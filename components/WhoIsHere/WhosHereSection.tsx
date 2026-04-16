@@ -177,32 +177,13 @@ function BrandCard({
 }) {
   const cardRef = useRef<HTMLDivElement>(null);
 
-  // 3D tilt on hover — GPU-only transform
-  const onMove = (e: React.MouseEvent<HTMLDivElement>) => {
-    const r  = (e.currentTarget as HTMLElement).getBoundingClientRect();
-    const mx = ((e.clientX - r.left) / r.width  - 0.5) * 14;
-    const my = ((e.clientY - r.top)  / r.height - 0.5) * -14;
-    gsap.to(e.currentTarget, {
-      rotateY: mx, rotateX: my,
-      duration: 0.35, ease: "power2.out",
-      transformPerspective: 800,
-    });
-  };
-
-  const onLeave = (e: React.MouseEvent<HTMLDivElement>) => {
-    gsap.to(e.currentTarget, {
-      rotateY: 0, rotateX: 0,
-      duration: 0.6, ease: "elastic.out(1,0.55)",
-      transformPerspective: 800,
-    });
-  };
-
+  // Simple CSS hover effect — no expensive mouse tracking
+  // This is much better than onMouseMove which fires 60x per second
+  
   return (
     <div
       ref={cardRef}
       className={`brand-card brand-card-${index}`}
-      onMouseMove={onMove}
-      onMouseLeave={onLeave}
       style={{
         background:    "rgba(255,255,255,0.03)",
         border:        "1px solid rgba(201,168,76,0.14)",
@@ -210,14 +191,18 @@ function BrandCard({
         display:       "flex",
         flexDirection: "column",
         gap:           "1.2rem",
-        willChange:    "transform",
-        transformStyle:"preserve-3d",
         cursor:        "default",
-        transition:    "border-color 0.3s ease, background 0.3s ease",
+        transition:    "all 0.3s ease, border-color 0.3s ease, background 0.3s ease",
       }}
       onMouseEnter={e => {
         (e.currentTarget as HTMLElement).style.borderColor = "rgba(201,168,76,0.4)";
         (e.currentTarget as HTMLElement).style.background  = "rgba(201,168,76,0.04)";
+        (e.currentTarget as HTMLElement).style.transform  = "translateY(-4px)";
+      }}
+      onMouseLeave={e => {
+        (e.currentTarget as HTMLElement).style.borderColor = "rgba(201,168,76,0.14)";
+        (e.currentTarget as HTMLElement).style.background  = "rgba(255,255,255,0.03)";
+        (e.currentTarget as HTMLElement).style.transform  = "translateY(0)";
       }}
     >
       {/* Top row — brand name + category */}
