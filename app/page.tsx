@@ -1,6 +1,7 @@
 import NumbersSection from "@/components/Numbers/NumbersSection";
 import HeroSection from "@/components/Hero/HeroSection";
 import Navbar from "@/components/Navbar/Navbar";
+import WhosHereSection from "@/components/WhoIsHere/WhosHereSection";
 
 export const metadata = {
   title: "The American Mall Experience",
@@ -13,6 +14,7 @@ export default function Home() {
       <Navbar />
       <HeroSection />
       <NumbersSection />
+      <WhosHereSection />
     </main>
   );
 }
