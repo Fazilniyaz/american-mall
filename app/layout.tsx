@@ -45,6 +45,21 @@ export default function RootLayout({
       lang="en"
       className={`${playfairDisplay.variable} ${montserrat.variable} ${inter.variable} h-full antialiased`}
     >
+      <head>
+        {/* Preload critical hero image */}
+        <link
+          rel="preload"
+          as="image"
+          href="/photos/hero-poster.jpg"
+          type="image/jpeg"
+        />
+        {/* Inline critical CSS */}
+        <style>{`
+          html, body { margin: 0; padding: 0; }
+          .stat-item { opacity: 1 !important; transform: translateY(0) !important; }
+          .hero-tagline { opacity: 1 !important; }
+        `}</style>
+      </head>
       <body className="min-h-full flex flex-col">{children}</body>
     </html>
   );

@@ -169,30 +169,30 @@ export default function HeroStats() {
   const wrapRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    // Defer animation setup to not block initial render
+    // CRITICAL: Defer animation MUCH later to not block initial paint
+    // Stats items should be visible (opacity: 1) before animation starts
     const animationTimer = setTimeout(() => {
       const ctx = gsap.context(() => {
-        gsap.fromTo(
+        // Animate stats IN (they're already visible)
+        gsap.to(
           ".stat-item",
-          { opacity: 0, y: 28 },
           {
             opacity:  1,
             y:        0,
             duration: 0.7,
             ease:     "power2.out",
             stagger:  0.15,
-            delay:    0.3, // Reduced from 1.3
+            delay:    0,
           }
         );
-        // Tagline: animate from visible → animate subtle entrance
-        gsap.fromTo(
+        // Tagline: subtle animation only
+        gsap.to(
           ".hero-tagline",
-          { opacity: 1, y: 0 },  // ← START VISIBLE (critical for LCP)
-          { opacity: 1, y: -8, duration: 0.6, ease: "power2.out", delay: 0.1, yoyo: true, repeat: 1 }
+          { y: -6, duration: 0.5, ease: "power2.out", delay: 0.05, yoyo: true, repeat: 1 }
         );
       }, wrapRef);
       return () => ctx.revert();
-    }, 100); // Defer 100ms to allow initial paint
+    }, 2000); // Defer 2 seconds - let page render first!
 
     return () => clearTimeout(animationTimer);
   }, []);
@@ -281,6 +281,12 @@ export default function HeroStats() {
       <style>{`
 
         /* ── Stats grid layout ─────────────────────────────────── */
+
+        /* Stat items must be VISIBLE by default for LCP */
+        .stat-item {
+          opacity: 1 !important;
+          transform: translateY(0) !important;
+        }
 
         /* Mobile default: 2×2 grid, fills width evenly */
         .stats-grid {
