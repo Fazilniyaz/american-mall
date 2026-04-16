@@ -1,6 +1,7 @@
 import NumbersSection from "@/components/Numbers/NumbersSection";
 import HeroSection from "@/components/Hero/HeroSection";
 import Navbar from "@/components/Navbar/Navbar";
+import MallMapSection from "@/components/MallMap/MallMapSection";
 import dynamic from "next/dynamic";
 
 // Lazy load WhosHereSection — it's heavy and below the fold
@@ -19,6 +20,7 @@ export default function Home() {
       <HeroSection />
       <NumbersSection />
       <WhosHereSection />
+      <MallMapSection />
     </main>
   );
 }
