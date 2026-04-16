@@ -27,24 +27,24 @@ export default function ParticleCanvas() {
     );
     camera.position.z = 3;
 
-    const renderer = new WebGLRenderer({ alpha: true, antialias: true });
+    const renderer = new WebGLRenderer({ alpha: true, antialias: false });
     renderer.setSize(window.innerWidth, window.innerHeight);
-    renderer.setPixelRatio(window.devicePixelRatio);
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.5));
     renderer.setClearColor(0x000000, 0); // transparent background
     mountRef.current.appendChild(renderer.domElement);
 
     // fix 2 — pause loop when hero not visible
-let isVisible = true;
-const observer = new IntersectionObserver(
-  ([entry]) => { isVisible = entry.isIntersecting; },
-  { threshold: 0.1 }
-);
-if (mountRef.current.parentElement) {
-  observer.observe(mountRef.current.parentElement);
-}
+    let isVisible = true;
+    const observer = new IntersectionObserver(
+      ([entry]) => { isVisible = entry.isIntersecting; },
+      { threshold: 0.1 }
+    );
+    if (mountRef.current.parentElement) {
+      observer.observe(mountRef.current.parentElement);
+    }
 
     // Create particles
-    const particleCount = 3000;
+    const particleCount = 1500;
     const geometry = new BufferGeometry();
     const positions = new Float32Array(particleCount * 3);
     const colors = new Float32Array(particleCount * 3);

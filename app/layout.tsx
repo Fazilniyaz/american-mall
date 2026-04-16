@@ -46,6 +46,7 @@ export default function RootLayout({
           as="image"
           href="/photos/hero-poster.jpg"
           type="image/jpeg"
+          media="(max-width: 768px)"
         />
       </head>
       <body className="min-h-full flex flex-col">{children}</body>

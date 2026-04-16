@@ -17,8 +17,7 @@ export default function HeroSection() {
     setIsDesktop(window.matchMedia("(min-width: 769px)").matches);
   }, []);
 
-  // Step 2: Load video AFTER the <video> element mounts (which happens
-  // after the re-render triggered by setIsDesktop(true) above)
+  // Step 2: Load video AFTER the <video> element mounts
   useEffect(() => {
     if (!isDesktop || !videoRef.current) return;
 
@@ -49,30 +48,46 @@ export default function HeroSection() {
         background: "#000",
       }}
     >
-      {/* ── POSTER IMAGE: Always rendered in SSR for instant LCP ── */}
-      {/* On mobile this is the permanent background;
-          on desktop it's the fallback while video loads */}
-      <img
-        src="/photos/hero-poster.jpg"
-        alt=""
-        width={1920}
-        height={1080}
-        fetchPriority="high"
-        decoding="async"
+      {/* ── DESKTOP: gradient fallback while video loads ── */}
+      {/* Always rendered (cheap CSS), visible on desktop behind video/particles */}
+      <div
+        className="hero-desktop-bg"
         style={{
           position: "absolute",
           inset: 0,
-          width: "100%",
-          height: "100%",
-          objectFit: "cover",
           zIndex: 1,
-          // Hide poster once desktop video is playing
-          opacity: isDesktop && videoReady ? 0 : 1,
-          transition: "opacity 0.8s ease",
+          background: "radial-gradient(ellipse at 60% 40%, #1a1408 0%, #000 70%)",
         }}
       />
 
-      {/* ── DESKTOP: lazy-loaded video (only mounts after hydration) ── */}
+      {/* ── MOBILE: poster image via <picture> ──
+          <picture> + <source media> prevents the browser from downloading
+          the 222 KB poster on desktop — it loads a 1-byte data URI instead.
+          On mobile, the real poster loads as the LCP element. */}
+      <picture className="hero-poster-mobile">
+        <source
+          media="(min-width: 769px)"
+          srcSet="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='1' height='1'/%3E"
+        />
+        <img
+          src="/photos/hero-poster.jpg"
+          alt=""
+          width={1920}
+          height={1080}
+          fetchPriority="high"
+          decoding="async"
+          style={{
+            position: "absolute",
+            inset: 0,
+            width: "100%",
+            height: "100%",
+            objectFit: "cover",
+            zIndex: 1,
+          }}
+        />
+      </picture>
+
+      {/* ── DESKTOP: lazy-loaded video ── */}
       {isDesktop && (
         <video
           ref={videoRef}
@@ -100,6 +115,20 @@ export default function HeroSection() {
 
       {/* ── Text + Stats — always rendered ── */}
       <HeroStats />
+
+      {/* ── Responsive: hide poster on desktop, hide gradient on mobile ── */}
+      <style>{`
+        /* Mobile: poster visible, desktop gradient hidden */
+        .hero-poster-mobile { display: block; }
+        .hero-desktop-bg { display: none; }
+
+        /* Desktop: poster hidden (not downloaded thanks to <picture>),
+           gradient visible as fallback behind video */
+        @media (min-width: 769px) {
+          .hero-poster-mobile { display: none; }
+          .hero-desktop-bg { display: block; }
+        }
+      `}</style>
     </section>
   );
 }
