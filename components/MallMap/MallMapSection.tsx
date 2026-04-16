@@ -7,9 +7,7 @@ import {
   useCallback,
   memo,
 } from "react";
-import gsap from "gsap";
-import { ScrollTrigger } from "gsap/ScrollTrigger";
-import * as d3 from "d3";
+import { select } from "d3-selection";
 import {
   Scene,
   PerspectiveCamera,
@@ -35,89 +33,91 @@ import {
   Fog,
 } from "three";
 
-gsap.registerPlugin(ScrollTrigger);
+// GSAP type for passing to sub-components after lazy load
+type GsapInstance = typeof import("gsap").default;
 
 // ─── Floor data ───────────────────────────────────────────────────────────────
 const FLOORS = [
   {
-    id:       0,
-    label:    "Floor 1",
-    name:     "Retail & Flagship",
-    color:    "#C9A84C",
+    id: 0,
+    label: "Floor 1",
+    name: "Retail & Flagship",
+    color: "#C9A84C",
     dimColor: "#3A2E10",
-    glowColor:"#C9A84C",
+    glowColor: "#C9A84C",
     zones: [
       { label: "Flagship Stores", pct: 42, color: "#C9A84C" },
-      { label: "Dining",          pct: 28, color: "#A67C32" },
-      { label: "Entertainment",   pct: 18, color: "#7A5C1E" },
-      { label: "Services",        pct: 12, color: "#4A3810" },
+      { label: "Dining", pct: 28, color: "#A67C32" },
+      { label: "Entertainment", pct: 18, color: "#7A5C1E" },
+      { label: "Services", pct: 12, color: "#4A3810" },
     ],
     tenants: ["Samsung", "Apple", "Nike", "Microsoft"],
-    stat:    "180+ stores",
+    stat: "180+ stores",
   },
   {
-    id:       1,
-    label:    "Floor 2",
-    name:     "Fashion & Luxury",
-    color:    "#B8922E",
+    id: 1,
+    label: "Floor 2",
+    name: "Fashion & Luxury",
+    color: "#B8922E",
     dimColor: "#2E2408",
-    glowColor:"#D4AF37",
+    glowColor: "#D4AF37",
     zones: [
-      { label: "Luxury Brands",  pct: 38, color: "#C9A84C" },
-      { label: "Fashion",        pct: 35, color: "#A67C32" },
-      { label: "Accessories",    pct: 17, color: "#7A5C1E" },
-      { label: "Beauty",         pct: 10, color: "#4A3810" },
+      { label: "Luxury Brands", pct: 38, color: "#C9A84C" },
+      { label: "Fashion", pct: 35, color: "#A67C32" },
+      { label: "Accessories", pct: 17, color: "#7A5C1E" },
+      { label: "Beauty", pct: 10, color: "#4A3810" },
     ],
     tenants: ["Coach", "Sephora", "Zara", "H&M"],
-    stat:    "140+ brands",
+    stat: "140+ brands",
   },
   {
-    id:       2,
-    label:    "Floor 3",
-    name:     "Entertainment Hub",
-    color:    "#A67C32",
+    id: 2,
+    label: "Floor 3",
+    name: "Entertainment Hub",
+    color: "#A67C32",
     dimColor: "#261E06",
-    glowColor:"#FFD700",
+    glowColor: "#FFD700",
     zones: [
-      { label: "Theme Park",  pct: 45, color: "#C9A84C" },
-      { label: "Aquarium",    pct: 25, color: "#A67C32" },
-      { label: "Dining",      pct: 20, color: "#7A5C1E" },
-      { label: "Events",      pct: 10, color: "#4A3810" },
+      { label: "Theme Park", pct: 45, color: "#C9A84C" },
+      { label: "Aquarium", pct: 25, color: "#A67C32" },
+      { label: "Dining", pct: 20, color: "#7A5C1E" },
+      { label: "Events", pct: 10, color: "#4A3810" },
     ],
     tenants: ["Nickelodeon Universe", "Sea Life", "Mini Golf", "Theatres"],
-    stat:    "7 major attractions",
+    stat: "7 major attractions",
   },
   {
-    id:       3,
-    label:    "Floor 4",
-    name:     "Dining & Events",
-    color:    "#8A6820",
+    id: 3,
+    label: "Floor 4",
+    name: "Dining & Events",
+    color: "#8A6820",
     dimColor: "#1A1404",
-    glowColor:"#FFA500",
+    glowColor: "#FFA500",
     zones: [
-      { label: "Restaurants",  pct: 50, color: "#C9A84C" },
+      { label: "Restaurants", pct: 50, color: "#C9A84C" },
       { label: "Event Spaces", pct: 28, color: "#A67C32" },
-      { label: "Food Court",   pct: 14, color: "#7A5C1E" },
-      { label: "Lounge",       pct:  8, color: "#4A3810" },
+      { label: "Food Court", pct: 14, color: "#7A5C1E" },
+      { label: "Lounge", pct: 8, color: "#4A3810" },
     ],
     tenants: ["50+ Restaurants", "Event Halls", "Sky Lounge", "Pop-ups"],
-    stat:    "50+ dining options",
+    stat: "50+ dining options",
   },
 ];
 
 // ─── D3 chart ─────────────────────────────────────────────────────────────────
 const ZoneChart = memo(function ZoneChart({
-  zones, visible,
-}: { zones: (typeof FLOORS)[0]["zones"]; visible: boolean }) {
+  zones, visible, gsapRef,
+}: { zones: (typeof FLOORS)[0]["zones"]; visible: boolean; gsapRef: React.MutableRefObject<GsapInstance | null> }) {
   const svgRef = useRef<SVGSVGElement>(null);
 
   useEffect(() => {
-    if (!svgRef.current || !visible) return;
-    const svg  = d3.select(svgRef.current);
+    if (!svgRef.current || !visible || !gsapRef.current) return;
+    const gsap = gsapRef.current;
+    const svg = select(svgRef.current);
     svg.selectAll("*").remove();
-    const W    = svgRef.current.clientWidth || 260;
+    const W = svgRef.current.clientWidth || 260;
     const rowH = 36;
-    const H    = zones.length * rowH;
+    const H = zones.length * rowH;
     const barMaxW = W - 110;
     svg.attr("width", W).attr("height", H).attr("viewBox", `0 0 ${W} ${H}`);
     const g = svg.append("g");
@@ -147,7 +147,7 @@ const ZoneChart = memo(function ZoneChart({
         },
       });
     });
-  }, [zones, visible]);
+  }, [zones, visible, gsapRef]);
 
   return (
     <svg ref={svgRef}
@@ -158,17 +158,17 @@ const ZoneChart = memo(function ZoneChart({
 
 // ─── Side panel ───────────────────────────────────────────────────────────────
 const SidePanel = memo(function SidePanel({
-  floor, visible,
-}: { floor: (typeof FLOORS)[0] | null; visible: boolean }) {
+  floor, visible, gsapRef,
+}: { floor: (typeof FLOORS)[0] | null; visible: boolean; gsapRef: React.MutableRefObject<GsapInstance | null> }) {
   const panelRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    if (!panelRef.current || !floor) return;
-    gsap.fromTo(panelRef.current,
+    if (!panelRef.current || !floor || !gsapRef.current) return;
+    gsapRef.current.fromTo(panelRef.current,
       { opacity: 0, x: 16 },
       { opacity: 1, x: 0, duration: 0.4, ease: "power2.out" }
     );
-  }, [floor]);
+  }, [floor, gsapRef]);
 
   if (!floor) {
     return (
@@ -177,41 +177,53 @@ const SidePanel = memo(function SidePanel({
         alignItems: "center", justifyContent: "center",
         height: "100%", gap: "0.8rem", opacity: 0.3,
       }}>
-        <div style={{ width:"1px", height:"40px", background:"linear-gradient(to bottom,transparent,#C9A84C,transparent)" }} />
-        <p style={{ color:"#C9A84C", fontSize:"0.6rem", letterSpacing:"0.3em", textTransform:"uppercase",
-          fontFamily:"var(--font-montserrat)", fontWeight:600, textAlign:"center", margin:0 }}>
+        <div style={{ width: "1px", height: "40px", background: "linear-gradient(to bottom,transparent,#C9A84C,transparent)" }} />
+        <p style={{
+          color: "#C9A84C", fontSize: "0.6rem", letterSpacing: "0.3em", textTransform: "uppercase",
+          fontFamily: "var(--font-montserrat)", fontWeight: 600, textAlign: "center", margin: 0
+        }}>
           Select a floor<br />to explore
         </p>
-        <div style={{ width:"1px", height:"40px", background:"linear-gradient(to bottom,#C9A84C,transparent)" }} />
+        <div style={{ width: "1px", height: "40px", background: "linear-gradient(to bottom,#C9A84C,transparent)" }} />
       </div>
     );
   }
 
   return (
     <div ref={panelRef} style={{ padding: "0.5rem 0" }}>
-      <div style={{ color:"#C9A84C", fontSize:"0.6rem", letterSpacing:"0.35em",
-        textTransform:"uppercase", fontFamily:"var(--font-montserrat)", fontWeight:700, marginBottom:"0.4rem" }}>
+      <div style={{
+        color: "#C9A84C", fontSize: "0.6rem", letterSpacing: "0.35em",
+        textTransform: "uppercase", fontFamily: "var(--font-montserrat)", fontWeight: 700, marginBottom: "0.4rem"
+      }}>
         {floor.label}
       </div>
-      <h3 style={{ color:"#ffffff", fontSize:"clamp(1rem,2vw,1.25rem)", fontWeight:800,
-        fontFamily:"var(--font-montserrat)", margin:"0 0 0.25rem", lineHeight:1.1 }}>
+      <h3 style={{
+        color: "#ffffff", fontSize: "clamp(1rem,2vw,1.25rem)", fontWeight: 800,
+        fontFamily: "var(--font-montserrat)", margin: "0 0 0.25rem", lineHeight: 1.1
+      }}>
         {floor.name}
       </h3>
-      <p style={{ color:"rgba(201,168,76,0.7)", fontSize:"0.7rem", fontFamily:"var(--font-montserrat)",
-        fontWeight:600, margin:"0 0 1.4rem", letterSpacing:"0.05em" }}>
+      <p style={{
+        color: "rgba(201,168,76,0.7)", fontSize: "0.7rem", fontFamily: "var(--font-montserrat)",
+        fontWeight: 600, margin: "0 0 1.4rem", letterSpacing: "0.05em"
+      }}>
         {floor.stat}
       </p>
-      <ZoneChart zones={floor.zones} visible={visible} />
-      <div style={{ marginTop:"1.4rem" }}>
-        <p style={{ color:"rgba(255,255,255,0.25)", fontSize:"0.56rem", letterSpacing:"0.3em",
-          textTransform:"uppercase", fontFamily:"var(--font-montserrat)", fontWeight:600, margin:"0 0 0.7rem" }}>
+      <ZoneChart zones={floor.zones} visible={visible} gsapRef={gsapRef} />
+      <div style={{ marginTop: "1.4rem" }}>
+        <p style={{
+          color: "rgba(255,255,255,0.25)", fontSize: "0.56rem", letterSpacing: "0.3em",
+          textTransform: "uppercase", fontFamily: "var(--font-montserrat)", fontWeight: 600, margin: "0 0 0.7rem"
+        }}>
           Key tenants
         </p>
-        <div style={{ display:"flex", flexWrap:"wrap", gap:"0.45rem" }}>
+        <div style={{ display: "flex", flexWrap: "wrap", gap: "0.45rem" }}>
           {floor.tenants.map(t => (
-            <span key={t} style={{ background:"rgba(201,168,76,0.07)", border:"1px solid rgba(201,168,76,0.18)",
-              color:"rgba(255,255,255,0.6)", fontSize:"0.6rem", fontFamily:"var(--font-montserrat)",
-              fontWeight:500, letterSpacing:"0.07em", padding:"3px 9px" }}>
+            <span key={t} style={{
+              background: "rgba(201,168,76,0.07)", border: "1px solid rgba(201,168,76,0.18)",
+              color: "rgba(255,255,255,0.6)", fontSize: "0.6rem", fontFamily: "var(--font-montserrat)",
+              fontWeight: 500, letterSpacing: "0.07em", padding: "3px 9px"
+            }}>
               {t}
             </span>
           ))}
@@ -227,9 +239,9 @@ function createWindowGrid(
   cols: number, rows: number, color: number
 ): Group {
   const group = new Group();
-  const winW  = 0.18;
-  const winH  = 0.14;
-  const winD  = 0.01;
+  const winW = 0.18;
+  const winH = 0.14;
+  const winD = 0.01;
 
   // Front face windows
   for (let r = 0; r < rows; r++) {
@@ -284,28 +296,28 @@ function BuildingCanvas({
   selectedFloor: number | null;
   isMobile: boolean;
 }) {
-  const mountRef    = useRef<HTMLDivElement>(null);
-  const rendRef     = useRef<WebGLRenderer | null>(null);
-  const camRef      = useRef<PerspectiveCamera | null>(null);
-  const meshesRef   = useRef<Mesh[]>([]);
-  const groupRef    = useRef<Group | null>(null);
-  const rafRef      = useRef<number>(0);
-  const isVisRef    = useRef(true);
-  const hoveredRef  = useRef<number | null>(null);
+  const mountRef = useRef<HTMLDivElement>(null);
+  const rendRef = useRef<WebGLRenderer | null>(null);
+  const camRef = useRef<PerspectiveCamera | null>(null);
+  const meshesRef = useRef<Mesh[]>([]);
+  const groupRef = useRef<Group | null>(null);
+  const rafRef = useRef<number>(0);
+  const isVisRef = useRef(true);
+  const hoveredRef = useRef<number | null>(null);
   const selectedRef = useRef<number | null>(selectedFloor);
-  const rotYRef     = useRef(0.4);
-  const rotXRef     = useRef(0.22);
-  const autoRotRef  = useRef(true);
-  const isDragRef   = useRef(false);
-  const lastPosRef  = useRef({ x: 0, y: 0 });
+  const rotYRef = useRef(0.4);
+  const rotXRef = useRef(0.22);
+  const autoRotRef = useRef(true);
+  const isDragRef = useRef(false);
+  const lastPosRef = useRef({ x: 0, y: 0 });
 
   useEffect(() => { selectedRef.current = selectedFloor; }, [selectedFloor]);
 
   useEffect(() => {
     if (!mountRef.current) return;
     const el = mountRef.current;
-    const W  = el.clientWidth;
-    const H  = el.clientHeight;
+    const W = el.clientWidth;
+    const H = el.clientHeight;
 
     // ── Scene setup ──────────────────────────────────────────────────────────
     const scene = new Scene();
@@ -340,7 +352,7 @@ function BuildingCanvas({
     // ── Ground plane ─────────────────────────────────────────────────────────
     const groundGeo = new PlaneGeometry(30, 30);
     const groundMat = new MeshLambertMaterial({ color: 0x0c0b08 });
-    const ground    = new Mesh(groundGeo, groundMat);
+    const ground = new Mesh(groundGeo, groundMat);
     ground.rotation.x = -Math.PI / 2;
     ground.receiveShadow = true;
     scene.add(ground);
@@ -381,18 +393,18 @@ function BuildingCanvas({
       // ── Slab body ──
       const bodyGeo = new BoxGeometry(cfg.w, cfg.h, cfg.d);
       const bodyMat = new MeshStandardMaterial({
-        color:     new Color(f.dimColor),
+        color: new Color(f.dimColor),
         roughness: 0.85,
         metalness: 0.15,
         envMapIntensity: 0.5,
       });
       const body = new Mesh(bodyGeo, bodyMat);
-      body.castShadow    = !isMobile;
+      body.castShadow = !isMobile;
       body.receiveShadow = !isMobile;
       body.userData = {
-        floorId:     i,
-        baseY:       cumulativeY + cfg.h / 2,
-        baseColor:   f.dimColor,
+        floorId: i,
+        baseY: cumulativeY + cfg.h / 2,
+        baseColor: f.dimColor,
         activeColor: f.color,
         bodyMat,
       };
@@ -400,19 +412,19 @@ function BuildingCanvas({
       floorGroup.add(body);
 
       // ── Edge wireframe ──
-      const edges   = new EdgesGeometry(bodyGeo);
+      const edges = new EdgesGeometry(bodyGeo);
       const edgeMat = new LineBasicMaterial({
-        color:       new Color(f.color),
+        color: new Color(f.color),
         transparent: true,
-        opacity:     0.25,
+        opacity: 0.25,
       });
       const edgeLines = new LineSegments(edges, edgeMat);
       edgeLines.userData.isEdge = true;
       body.add(edgeLines);
 
       // ── Windows ──
-      const winCols  = i === 0 ? 8 : i === 1 ? 7 : i === 2 ? 6 : 5;
-      const winRows  = 2;
+      const winCols = i === 0 ? 8 : i === 1 ? 7 : i === 2 ? 6 : 5;
+      const winRows = 2;
       const winColor = 0x1a1408; // dark by default
       const winGroup = createWindowGrid(cfg.w, cfg.h, cfg.d, winCols, winRows, winColor);
       winGroup.userData.isWindowGroup = true;
@@ -432,10 +444,10 @@ function BuildingCanvas({
 
       // ── Column pillars at corners ──
       const pillarPositions = [
-        [-cfg.w / 2 + 0.08,  cfg.d / 2 - 0.08],
-        [ cfg.w / 2 - 0.08,  cfg.d / 2 - 0.08],
+        [-cfg.w / 2 + 0.08, cfg.d / 2 - 0.08],
+        [cfg.w / 2 - 0.08, cfg.d / 2 - 0.08],
         [-cfg.w / 2 + 0.08, -cfg.d / 2 + 0.08],
-        [ cfg.w / 2 - 0.08, -cfg.d / 2 + 0.08],
+        [cfg.w / 2 - 0.08, -cfg.d / 2 + 0.08],
       ];
       pillarPositions.forEach(([px, pz]) => {
         const pGeo = new CylinderGeometry(0.055, 0.055, cfg.h + 0.1, 6);
@@ -450,14 +462,14 @@ function BuildingCanvas({
       if (i === 0) {
         const entranceGeo = new BoxGeometry(1.4, cfg.h * 0.7, 0.08);
         const entranceMat = new MeshBasicMaterial({ color: 0x080604 });
-        const entrance    = new Mesh(entranceGeo, entranceMat);
+        const entrance = new Mesh(entranceGeo, entranceMat);
         entrance.position.set(0, -cfg.h * 0.15, cfg.d / 2 - 0.02);
         body.add(entrance);
 
         // Entrance frame
         const frameGeo = new BoxGeometry(1.5, cfg.h * 0.72, 0.04);
         const frameMat = new MeshBasicMaterial({ color: 0x3a2e10, transparent: true, opacity: 0.8 });
-        const frame    = new Mesh(frameGeo, frameMat);
+        const frame = new Mesh(frameGeo, frameMat);
         frame.position.set(0, -cfg.h * 0.15, cfg.d / 2 + 0.01);
         body.add(frame);
       }
@@ -467,14 +479,14 @@ function BuildingCanvas({
         // Central rooftop structure
         const roofGeo = new BoxGeometry(1.8, 0.5, 1.2);
         const roofMat = new MeshStandardMaterial({ color: new Color("#0e0c06"), roughness: 0.8, metalness: 0.2 });
-        const roof    = new Mesh(roofGeo, roofMat);
+        const roof = new Mesh(roofGeo, roofMat);
         roof.position.y = cfg.h / 2 + 0.28;
         floorGroup.add(roof);
 
         // Antenna / spire
         const spireGeo = new CylinderGeometry(0.02, 0.04, 1.2, 6);
         const spireMat = new MeshStandardMaterial({ color: new Color("#C9A84C"), roughness: 0.3, metalness: 0.8 });
-        const spire    = new Mesh(spireGeo, spireMat);
+        const spire = new Mesh(spireGeo, spireMat);
         spire.position.y = cfg.h / 2 + 0.5 + 0.6;
         floorGroup.add(spire);
 
@@ -497,12 +509,12 @@ function BuildingCanvas({
 
     // ── Raycaster ────────────────────────────────────────────────────────────
     const raycaster = new Raycaster();
-    const mouse2d   = new Vector2(-9, -9);
+    const mouse2d = new Vector2(-9, -9);
 
     const getFloorId = (clientX: number, clientY: number): number | null => {
       const rect = el.getBoundingClientRect();
-      mouse2d.x  =  ((clientX - rect.left) / rect.width)  * 2 - 1;
-      mouse2d.y  = -((clientY - rect.top)  / rect.height) * 2 + 1;
+      mouse2d.x = ((clientX - rect.left) / rect.width) * 2 - 1;
+      mouse2d.y = -((clientY - rect.top) / rect.height) * 2 + 1;
       raycaster.setFromCamera(mouse2d, camera);
       const hits = raycaster.intersectObjects(meshesRef.current, true);
       if (!hits.length) return null;
@@ -517,18 +529,18 @@ function BuildingCanvas({
       if (isDragRef.current) {
         rotYRef.current += (e.clientX - lastPosRef.current.x) * 0.007;
         rotXRef.current += (e.clientY - lastPosRef.current.y) * 0.003;
-        rotXRef.current  = Math.max(-0.45, Math.min(0.55, rotXRef.current));
+        rotXRef.current = Math.max(-0.45, Math.min(0.55, rotXRef.current));
         lastPosRef.current = { x: e.clientX, y: e.clientY };
       }
       const fid = getFloorId(e.clientX, e.clientY);
-      hoveredRef.current  = fid;
+      hoveredRef.current = fid;
       el.style.cursor = fid !== null ? "pointer" : "grab";
     };
 
     const onMouseDown = (e: MouseEvent) => {
-      isDragRef.current   = true;
-      autoRotRef.current  = false;
-      lastPosRef.current  = { x: e.clientX, y: e.clientY };
+      isDragRef.current = true;
+      autoRotRef.current = false;
+      lastPosRef.current = { x: e.clientX, y: e.clientY };
       el.style.cursor = "grabbing";
     };
 
@@ -539,29 +551,29 @@ function BuildingCanvas({
         onFloorSelect(fid === selectedRef.current ? null : fid);
       }
       isDragRef.current = false;
-      el.style.cursor   = "grab";
+      el.style.cursor = "grab";
       setTimeout(() => { autoRotRef.current = true; }, 3000);
     };
 
     const onMouseLeave = () => {
-      isDragRef.current  = false;
+      isDragRef.current = false;
       hoveredRef.current = null;
-      el.style.cursor    = "grab";
+      el.style.cursor = "grab";
       setTimeout(() => { autoRotRef.current = true; }, 1200);
     };
 
     let touchStartPos = { x: 0, y: 0 };
     const onTouchStart = (e: TouchEvent) => {
-      touchStartPos    = { x: e.touches[0].clientX, y: e.touches[0].clientY };
-      isDragRef.current    = true;
-      autoRotRef.current   = false;
-      lastPosRef.current   = { x: e.touches[0].clientX, y: e.touches[0].clientY };
+      touchStartPos = { x: e.touches[0].clientX, y: e.touches[0].clientY };
+      isDragRef.current = true;
+      autoRotRef.current = false;
+      lastPosRef.current = { x: e.touches[0].clientX, y: e.touches[0].clientY };
     };
     const onTouchMove = (e: TouchEvent) => {
       if (!isDragRef.current) return;
       rotYRef.current += (e.touches[0].clientX - lastPosRef.current.x) * 0.006;
       rotXRef.current += (e.touches[0].clientY - lastPosRef.current.y) * 0.003;
-      rotXRef.current  = Math.max(-0.45, Math.min(0.55, rotXRef.current));
+      rotXRef.current = Math.max(-0.45, Math.min(0.55, rotXRef.current));
       lastPosRef.current = { x: e.touches[0].clientX, y: e.touches[0].clientY };
     };
     const onTouchEnd = (e: TouchEvent) => {
@@ -575,13 +587,13 @@ function BuildingCanvas({
       setTimeout(() => { autoRotRef.current = true; }, 2500);
     };
 
-    el.addEventListener("mousemove",  onMouseMove);
-    el.addEventListener("mousedown",  onMouseDown);
-    el.addEventListener("mouseup",    onMouseUp);
+    el.addEventListener("mousemove", onMouseMove);
+    el.addEventListener("mousedown", onMouseDown);
+    el.addEventListener("mouseup", onMouseUp);
     el.addEventListener("mouseleave", onMouseLeave);
     el.addEventListener("touchstart", onTouchStart, { passive: true });
-    el.addEventListener("touchmove",  onTouchMove,  { passive: true });
-    el.addEventListener("touchend",   onTouchEnd);
+    el.addEventListener("touchmove", onTouchMove, { passive: true });
+    el.addEventListener("touchend", onTouchEnd);
     el.style.cursor = "grab";
 
     // ── Visibility observer — pause when off screen ───────────────────────
@@ -592,9 +604,9 @@ function BuildingCanvas({
     observer.observe(el);
 
     // ── Window glow colors ────────────────────────────────────────────────
-    const windowDark   = new Color(0x1a1408);
+    const windowDark = new Color(0x1a1408);
     const windowActive = new Color(0xfff0a0);
-    const windowHover  = new Color(0x8a6820);
+    const windowHover = new Color(0x8a6820);
 
     // ── Render loop ───────────────────────────────────────────────────────
     let frame = 0;
@@ -615,7 +627,7 @@ function BuildingCanvas({
       meshesRef.current.forEach((mesh, i) => {
         const { baseColor, activeColor, bodyMat } = mesh.userData;
         const isActive = sel === i;
-        const isHov    = hov === i && sel !== i;
+        const isHov = hov === i && sel !== i;
 
         // Body color lerp
         const target = isActive ? activeColor : isHov ? "#5a4015" : baseColor;
@@ -623,7 +635,7 @@ function BuildingCanvas({
 
         // Lift active floor
         const floorGroup = buildingGroup.children[i] as Group;
-        const targetY    = mesh.userData.baseY + (isActive ? 0.55 : 0);
+        const targetY = mesh.userData.baseY + (isActive ? 0.55 : 0);
         floorGroup.position.y += (targetY - floorGroup.position.y) * 0.1;
 
         // Edge opacity
@@ -637,8 +649,8 @@ function BuildingCanvas({
           if (child.userData.isWindowGroup) {
             child.children.forEach((win) => {
               const wMesh = win as Mesh;
-              const wMat  = wMesh.material as MeshBasicMaterial;
-              const tgt   = isActive ? windowActive : isHov ? windowHover : windowDark;
+              const wMat = wMesh.material as MeshBasicMaterial;
+              const tgt = isActive ? windowActive : isHov ? windowHover : windowDark;
               wMat.color.lerp(tgt, 0.08);
             });
           }
@@ -675,13 +687,13 @@ function BuildingCanvas({
       cancelAnimationFrame(rafRef.current);
       observer.disconnect();
       window.removeEventListener("resize", onResize);
-      el.removeEventListener("mousemove",  onMouseMove);
-      el.removeEventListener("mousedown",  onMouseDown);
-      el.removeEventListener("mouseup",    onMouseUp);
+      el.removeEventListener("mousemove", onMouseMove);
+      el.removeEventListener("mousedown", onMouseDown);
+      el.removeEventListener("mouseup", onMouseUp);
       el.removeEventListener("mouseleave", onMouseLeave);
       el.removeEventListener("touchstart", onTouchStart);
-      el.removeEventListener("touchmove",  onTouchMove);
-      el.removeEventListener("touchend",   onTouchEnd);
+      el.removeEventListener("touchmove", onTouchMove);
+      el.removeEventListener("touchend", onTouchEnd);
       renderer.dispose();
       meshesRef.current.forEach(m => {
         (m.material as MeshStandardMaterial).dispose();
@@ -689,7 +701,7 @@ function BuildingCanvas({
       });
       if (el.contains(renderer.domElement)) el.removeChild(renderer.domElement);
     };
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isMobile]);
 
   return <div ref={mountRef} style={{ width: "100%", height: "100%", position: "relative" }} />;
@@ -705,21 +717,21 @@ const FloorButtons = memo(function FloorButtons({
         <button key={f.id}
           onClick={() => onSelect(selected === f.id ? null : f.id)}
           style={{
-            background:    selected === f.id ? "rgba(201,168,76,0.1)" : "transparent",
-            border:        `1px solid ${selected === f.id ? "#C9A84C" : "rgba(201,168,76,0.15)"}`,
-            color:         selected === f.id ? "#C9A84C" : "rgba(255,255,255,0.42)",
-            fontSize:      "0.6rem",
-            fontWeight:    700,
+            background: selected === f.id ? "rgba(201,168,76,0.1)" : "transparent",
+            border: `1px solid ${selected === f.id ? "#C9A84C" : "rgba(201,168,76,0.15)"}`,
+            color: selected === f.id ? "#C9A84C" : "rgba(255,255,255,0.42)",
+            fontSize: "0.6rem",
+            fontWeight: 700,
             letterSpacing: "0.18em",
             textTransform: "uppercase",
-            fontFamily:    "var(--font-montserrat)",
-            padding:       "8px 12px",
-            cursor:        "pointer",
-            textAlign:     "left",
-            transition:    "all 0.2s ease",
-            display:       "flex",
-            alignItems:    "center",
-            gap:           "0.55rem",
+            fontFamily: "var(--font-montserrat)",
+            padding: "8px 12px",
+            cursor: "pointer",
+            textAlign: "left",
+            transition: "all 0.2s ease",
+            display: "flex",
+            alignItems: "center",
+            gap: "0.55rem",
           }}>
           <span style={{
             width: "5px", height: "5px", flexShrink: 0,
@@ -736,28 +748,45 @@ const FloorButtons = memo(function FloorButtons({
 // ─── Main export ──────────────────────────────────────────────────────────────
 export default function MallMapSection() {
   const sectionRef = useRef<HTMLElement>(null);
+  const gsapRef = useRef<GsapInstance | null>(null);
   const [selected, setSelected] = useState<number | null>(null);
   const [isMobile, setIsMobile] = useState(false);
-  const [mounted,  setMounted]  = useState(false);
+  const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
     setIsMobile(window.innerWidth < 768);
     setMounted(true);
 
-    const ctx = gsap.context(() => {
-      gsap.fromTo(".map-heading",
-        { opacity: 0, y: 24 },
-        { opacity: 1, y: 0, duration: 0.9, ease: "power2.out",
-          scrollTrigger: { trigger: ".map-heading", start: "top 85%" } }
-      );
-      gsap.fromTo(".map-canvas-wrap",
-        { opacity: 0 },
-        { opacity: 1, duration: 1.1, ease: "power2.out",
-          scrollTrigger: { trigger: ".map-canvas-wrap", start: "top 82%" } }
-      );
-    }, sectionRef);
+    // Lazy-import GSAP so it's NOT in the initial JS bundle
+    let ctx: { revert: () => void } | null = null;
+    Promise.all([
+      import("gsap"),
+      import("gsap/ScrollTrigger"),
+    ]).then(([gsapMod, stMod]) => {
+      const gsap = gsapMod.default;
+      const { ScrollTrigger } = stMod;
+      gsap.registerPlugin(ScrollTrigger);
+      gsapRef.current = gsap;
 
-    return () => ctx.revert();
+      ctx = gsap.context(() => {
+        gsap.fromTo(".map-heading",
+          { opacity: 0, y: 24 },
+          {
+            opacity: 1, y: 0, duration: 0.9, ease: "power2.out",
+            scrollTrigger: { trigger: ".map-heading", start: "top 85%" }
+          }
+        );
+        gsap.fromTo(".map-canvas-wrap",
+          { opacity: 0 },
+          {
+            opacity: 1, duration: 1.1, ease: "power2.out",
+            scrollTrigger: { trigger: ".map-canvas-wrap", start: "top 82%" }
+          }
+        );
+      }, sectionRef);
+    });
+
+    return () => { ctx?.revert(); };
   }, []);
 
   const handleSelect = useCallback((id: number | null) => setSelected(id), []);
@@ -769,45 +798,57 @@ export default function MallMapSection() {
       style={{ background: "#050402", padding: "0 0 7rem", overflow: "hidden", position: "relative" }}
     >
       {/* Top separator */}
-      <div style={{ height:"1px", background:"linear-gradient(to right,transparent,rgba(201,168,76,0.18),transparent)", marginBottom:"5rem" }} />
+      <div style={{ height: "1px", background: "linear-gradient(to right,transparent,rgba(201,168,76,0.18),transparent)", marginBottom: "5rem" }} />
 
       {/* Heading */}
-      <div className="map-heading" style={{ textAlign:"center", marginBottom:"3.5rem", padding:"0 1.5rem" }}>
-        <p style={{ color:"#C9A84C", fontSize:"0.68rem", letterSpacing:"0.4em", textTransform:"uppercase",
-          fontFamily:"var(--font-montserrat)", fontWeight:600, margin:"0 0 0.8rem" }}>
+      <div className="map-heading" style={{ textAlign: "center", marginBottom: "3.5rem", padding: "0 1.5rem" }}>
+        <p style={{
+          color: "#C9A84C", fontSize: "0.68rem", letterSpacing: "0.4em", textTransform: "uppercase",
+          fontFamily: "var(--font-montserrat)", fontWeight: 600, margin: "0 0 0.8rem"
+        }}>
           Explore the property
         </p>
-        <h2 style={{ color:"#ffffff", fontSize:"clamp(1.8rem,3.5vw,3rem)", fontWeight:800,
-          fontFamily:"var(--font-montserrat)", margin:"0 0 1rem", lineHeight:1.1 }}>
+        <h2 style={{
+          color: "#ffffff", fontSize: "clamp(1.8rem,3.5vw,3rem)", fontWeight: 800,
+          fontFamily: "var(--font-montserrat)", margin: "0 0 1rem", lineHeight: 1.1
+        }}>
           5.6 million sq ft<br />
-          <span style={{ color:"#C9A84C" }}>across 4 floors</span>
+          <span style={{ color: "#C9A84C" }}>across 4 floors</span>
         </h2>
-        <p style={{ color:"rgba(255,255,255,0.35)", fontSize:"0.8rem", fontFamily:"var(--font-montserrat)",
-          fontWeight:400, margin:"0 auto", maxWidth:"400px", lineHeight:1.75 }}>
+        <p style={{
+          color: "rgba(255,255,255,0.35)", fontSize: "0.8rem", fontFamily: "var(--font-montserrat)",
+          fontWeight: 400, margin: "0 auto", maxWidth: "400px", lineHeight: 1.75
+        }}>
           Rotate the building and click any floor to explore its retail mix, key tenants, and commercial opportunity.
         </p>
       </div>
 
       {/* Main grid */}
-      <div className="map-canvas-wrap" style={{ padding:"0 clamp(1rem,4vw,4rem)" }}>
+      <div className="map-canvas-wrap" style={{ padding: "0 clamp(1rem,4vw,4rem)" }}>
         <div className="map-inner-grid">
 
           {/* Left — floor buttons */}
-          <div style={{ display:"flex", flexDirection:"column", justifyContent:"center", gap:"1rem" }}>
-            <p style={{ color:"rgba(255,255,255,0.2)", fontSize:"0.56rem", letterSpacing:"0.3em",
-              textTransform:"uppercase", fontFamily:"var(--font-montserrat)", fontWeight:600, margin:"0 0 0.4rem" }}>
+          <div style={{ display: "flex", flexDirection: "column", justifyContent: "center", gap: "1rem" }}>
+            <p style={{
+              color: "rgba(255,255,255,0.2)", fontSize: "0.56rem", letterSpacing: "0.3em",
+              textTransform: "uppercase", fontFamily: "var(--font-montserrat)", fontWeight: 600, margin: "0 0 0.4rem"
+            }}>
               Select floor
             </p>
             <FloorButtons selected={selected} onSelect={handleSelect} />
-            <p style={{ color:"rgba(255,255,255,0.15)", fontSize:"0.56rem", fontFamily:"var(--font-montserrat)",
-              fontWeight:400, margin:"0.4rem 0 0", lineHeight:1.6, letterSpacing:"0.04em" }}>
+            <p style={{
+              color: "rgba(255,255,255,0.15)", fontSize: "0.56rem", fontFamily: "var(--font-montserrat)",
+              fontWeight: 400, margin: "0.4rem 0 0", lineHeight: 1.6, letterSpacing: "0.04em"
+            }}>
               Drag to rotate.<br />Click floor to explore.
             </p>
           </div>
 
           {/* Centre — 3D building */}
-          <div style={{ height:"clamp(320px,48vw,520px)", position:"relative",
-            border:"1px solid rgba(201,168,76,0.08)", background:"#060504" }}>
+          <div style={{
+            height: "clamp(320px,48vw,520px)", position: "relative",
+            border: "1px solid rgba(201,168,76,0.08)", background: "#060504"
+          }}>
             {mounted && (
               <BuildingCanvas
                 onFloorSelect={handleSelect}
@@ -817,29 +858,29 @@ export default function MallMapSection() {
             )}
 
             {/* Corner decorations */}
-            {(["tl","tr","bl","br"] as const).map(pos => (
+            {(["tl", "tr", "bl", "br"] as const).map(pos => (
               <div key={pos} style={{
-                position:"absolute", width:"10px", height:"10px",
-                ...(pos.includes("t") ? { top:"7px" }    : { bottom:"7px" }),
-                ...(pos.includes("l") ? { left:"7px" }   : { right:"7px"  }),
-                borderTop:    pos.includes("t") ? "1px solid rgba(201,168,76,0.35)" : "none",
+                position: "absolute", width: "10px", height: "10px",
+                ...(pos.includes("t") ? { top: "7px" } : { bottom: "7px" }),
+                ...(pos.includes("l") ? { left: "7px" } : { right: "7px" }),
+                borderTop: pos.includes("t") ? "1px solid rgba(201,168,76,0.35)" : "none",
                 borderBottom: pos.includes("b") ? "1px solid rgba(201,168,76,0.35)" : "none",
-                borderLeft:   pos.includes("l") ? "1px solid rgba(201,168,76,0.35)" : "none",
-                borderRight:  pos.includes("r") ? "1px solid rgba(201,168,76,0.35)" : "none",
-                pointerEvents:"none",
+                borderLeft: pos.includes("l") ? "1px solid rgba(201,168,76,0.35)" : "none",
+                borderRight: pos.includes("r") ? "1px solid rgba(201,168,76,0.35)" : "none",
+                pointerEvents: "none",
               }} />
             ))}
 
             {/* Floor label overlay — shows active floor name */}
             {selected !== null && (
               <div style={{
-                position:"absolute", top:"0.8rem", left:"50%",
-                transform:"translateX(-50%)",
-                color:"#C9A84C", fontSize:"0.58rem", letterSpacing:"0.3em",
-                textTransform:"uppercase", fontFamily:"var(--font-montserrat)",
-                fontWeight:700, pointerEvents:"none", whiteSpace:"nowrap",
-                background:"rgba(6,5,4,0.7)", padding:"4px 12px",
-                border:"1px solid rgba(201,168,76,0.2)",
+                position: "absolute", top: "0.8rem", left: "50%",
+                transform: "translateX(-50%)",
+                color: "#C9A84C", fontSize: "0.58rem", letterSpacing: "0.3em",
+                textTransform: "uppercase", fontFamily: "var(--font-montserrat)",
+                fontWeight: 700, pointerEvents: "none", whiteSpace: "nowrap",
+                background: "rgba(6,5,4,0.7)", padding: "4px 12px",
+                border: "1px solid rgba(201,168,76,0.2)",
               }}>
                 {FLOORS[selected].name}
               </div>
@@ -847,10 +888,10 @@ export default function MallMapSection() {
 
             {selected === null && (
               <div style={{
-                position:"absolute", bottom:"0.8rem", left:"50%", transform:"translateX(-50%)",
-                color:"rgba(255,255,255,0.18)", fontSize:"0.56rem", letterSpacing:"0.22em",
-                textTransform:"uppercase", fontFamily:"var(--font-montserrat)", fontWeight:500,
-                pointerEvents:"none", whiteSpace:"nowrap",
+                position: "absolute", bottom: "0.8rem", left: "50%", transform: "translateX(-50%)",
+                color: "rgba(255,255,255,0.18)", fontSize: "0.56rem", letterSpacing: "0.22em",
+                textTransform: "uppercase", fontFamily: "var(--font-montserrat)", fontWeight: 500,
+                pointerEvents: "none", whiteSpace: "nowrap",
               }}>
                 Drag · Click a floor
               </div>
@@ -858,16 +899,18 @@ export default function MallMapSection() {
           </div>
 
           {/* Right — info panel */}
-          <div style={{ borderLeft:"1px solid rgba(201,168,76,0.08)", paddingLeft:"1.4rem", minHeight:"200px" }}>
-            <SidePanel floor={selected !== null ? FLOORS[selected] : null} visible={true} />
+          <div style={{ borderLeft: "1px solid rgba(201,168,76,0.08)", paddingLeft: "1.4rem", minHeight: "200px" }}>
+            <SidePanel floor={selected !== null ? FLOORS[selected] : null} visible={true} gsapRef={gsapRef} />
           </div>
 
         </div>
       </div>
 
       {/* Bottom divider */}
-      <div style={{ marginTop:"5rem", height:"1px",
-        background:"linear-gradient(to right,transparent,rgba(201,168,76,0.12),transparent)" }} />
+      <div style={{
+        marginTop: "5rem", height: "1px",
+        background: "linear-gradient(to right,transparent,rgba(201,168,76,0.12),transparent)"
+      }} />
 
       <style>{`
         .map-inner-grid {

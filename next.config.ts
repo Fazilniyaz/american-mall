@@ -3,11 +3,11 @@ import type { NextConfig } from "next";
 const nextConfig: NextConfig = {
   reactStrictMode: true,
 
-  // Tree-shake D3 sub-packages (clean module structure, safe to optimize).
-  // Intentionally NOT including 'three' or 'gsap' — their barrel-export
-  // structures don't work well with this transform and can increase bundle size.
+  // Tree-shake D3 + Three.js sub-packages (clean module structure, safe to optimize).
+  // Intentionally NOT including 'gsap' — its barrel-export structure doesn't
+  // work well with this transform and can increase bundle size.
   experimental: {
-    optimizePackageImports: ["d3-selection", "d3-shape"],
+    optimizePackageImports: ["d3-selection", "d3-shape", "three"],
   },
 
   // Remove console.log in production builds

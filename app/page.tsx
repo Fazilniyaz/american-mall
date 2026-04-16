@@ -1,12 +1,15 @@
 import NumbersSection from "@/components/Numbers/NumbersSection";
 import HeroSection from "@/components/Hero/HeroSection";
 import Navbar from "@/components/Navbar/Navbar";
-import MallMapSection from "@/components/MallMap/MallMapSection";
 import dynamic from "next/dynamic";
 
 // Lazy load WhosHereSection — it's heavy and below the fold
 // Dynamic import without ssr:false will still lazy load the component code
 const WhosHereSection = dynamic(() => import("@/components/WhoIsHere/WhosHereSection"));
+
+// Lazy load MallMapSection — heaviest component (Three.js + D3 + GSAP),
+// always below the fold. Code-split into a separate chunk.
+const MallMapSection = dynamic(() => import("@/components/MallMap/MallMapSection"));
 
 export const metadata = {
   title: "The American Mall Experience",
