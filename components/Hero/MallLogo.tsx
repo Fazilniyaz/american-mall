@@ -8,16 +8,23 @@ export default function MallLogo() {
 
   useEffect(() => {
     const ctx = gsap.context(() => {
+      // Logo mark — entrance animation (kept)
       gsap.fromTo(
         ".logo-mark",
         { opacity: 0, scale: 0.7, rotate: -15 },
         { opacity: 1, scale: 1, rotate: 0, duration: 1.1, ease: "expo.out", delay: 0.4 }
       );
+
+      // Wordmark — animate ONLY translate, NOT opacity
+      // The wordmark contains the LCP text ("Bloomington · Minnesota"),
+      // so it MUST be visible from the first paint. We keep a subtle
+      // slide-in for polish.
       gsap.fromTo(
         ".logo-wordmark-group",
-        { opacity: 0, x: -12 },
-        { opacity: 1, x: 0, duration: 0.9, ease: "power3.out", delay: 0.85 }
+        { x: -12 },
+        { x: 0, duration: 0.9, ease: "power3.out", delay: 0.85 }
       );
+
       gsap.fromTo(
         ".logo-divider",
         { scaleY: 0 },
@@ -58,13 +65,13 @@ export default function MallLogo() {
       >
         <defs>
           <linearGradient id="g1" x1="0%" y1="0%" x2="100%" y2="100%">
-           <stop offset="0%"  stopColor="#F0D988" />   // warm light gold
-<stop offset="50%" stopColor="#C9A84C" />   // true gold mid
-<stop offset="100%" stopColor="#8A6820" />  // deep bronze
+            <stop offset="0%" stopColor="#F0D988" />
+            <stop offset="50%" stopColor="#C9A84C" />
+            <stop offset="100%" stopColor="#8A6820" />
           </linearGradient>
           <linearGradient id="g2" x1="100%" y1="0%" x2="0%" y2="100%">
-            <stop offset="0%"  stopColor="#F5E8A0" />   // soft shimmer
-<stop offset="100%" stopColor="#B8922E" />  // rich bronze
+            <stop offset="0%" stopColor="#F5E8A0" />
+            <stop offset="100%" stopColor="#B8922E" />
           </linearGradient>
         </defs>
 
@@ -88,9 +95,9 @@ export default function MallLogo() {
           <circle cx="22" cy="22" r="14" fill="none" stroke="url(#g1)" strokeWidth="1" opacity="0.6" />
 
           {/* Cardinal arms */}
-          <line x1="22" y1="8"  x2="22" y2="14" stroke="url(#g1)" strokeWidth="1.2" strokeLinecap="round" />
+          <line x1="22" y1="8" x2="22" y2="14" stroke="url(#g1)" strokeWidth="1.2" strokeLinecap="round" />
           <line x1="22" y1="30" x2="22" y2="36" stroke="url(#g1)" strokeWidth="1.2" strokeLinecap="round" />
-          <line x1="8"  y1="22" x2="14" y2="22" stroke="url(#g1)" strokeWidth="1.2" strokeLinecap="round" />
+          <line x1="8" y1="22" x2="14" y2="22" stroke="url(#g1)" strokeWidth="1.2" strokeLinecap="round" />
           <line x1="30" y1="22" x2="36" y2="22" stroke="url(#g1)" strokeWidth="1.2" strokeLinecap="round" />
 
           {/* Outer diamond outline */}
@@ -110,10 +117,10 @@ export default function MallLogo() {
           <circle cx="22" cy="22" r="1.8" fill="#0a0a0a" opacity="0.55" />
 
           {/* Corner dots on ring */}
-          <circle cx="22" cy="8"  r="1.2" fill="#C9A84C" opacity="0.8" />
+          <circle cx="22" cy="8" r="1.2" fill="#C9A84C" opacity="0.8" />
           <circle cx="36" cy="22" r="1.2" fill="#C9A84C" opacity="0.8" />
           <circle cx="22" cy="36" r="1.2" fill="#C9A84C" opacity="0.8" />
-          <circle cx="8"  cy="22" r="1.2" fill="#C9A84C" opacity="0.8" />
+          <circle cx="8" cy="22" r="1.2" fill="#C9A84C" opacity="0.8" />
         </g>
       </svg>
 
@@ -129,7 +136,7 @@ export default function MallLogo() {
         }}
       />
 
-      {/* ── Wordmark ── */}
+      {/* ── Wordmark — MUST be visible from first paint (LCP element) ── */}
       <div
         className="logo-wordmark-group"
         style={{ display: "flex", flexDirection: "column", gap: "1px" }}

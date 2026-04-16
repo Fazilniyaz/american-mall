@@ -8,20 +8,20 @@ const stats = [
   { value: "40M+", label: "Annual Visitors" },
   { value: "520+", label: "Stores & Restaurants" },
   { value: "5.6M", label: "Square Feet" },
-  { value: "#1",   label: "Most Visited Mall in America" },
+  { value: "#1", label: "Most Visited Mall in America" },
 ];
 
 const SHUFFLE_CHARS = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ#@$%&+";
 
 function useShuffleText(originalText: string) {
-  const rafRef  = useRef<number | null>(null);
+  const rafRef = useRef<number | null>(null);
   const iterRef = useRef(0);
-  const runRef  = useRef(false);
+  const runRef = useRef(false);
 
   const shuffle = useCallback((el: HTMLElement, onComplete?: () => void) => {
     if (rafRef.current) cancelAnimationFrame(rafRef.current);
     iterRef.current = 0;
-    runRef.current  = true;
+    runRef.current = true;
     const total = originalText.length * 5;
 
     const step = () => {
@@ -59,8 +59,8 @@ function useShuffleText(originalText: string) {
 }
 
 function StatItem({ value, label }: { value: string; label: string }) {
-  const valueRef  = useRef<HTMLDivElement>(null);
-  const labelRef  = useRef<HTMLDivElement>(null);
+  const valueRef = useRef<HTMLDivElement>(null);
+  const labelRef = useRef<HTMLDivElement>(null);
   const borderRef = useRef<HTMLDivElement>(null);
   const { shuffle, cancel } = useShuffleText(value);
 
@@ -105,9 +105,9 @@ function StatItem({ value, label }: { value: string; label: string }) {
       onMouseLeave={onLeave}
       style={{
         paddingLeft: "1rem",
-        position:    "relative",
-        cursor:      "default",
-        userSelect:  "none",
+        position: "relative",
+        cursor: "default",
+        userSelect: "none",
         // Let CSS grid control sizing — no fixed widths here
       }}
     >
@@ -115,16 +115,15 @@ function StatItem({ value, label }: { value: string; label: string }) {
       <div
         ref={borderRef}
         style={{
-          position:        "absolute",
-          left:            0,
-          top:             "50%",
-          transform:       "translateY(-50%)",
-          width:           "2px",
-          height:          "75%",
-          background:      "linear-gradient(to bottom, #C9A84C, rgba(201,168,76,0.2))",
-          opacity:         0.5,
+          position: "absolute",
+          left: 0,
+          top: "50%",
+          transform: "translateY(-50%)",
+          width: "2px",
+          height: "75%",
+          background: "linear-gradient(to bottom, #C9A84C, rgba(201,168,76,0.2))",
+          opacity: 0.5,
           transformOrigin: "center",
-          willChange:      "transform, opacity",
         }}
       />
 
@@ -133,12 +132,11 @@ function StatItem({ value, label }: { value: string; label: string }) {
         ref={valueRef}
         className="stat-value"
         style={{
-          color:              "#C9A84C",
-          fontWeight:         800,
-          fontFamily:         "var(--font-montserrat)",
-          lineHeight:         1,
-          willChange:         "transform",
-          transformOrigin:    "left center",
+          color: "#C9A84C",
+          fontWeight: 800,
+          fontFamily: "var(--font-montserrat)",
+          lineHeight: 1,
+          transformOrigin: "left center",
           fontVariantNumeric: "tabular-nums",
         }}
       >
@@ -150,13 +148,12 @@ function StatItem({ value, label }: { value: string; label: string }) {
         ref={labelRef}
         className="stat-label"
         style={{
-          color:         "rgba(255,255,255,0.68)",
-          marginTop:     "0.3rem",
+          color: "rgba(255,255,255,0.68)",
+          marginTop: "0.3rem",
           letterSpacing: "0.08em",
           textTransform: "uppercase",
-          fontFamily:    "var(--font-montserrat)",
-          fontWeight:    500,
-          willChange:    "transform, opacity",
+          fontFamily: "var(--font-montserrat)",
+          fontWeight: 500,
         }}
       >
         {label}
@@ -177,12 +174,12 @@ export default function HeroStats() {
         gsap.to(
           ".stat-item",
           {
-            opacity:  1,
-            y:        0,
+            opacity: 1,
+            y: 0,
             duration: 0.7,
-            ease:     "power2.out",
-            stagger:  0.15,
-            delay:    0,
+            ease: "power2.out",
+            stagger: 0.15,
+            delay: 0,
           }
         );
         // Tagline: subtle animation only
@@ -202,26 +199,26 @@ export default function HeroStats() {
       <div
         ref={wrapRef}
         style={{
-          position:       "absolute",
-          inset:          0,
-          zIndex:         3,
-          display:        "flex",
-          flexDirection:  "column",
+          position: "absolute",
+          inset: 0,
+          zIndex: 3,
+          display: "flex",
+          flexDirection: "column",
           justifyContent: "center",
-          alignItems:     "center",
+          alignItems: "center",
           // Padding: top accounts for 60px navbar, bottom for scroll indicator
-          padding:        "80px 1.5rem 70px",
-          boxSizing:      "border-box",
+          padding: "80px 1.5rem 70px",
+          boxSizing: "border-box",
           // Prevent any overflow on tiny phones
-          overflow:       "hidden",
+          overflow: "hidden",
         }}
       >
         {/* Dark gradient overlay */}
         <div style={{
-          position:   "absolute",
-          inset:      0,
+          position: "absolute",
+          inset: 0,
           background: "linear-gradient(160deg, rgba(0,0,0,0.2) 0%, rgba(0,0,0,0.65) 100%)",
-          zIndex:     -1,
+          zIndex: -1,
         }} />
 
         {/* Logo */}
@@ -233,15 +230,15 @@ export default function HeroStats() {
         <p
           className="hero-tagline"
           style={{
-            color:         "rgba(255,255,255,0.48)",
+            color: "rgba(255,255,255,0.48)",
             letterSpacing: "0.3em",
             textTransform: "uppercase",
-            fontFamily:    "var(--font-montserrat)",
-            fontWeight:    400,
-            marginBottom:  "clamp(1.5rem, 4vw, 3rem)",
-            marginTop:     "-0.3rem",
-            textAlign:     "center",
-            opacity:       1,  // ← Ensure always visible (critical for LCP)
+            fontFamily: "var(--font-montserrat)",
+            fontWeight: 400,
+            marginBottom: "clamp(1.5rem, 4vw, 3rem)",
+            marginTop: "-0.3rem",
+            textAlign: "center",
+            opacity: 1,  // ← Ensure always visible (critical for LCP)
           }}
         >
           America&apos;s most iconic retail destination
@@ -256,22 +253,22 @@ export default function HeroStats() {
 
         {/* Scroll indicator */}
         <div style={{
-          position:      "absolute",
-          bottom:        "1.5rem",
-          display:       "flex",
+          position: "absolute",
+          bottom: "1.5rem",
+          display: "flex",
           flexDirection: "column",
-          alignItems:    "center",
-          gap:           "0.4rem",
-          color:         "rgba(255,255,255,0.38)",
+          alignItems: "center",
+          gap: "0.4rem",
+          color: "rgba(255,255,255,0.38)",
           letterSpacing: "0.25em",
           textTransform: "uppercase",
-          fontFamily:    "var(--font-montserrat)",
-          fontWeight:    500,
+          fontFamily: "var(--font-montserrat)",
+          fontWeight: 500,
         }}>
           <span className="scroll-text">Scroll</span>
           <div style={{
-            width:      "1px",
-            height:     "32px",
+            width: "1px",
+            height: "32px",
             background: "linear-gradient(to bottom, rgba(255,255,255,0.4), transparent)",
           }} />
         </div>

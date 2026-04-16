@@ -9,33 +9,33 @@ const ParticleCanvas = dynamic(() => import("./ParticleCanvas"), { ssr: false })
 
 export default function HeroSection() {
   const videoRef = useRef<HTMLVideoElement>(null);
-  const [isMobile, setIsMobile] = useState(false);
+  const [isDesktop, setIsDesktop] = useState(false);
   const [videoReady, setVideoReady] = useState(false);
 
+  // Step 1: Detect desktop once on client
   useEffect(() => {
-    // Detect mobile once on client
-    const mobile = window.matchMedia("(max-width: 768px)").matches;
-    setIsMobile(mobile);
+    setIsDesktop(window.matchMedia("(min-width: 769px)").matches);
+  }, []);
 
-    if (mobile || !videoRef.current) return;
+  // Step 2: Load video AFTER the <video> element mounts (which happens
+  // after the re-render triggered by setIsDesktop(true) above)
+  useEffect(() => {
+    if (!isDesktop || !videoRef.current) return;
 
     const video = videoRef.current;
 
-    // Defer video load until after page is interactive
-    // This prevents video from blocking LCP
     const loadVideo = () => {
       video.src = "/videos/videoplayback.mp4";
       video.load();
     };
 
-    // Use requestIdleCallback if available, else 2s timeout
     if ("requestIdleCallback" in window) {
       (window as Window & typeof globalThis).requestIdleCallback(loadVideo, { timeout: 2000 });
     } else {
       const t = setTimeout(loadVideo, 1500);
       return () => clearTimeout(t);
     }
-  }, []);
+  }, [isDesktop]);
 
   const handleVideoReady = () => setVideoReady(true);
 
@@ -49,30 +49,38 @@ export default function HeroSection() {
         background: "#000",
       }}
     >
-      {/* ── MOBILE: static poster image (no video, no WebGL) ── */}
-      {isMobile && (
-        <div
-          style={{
-            position: "absolute",
-            inset: 0,
-            zIndex: 1,
-            backgroundImage: "url('/photos/hero-poster.jpg')",
-            backgroundSize: "cover",
-            backgroundPosition: "center",
-          }}
-        />
-      )}
+      {/* ── POSTER IMAGE: Always rendered in SSR for instant LCP ── */}
+      {/* On mobile this is the permanent background;
+          on desktop it's the fallback while video loads */}
+      <img
+        src="/photos/hero-poster.jpg"
+        alt=""
+        width={1920}
+        height={1080}
+        fetchPriority="high"
+        decoding="async"
+        style={{
+          position: "absolute",
+          inset: 0,
+          width: "100%",
+          height: "100%",
+          objectFit: "cover",
+          zIndex: 1,
+          // Hide poster once desktop video is playing
+          opacity: isDesktop && videoReady ? 0 : 1,
+          transition: "opacity 0.8s ease",
+        }}
+      />
 
-      {/* ── DESKTOP: lazy-loaded video ── */}
-      {!isMobile && (
+      {/* ── DESKTOP: lazy-loaded video (only mounts after hydration) ── */}
+      {isDesktop && (
         <video
           ref={videoRef}
           autoPlay
           muted
           loop
-          poster="/photos/hero-poster.jpg"
           playsInline
-          preload="none"          // ← critical: don't block page load
+          preload="none"
           onCanPlay={handleVideoReady}
           style={{
             position: "absolute",
@@ -87,24 +95,11 @@ export default function HeroSection() {
         />
       )}
 
-      {/* Fallback black bg while video loads on desktop */}
-      {!isMobile && !videoReady && (
-        <div
-          style={{
-            position: "absolute",
-            inset: 0,
-            zIndex: 1,
-            background: "radial-gradient(ellipse at 60% 40%, #1a1408 0%, #000 70%)",
-          }}
-        />
-      )}
-
       {/* ── Three.js particles — desktop only ── */}
-      {!isMobile && <ParticleCanvas />}
+      {isDesktop && <ParticleCanvas />}
 
       {/* ── Text + Stats — always rendered ── */}
       <HeroStats />
     </section>
   );
-
 }
