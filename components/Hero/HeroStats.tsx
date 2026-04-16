@@ -169,26 +169,32 @@ export default function HeroStats() {
   const wrapRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    const ctx = gsap.context(() => {
-      gsap.fromTo(
-        ".stat-item",
-        { opacity: 0, y: 28 },
-        {
-          opacity:  1,
-          y:        0,
-          duration: 0.7,
-          ease:     "power2.out",
-          stagger:  0.15,
-          delay:    1.3,
-        }
-      );
-      gsap.fromTo(
-        ".hero-tagline",
-        { opacity: 0, y: 16 },
-        { opacity: 1, y: 0, duration: 0.75, ease: "power2.out", delay: 1.0 }
-      );
-    }, wrapRef);
-    return () => ctx.revert();
+    // Defer animation setup to not block initial render
+    const animationTimer = setTimeout(() => {
+      const ctx = gsap.context(() => {
+        gsap.fromTo(
+          ".stat-item",
+          { opacity: 0, y: 28 },
+          {
+            opacity:  1,
+            y:        0,
+            duration: 0.7,
+            ease:     "power2.out",
+            stagger:  0.15,
+            delay:    0.3, // Reduced from 1.3
+          }
+        );
+        // Tagline: animate from visible → animate subtle entrance
+        gsap.fromTo(
+          ".hero-tagline",
+          { opacity: 1, y: 0 },  // ← START VISIBLE (critical for LCP)
+          { opacity: 1, y: -8, duration: 0.6, ease: "power2.out", delay: 0.1, yoyo: true, repeat: 1 }
+        );
+      }, wrapRef);
+      return () => ctx.revert();
+    }, 100); // Defer 100ms to allow initial paint
+
+    return () => clearTimeout(animationTimer);
   }, []);
 
   return (
@@ -235,6 +241,7 @@ export default function HeroStats() {
             marginBottom:  "clamp(1.5rem, 4vw, 3rem)",
             marginTop:     "-0.3rem",
             textAlign:     "center",
+            opacity:       1,  // ← Ensure always visible (critical for LCP)
           }}
         >
           America&apos;s most iconic retail destination
