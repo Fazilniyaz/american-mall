@@ -5,10 +5,10 @@ import gsap from "gsap";
 import MallLogo from "./MallLogo";
 
 const stats = [
-  { value: "40M+",  label: "Annual Visitors" },
-  { value: "520+",  label: "Stores & Restaurants" },
-  { value: "5.6M",  label: "Square Feet" },
-  { value: "#1",    label: "Most Visited Mall in America" },
+  { value: "40M+", label: "Annual Visitors" },
+  { value: "520+", label: "Stores & Restaurants" },
+  { value: "5.6M", label: "Square Feet" },
+  { value: "#1",   label: "Most Visited Mall in America" },
 ];
 
 const SHUFFLE_CHARS = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ#@$%&+";
@@ -69,27 +69,33 @@ function StatItem({ value, label }: { value: string; label: string }) {
     shuffle(valueRef.current);
     gsap.killTweensOf(labelRef.current);
     gsap.to(labelRef.current, {
-      y: -5, opacity: 0.45, letterSpacing: "0.28em",
-      duration: 0.28, ease: "power2.out",
+      y: -4, opacity: 0.45, letterSpacing: "0.24em",
+      duration: 0.25, ease: "power2.out",
       yoyo: true, repeat: 1,
       onComplete: () =>
-        gsap.to(labelRef.current, { y: 0, opacity: 1, letterSpacing: "0.1em", duration: 0.38, ease: "power2.inOut" }),
+        gsap.to(labelRef.current, {
+          y: 0, opacity: 1, letterSpacing: "0.08em",
+          duration: 0.35, ease: "power2.inOut",
+        }),
     });
     gsap.killTweensOf(borderRef.current);
-    gsap.to(borderRef.current, { opacity: 1, scaleY: 1.18, duration: 0.22, ease: "power2.out" });
+    gsap.to(borderRef.current, { opacity: 1, scaleY: 1.18, duration: 0.2, ease: "power2.out" });
     gsap.killTweensOf(valueRef.current);
-    gsap.to(valueRef.current, { scale: 1.07, duration: 0.22, ease: "power2.out" });
+    gsap.to(valueRef.current, { scale: 1.06, duration: 0.2, ease: "power2.out" });
   }, [shuffle]);
 
   const onLeave = useCallback(() => {
     if (!valueRef.current || !labelRef.current || !borderRef.current) return;
     cancel(valueRef.current);
     gsap.killTweensOf(labelRef.current);
-    gsap.to(labelRef.current, { y: 0, opacity: 1, letterSpacing: "0.1em", duration: 0.38, ease: "power2.inOut" });
+    gsap.to(labelRef.current, {
+      y: 0, opacity: 1, letterSpacing: "0.08em",
+      duration: 0.35, ease: "power2.inOut",
+    });
     gsap.killTweensOf(borderRef.current);
-    gsap.to(borderRef.current, { opacity: 0.55, scaleY: 1, duration: 0.32, ease: "power2.inOut" });
+    gsap.to(borderRef.current, { opacity: 0.5, scaleY: 1, duration: 0.3, ease: "power2.inOut" });
     gsap.killTweensOf(valueRef.current);
-    gsap.to(valueRef.current, { scale: 1, duration: 0.32, ease: "power2.inOut" });
+    gsap.to(valueRef.current, { scale: 1, duration: 0.3, ease: "power2.inOut" });
   }, [cancel]);
 
   return (
@@ -97,46 +103,60 @@ function StatItem({ value, label }: { value: string; label: string }) {
       className="stat-item"
       onMouseEnter={onEnter}
       onMouseLeave={onLeave}
-      style={{ paddingLeft: "1.4rem", position: "relative", cursor: "default", userSelect: "none" }}
+      style={{
+        paddingLeft: "1rem",
+        position:    "relative",
+        cursor:      "default",
+        userSelect:  "none",
+        // Let CSS grid control sizing — no fixed widths here
+      }}
     >
+      {/* Left gold border */}
       <div
         ref={borderRef}
         style={{
-          position: "absolute", left: 0, top: "50%",
-          transform: "translateY(-50%)",
-          width: "2px", height: "78%",
-          background: "linear-gradient(to bottom, #C9A84C, rgba(201,168,76,0.25))",
-          opacity: 0.55, transformOrigin: "center",
-          willChange: "transform, opacity",
+          position:        "absolute",
+          left:            0,
+          top:             "50%",
+          transform:       "translateY(-50%)",
+          width:           "2px",
+          height:          "75%",
+          background:      "linear-gradient(to bottom, #C9A84C, rgba(201,168,76,0.2))",
+          opacity:         0.5,
+          transformOrigin: "center",
+          willChange:      "transform, opacity",
         }}
       />
+
+      {/* Value */}
       <div
         ref={valueRef}
+        className="stat-value"
         style={{
-          color: "#C9A84C",
-          fontSize: "clamp(1.75rem, 3.2vw, 2.7rem)",
-          fontWeight: 800,
-          fontFamily: "var(--font-montserrat)",
-          lineHeight: 1,
-          willChange: "transform",
-          transformOrigin: "left center",
+          color:              "#C9A84C",
+          fontWeight:         800,
+          fontFamily:         "var(--font-montserrat)",
+          lineHeight:         1,
+          willChange:         "transform",
+          transformOrigin:    "left center",
           fontVariantNumeric: "tabular-nums",
-          minWidth: "4ch",
         }}
       >
         {value}
       </div>
+
+      {/* Label */}
       <div
         ref={labelRef}
+        className="stat-label"
         style={{
-          color: "rgba(255,255,255,0.7)",
-          fontSize: "clamp(0.62rem, 1.1vw, 0.82rem)",
-          marginTop: "0.35rem",
-          letterSpacing: "0.1em",
+          color:         "rgba(255,255,255,0.68)",
+          marginTop:     "0.3rem",
+          letterSpacing: "0.08em",
           textTransform: "uppercase",
-          fontFamily: "var(--font-montserrat)",
-          fontWeight: 500,
-          willChange: "transform, opacity",
+          fontFamily:    "var(--font-montserrat)",
+          fontWeight:    500,
+          willChange:    "transform, opacity",
         }}
       >
         {label}
@@ -152,83 +172,182 @@ export default function HeroStats() {
     const ctx = gsap.context(() => {
       gsap.fromTo(
         ".stat-item",
-        { opacity: 0, y: 36 },
-        { opacity: 1, y: 0, duration: 0.75, ease: "power2.out", stagger: 0.18, delay: 1.4 }
+        { opacity: 0, y: 28 },
+        {
+          opacity:  1,
+          y:        0,
+          duration: 0.7,
+          ease:     "power2.out",
+          stagger:  0.15,
+          delay:    1.3,
+        }
       );
       gsap.fromTo(
         ".hero-tagline",
-        { opacity: 0, y: 20 },
-        { opacity: 1, y: 0, duration: 0.8, ease: "power2.out", delay: 1.0 }
+        { opacity: 0, y: 16 },
+        { opacity: 1, y: 0, duration: 0.75, ease: "power2.out", delay: 1.0 }
       );
     }, wrapRef);
     return () => ctx.revert();
   }, []);
 
   return (
-    <div
-      ref={wrapRef}
-      style={{
-        position: "absolute", inset: 0, zIndex: 3,
-        display: "flex", flexDirection: "column",
-        justifyContent: "center", alignItems: "center",
-        padding: "0 2rem",
-      }}
-    >
-      {/* Gradient overlay */}
-      <div style={{
-        position: "absolute", inset: 0,
-        background: "linear-gradient(160deg, rgba(0,0,0,0.22) 0%, rgba(0,0,0,0.62) 100%)",
-        zIndex: -1,
-      }} />
-
-      {/* Logo mark + wordmark inline */}
-      <MallLogo />
-
-      {/* Tagline */}
-      <p
-        className="hero-tagline"
+    <>
+      <div
+        ref={wrapRef}
         style={{
-          color: "rgba(255,255,255,0.5)",
-          fontSize: "clamp(0.7rem, 1.3vw, 0.95rem)",
-          letterSpacing: "0.38em",
-          textTransform: "uppercase",
-          fontFamily: "var(--font-montserrat)",
-          fontWeight: 400,
-          marginBottom: "3rem",
-          marginTop: "-0.4rem",
+          position:       "absolute",
+          inset:          0,
+          zIndex:         3,
+          display:        "flex",
+          flexDirection:  "column",
+          justifyContent: "center",
+          alignItems:     "center",
+          // Padding: top accounts for 60px navbar, bottom for scroll indicator
+          padding:        "80px 1.5rem 70px",
+          boxSizing:      "border-box",
+          // Prevent any overflow on tiny phones
+          overflow:       "hidden",
         }}
       >
-        America&apos;s most iconic retail destination
-      </p>
-
-      {/* Stats row */}
-      <div style={{
-        display: "flex",
-        gap: "clamp(1.4rem, 3.8vw, 3.8rem)",
-        flexWrap: "wrap",
-        justifyContent: "center",
-      }}>
-        {stats.map((s) => (
-          <StatItem key={s.value} value={s.value} label={s.label} />
-        ))}
-      </div>
-
-      {/* Scroll indicator */}
-      <div style={{
-        position: "absolute", bottom: "2rem",
-        display: "flex", flexDirection: "column",
-        alignItems: "center", gap: "0.5rem",
-        color: "rgba(255,255,255,0.4)",
-        fontSize: "0.65rem", letterSpacing: "0.25em",
-        textTransform: "uppercase",
-        fontFamily: "var(--font-montserrat)", fontWeight: 500,
-      }}>
-        <span>Scroll</span>
+        {/* Dark gradient overlay */}
         <div style={{
-          width: "1px", height: "38px",
-          background: "linear-gradient(to bottom, rgba(255,255,255,0.45), transparent)",
+          position:   "absolute",
+          inset:      0,
+          background: "linear-gradient(160deg, rgba(0,0,0,0.2) 0%, rgba(0,0,0,0.65) 100%)",
+          zIndex:     -1,
         }} />
+
+        {/* Logo */}
+        <div className="hero-logo-wrap">
+          <MallLogo />
+        </div>
+
+        {/* Tagline */}
+        <p
+          className="hero-tagline"
+          style={{
+            color:         "rgba(255,255,255,0.48)",
+            letterSpacing: "0.3em",
+            textTransform: "uppercase",
+            fontFamily:    "var(--font-montserrat)",
+            fontWeight:    400,
+            marginBottom:  "clamp(1.5rem, 4vw, 3rem)",
+            marginTop:     "-0.3rem",
+            textAlign:     "center",
+          }}
+        >
+          America&apos;s most iconic retail destination
+        </p>
+
+        {/* Stats grid — responsive via CSS */}
+        <div className="stats-grid">
+          {stats.map((s) => (
+            <StatItem key={s.value} value={s.value} label={s.label} />
+          ))}
+        </div>
+
+        {/* Scroll indicator */}
+        <div style={{
+          position:      "absolute",
+          bottom:        "1.5rem",
+          display:       "flex",
+          flexDirection: "column",
+          alignItems:    "center",
+          gap:           "0.4rem",
+          color:         "rgba(255,255,255,0.38)",
+          letterSpacing: "0.25em",
+          textTransform: "uppercase",
+          fontFamily:    "var(--font-montserrat)",
+          fontWeight:    500,
+        }}>
+          <span className="scroll-text">Scroll</span>
+          <div style={{
+            width:      "1px",
+            height:     "32px",
+            background: "linear-gradient(to bottom, rgba(255,255,255,0.4), transparent)",
+          }} />
+        </div>
       </div>
-    </div>
+
+      {/* ── All responsive CSS in one place ──────────────────────── */}
+      <style>{`
+
+        /* ── Stats grid layout ─────────────────────────────────── */
+
+        /* Mobile default: 2×2 grid, fills width evenly */
+        .stats-grid {
+          display: grid;
+          grid-template-columns: 1fr 1fr;
+          gap: 1.4rem 1.6rem;
+          width: 100%;
+          max-width: 480px;
+        }
+
+        /* Tablet and up: single row of 4 */
+        @media (min-width: 640px) {
+          .stats-grid {
+            grid-template-columns: repeat(4, auto);
+            max-width: none;
+            gap: clamp(1.5rem, 4vw, 4rem);
+            width: auto;
+          }
+        }
+
+        /* ── Stat value font size ──────────────────────────────── */
+
+        /* Small phones (< 390px) */
+        .stat-value {
+          font-size: clamp(1.5rem, 7vw, 2rem);
+        }
+
+        /* Normal phones (390px – 639px) */
+        @media (min-width: 390px) {
+          .stat-value {
+            font-size: clamp(1.7rem, 7vw, 2.2rem);
+          }
+        }
+
+        /* Tablet and up */
+        @media (min-width: 640px) {
+          .stat-value {
+            font-size: clamp(1.9rem, 3vw, 2.7rem);
+          }
+        }
+
+        /* ── Stat label font size ──────────────────────────────── */
+        .stat-label {
+          font-size: clamp(0.55rem, 2.2vw, 0.72rem);
+        }
+
+        @media (min-width: 640px) {
+          .stat-label {
+            font-size: clamp(0.62rem, 1vw, 0.82rem);
+          }
+        }
+
+        /* ── Tagline font size ─────────────────────────────────── */
+        .hero-tagline {
+          font-size: clamp(0.55rem, 2.8vw, 0.92rem);
+        }
+
+        /* ── Logo scale down on very small phones ──────────────── */
+        @media (max-width: 360px) {
+          .hero-logo-wrap svg {
+            width: 34px !important;
+            height: 34px !important;
+          }
+          .hero-logo-wrap [style*="font-size: 1.22rem"] {
+            font-size: 1rem !important;
+          }
+        }
+
+        /* ── Scroll label hide on tiny screens to save space ───── */
+        @media (max-height: 680px) {
+          .scroll-text { display: none; }
+        }
+
+      `}</style>
+    </>
   );
 }
