@@ -1,6 +1,11 @@
 import type { Metadata } from "next";
 import { Playfair_Display, Montserrat } from "next/font/google";
-import "./globals.css";
+
+// ────────────────────────────────────────────────────────────────────────────
+// NO CSS IMPORT — the old `import "./globals.css"` created a render-blocking
+// CSS chunk (chunks/05rivr4ku8wlb.css, 1.8 KiB, 300ms blocking time).
+// All reset styles are now inlined via <style> in <head> below.
+// ────────────────────────────────────────────────────────────────────────────
 
 const playfairDisplay = Playfair_Display({
   variable: "--font-playfair",
@@ -29,25 +34,42 @@ export default function RootLayout({
   return (
     <html
       lang="en"
-      className={`${playfairDisplay.variable} ${montserrat.variable} h-full antialiased`}
+      className={`${playfairDisplay.variable} ${montserrat.variable}`}
+      style={{ height: "100%", WebkitTextSizeAdjust: "100%" }}
     >
       <head>
-        {/* Preconnect to Google Fonts origin — eliminates connection setup latency */}
-        <link rel="preconnect" href="https://fonts.googleapis.com" />
-        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
+        {/*
+          Inline critical reset CSS — this is NOT render-blocking because it's
+          inside the HTML document itself (no external CSS fetch required).
+          Previously this was in globals.css → compiled to a separate CSS chunk
+          that blocked FCP/LCP by 300ms.
+        */}
+        <style dangerouslySetInnerHTML={{
+          __html: `
+          *{margin:0;padding:0;box-sizing:border-box}
+          html,body{width:100%;height:100%;background:#000;overflow-x:hidden}
+        `}} />
 
-        {/* Preload critical LCP image for mobile — fetchpriority ensures highest browser priority */}
+        {/* Preload critical LCP image for mobile */}
         <link
           rel="preload"
           as="image"
           href="/photos/hero-poster.jpg"
           type="image/jpeg"
-          // fetchPriority is valid HTML but React types lag behind — cast via spread
           {...({ fetchpriority: "high" } as Record<string, string>)}
           media="(max-width: 768px)"
         />
+
+        {/*
+          REMOVED: preconnect to fonts.googleapis.com & fonts.gstatic.com
+          next/font/google downloads fonts at BUILD TIME and self-hosts them.
+          At runtime, these origins are NEVER fetched → Lighthouse flags them
+          as "Unused preconnect" and they waste DNS+TCP connection time.
+        */}
       </head>
-      <body className="min-h-full flex flex-col">{children}</body>
+      <body style={{ minHeight: "100%", display: "flex", flexDirection: "column" }}>
+        {children}
+      </body>
     </html>
   );
 }
