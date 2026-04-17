@@ -1,25 +1,15 @@
 import type { Metadata } from "next";
-import { Playfair_Display, Montserrat } from "next/font/google";
 
 // ────────────────────────────────────────────────────────────────────────────
-// NO CSS IMPORT — the old `import "./globals.css"` created a render-blocking
-// CSS chunk (chunks/05rivr4ku8wlb.css, 1.8 KiB, 300ms blocking time).
-// All reset styles are now inlined via <style> in <head> below.
+// NO next/font/google — it generates a render-blocking CSS chunk for
+// @font-face declarations (~1.6 KiB, 300ms blocking time on mobile).
+//
+// Instead, we:
+// 1. Define CSS custom properties with system font fallbacks (inline, instant)
+// 2. Load Google Fonts CSS asynchronously via a tiny inline <script>
+// 3. fonts.googleapis.com serves @font-face with font-display:swap,
+//    so text is visible immediately with system fonts, then swaps
 // ────────────────────────────────────────────────────────────────────────────
-
-const playfairDisplay = Playfair_Display({
-  variable: "--font-playfair",
-  subsets: ["latin"],
-  weight: ["700", "800"],
-  display: "swap",
-});
-
-const montserrat = Montserrat({
-  variable: "--font-montserrat",
-  subsets: ["latin"],
-  weight: ["400", "500", "600", "700", "800"],
-  display: "swap",
-});
 
 export const metadata: Metadata = {
   title: "Mall of America | America's Most Iconic Retail Destination",
@@ -32,23 +22,26 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html
-      lang="en"
-      className={`${playfairDisplay.variable} ${montserrat.variable}`}
-      style={{ height: "100%", WebkitTextSizeAdjust: "100%" }}
-    >
+    <html lang="en" style={{ height: "100%" }}>
       <head>
         {/*
-          Inline critical reset CSS — this is NOT render-blocking because it's
-          inside the HTML document itself (no external CSS fetch required).
-          Previously this was in globals.css → compiled to a separate CSS chunk
-          that blocked FCP/LCP by 300ms.
+          Inline critical CSS — this is NOT render-blocking because it's
+          part of the HTML document itself (no external fetch needed).
         */}
         <style dangerouslySetInnerHTML={{
-          __html: `
-          *{margin:0;padding:0;box-sizing:border-box}
-          html,body{width:100%;height:100%;background:#000;overflow-x:hidden}
-        `}} />
+          __html: [
+            "*{margin:0;padding:0;box-sizing:border-box}",
+            "html,body{width:100%;height:100%;background:#000;overflow-x:hidden}",
+            ":root{",
+            "--font-playfair:'Playfair Display',Georgia,serif;",
+            "--font-montserrat:'Montserrat',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif",
+            "}",
+          ].join("")
+        }} />
+
+        {/* Preconnect to Google Fonts CDN — NOW actually used */}
+        <link rel="preconnect" href="https://fonts.googleapis.com" />
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
 
         {/* Preload critical LCP image for mobile */}
         <link
@@ -61,11 +54,21 @@ export default function RootLayout({
         />
 
         {/*
-          REMOVED: preconnect to fonts.googleapis.com & fonts.gstatic.com
-          next/font/google downloads fonts at BUILD TIME and self-hosts them.
-          At runtime, these origins are NEVER fetched → Lighthouse flags them
-          as "Unused preconnect" and they waste DNS+TCP connection time.
+          Async font loader — dynamically creates a <link rel="stylesheet">
+          for Google Fonts. Dynamically-created stylesheets are NOT render-
+          blocking. Text renders instantly with system font fallbacks,
+          then font-display:swap swaps in Montserrat when loaded.
+
+          This tiny inline script (~150 bytes) executes in <0.1ms —
+          it does NOT cause TBT (no heavy computation, just DOM API call).
         */}
+        <script dangerouslySetInnerHTML={{
+          __html:
+            "var l=document.createElement('link');" +
+            "l.rel='stylesheet';" +
+            "l.href='https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800&display=swap';" +
+            "document.head.appendChild(l);"
+        }} />
       </head>
       <body style={{ minHeight: "100%", display: "flex", flexDirection: "column" }}>
         {children}
