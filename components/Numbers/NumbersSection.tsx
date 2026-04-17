@@ -1,13 +1,9 @@
 "use client";
 
 import { useEffect, useRef } from "react";
-import gsap from "gsap";
-import { ScrollTrigger } from "gsap/ScrollTrigger";
 import { select } from "d3-selection";
 import { arc as d3Arc } from "d3-shape";
 
-
-gsap.registerPlugin(ScrollTrigger);
 
 const STATS = [
   {
@@ -103,51 +99,53 @@ function ArcCounter({ stat, index }: { stat: typeof STATS[0]; index: number }) {
         .attr("stroke-width", 1);
     }
 
-    // Scroll trigger animation
-    ScrollTrigger.create({
-      trigger: svgRef.current,
-      start: "top 82%",
-      once: true,
-      onEnter: () => {
-        if (triggered.current) return;
+    // ── Scroll trigger via IntersectionObserver — NO GSAP on critical path ──
+    // ScrollTrigger was previously imported at the TOP LEVEL which added
+    // ~17 KB to the initial bundle and ran setup JS blocking the main thread.
+    // IntersectionObserver is zero-cost until the section actually enters view.
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (!entry.isIntersecting || triggered.current) return;
         triggered.current = true;
+        observer.disconnect();
 
-        // Arc fill
-        const endAngle = -Math.PI * 0.85 + Math.PI * 1.7 * stat.arc;
-        gsap.to({ angle: -Math.PI * 0.85 }, {
-          angle: endAngle,
-          duration: 1.6,
-          ease: "power2.out",
-          delay: index * 0.12,
-          onUpdate: function () {
-            // ts-expect-error gsap tween target
-            const a = this.targets()[0].angle;
-            // @ts-expect-error d3 arc
-            path.attr("d", arcFg.endAngle(a)());
-          },
-        });
+        // Lazy-load GSAP only after section is visible
+        import("gsap").then(({ default: gsap }) => {
+          const endAngle = -Math.PI * 0.85 + Math.PI * 1.7 * stat.arc;
+          gsap.to({ angle: -Math.PI * 0.85 }, {
+            angle: endAngle,
+            duration: 1.6,
+            ease: "power2.out",
+            delay: index * 0.12,
+            onUpdate: function () {
+              const a = this.targets()[0].angle;
+              // @ts-expect-error d3 arc
+              path.attr("d", arcFg.endAngle(a)());
+            },
+          });
 
-        // Number count up
-        const isDecimal = stat.value % 1 !== 0;
-        gsap.to({ val: 0 }, {
-          val: stat.value,
-          duration: 1.8,
-          ease: "power2.out",
-          delay: index * 0.12,
-          onUpdate: function () {
-            // ts-expect-error gsap tween target
-            const v = this.targets()[0].val;
-            if (countRef.current) {
-              countRef.current.textContent = isDecimal
-                ? v.toFixed(1) + stat.suffix
-                : Math.round(v) + stat.suffix;
-            }
-          },
+          const isDecimal = stat.value % 1 !== 0;
+          gsap.to({ val: 0 }, {
+            val: stat.value,
+            duration: 1.8,
+            ease: "power2.out",
+            delay: index * 0.12,
+            onUpdate: function () {
+              const v = this.targets()[0].val;
+              if (countRef.current) {
+                countRef.current.textContent = isDecimal
+                  ? v.toFixed(1) + stat.suffix
+                  : Math.round(v) + stat.suffix;
+              }
+            },
+          });
         });
       },
-    });
+      { rootMargin: "100px", threshold: 0 }
+    );
 
-    return () => { ScrollTrigger.getAll().forEach(t => t.kill()); };
+    if (svgRef.current) observer.observe(svgRef.current);
+    return () => observer.disconnect();
   }, [stat, index]);
 
   return (
@@ -171,16 +169,16 @@ function ArcCounter({ stat, index }: { stat: typeof STATS[0]; index: number }) {
           const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
           const mx = ((e.clientX - rect.left) / rect.width - 0.5) * 18;
           const my = ((e.clientY - rect.top) / rect.height - 0.5) * -18;
-          gsap.to(e.currentTarget, {
-            rotateY: mx, rotateX: my,
-            duration: 0.35, ease: "power2.out",
-          });
+          // Use CSS transforms instead of GSAP for hover (zero JS cost)
+          (e.currentTarget as HTMLElement).style.transform =
+            `rotateY(${mx}deg) rotateX(${my}deg)`;
         }}
         onMouseLeave={e => {
-          gsap.to(e.currentTarget, {
-            rotateY: 0, rotateX: 0,
-            duration: 0.6, ease: "elastic.out(1,0.6)",
-          });
+          (e.currentTarget as HTMLElement).style.transition = "transform 0.6s cubic-bezier(0.34,1.56,0.64,1)";
+          (e.currentTarget as HTMLElement).style.transform = "rotateY(0deg) rotateX(0deg)";
+          setTimeout(() => {
+            if (e.currentTarget) (e.currentTarget as HTMLElement).style.transition = "";
+          }, 600);
         }}
       >
         {/* D3 arc SVG */}
@@ -239,16 +237,44 @@ export default function NumbersSection() {
   const sectionRef = useRef<HTMLElement>(null);
 
   useEffect(() => {
-    const ctx = gsap.context(() => {
-      gsap.fromTo(".numbers-heading",
-        { opacity: 0, y: 30 },
-        {
-          opacity: 1, y: 0, duration: 0.9, ease: "power2.out",
-          scrollTrigger: { trigger: ".numbers-heading", start: "top 85%" }
-        }
-      );
-    }, sectionRef);
-    return () => ctx.revert();
+    const el = sectionRef.current;
+    if (!el) return;
+
+    // ── Heading animation — lazy GSAP ─────────────────────────────────────
+    // GSAP + ScrollTrigger were previously imported at the MODULE TOP LEVEL.
+    // This caused them to run during initial JS parse, blocking the main thread.
+    // Now they're imported lazily via IntersectionObserver when the section
+    // comes into view. Zero cost until needed.
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (!entry.isIntersecting) return;
+        observer.disconnect();
+
+        Promise.all([
+          import("gsap"),
+          import("gsap/ScrollTrigger"),
+        ]).then(([gsapMod, stMod]) => {
+          const gsap = gsapMod.default;
+          const { ScrollTrigger } = stMod;
+          gsap.registerPlugin(ScrollTrigger);
+
+          const ctx = gsap.context(() => {
+            gsap.fromTo(".numbers-heading",
+              { opacity: 0, y: 30 },
+              {
+                opacity: 1, y: 0, duration: 0.9, ease: "power2.out",
+                scrollTrigger: { trigger: ".numbers-heading", start: "top 85%" }
+              }
+            );
+          }, sectionRef);
+
+          return () => ctx.revert();
+        });
+      },
+      { rootMargin: "200px", threshold: 0 }
+    );
+    observer.observe(el);
+    return () => observer.disconnect();
   }, []);
 
   return (

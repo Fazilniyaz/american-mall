@@ -754,39 +754,61 @@ export default function MallMapSection() {
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
-    setIsMobile(window.innerWidth < 768);
-    setMounted(true);
+    const el = sectionRef.current;
+    if (!el) return;
 
-    // Lazy-import GSAP so it's NOT in the initial JS bundle
+    // ── Gate mount + GSAP behind IntersectionObserver ─────────────────────
+    // Previously: setMounted(true) + GSAP import ran IMMEDIATELY on page load,
+    // causing Three.js canvas to initialize and GSAP to parse while the user
+    // was still on the hero — wasting main thread budget and contributing to TBT.
+    //
+    // Now: Nothing happens until the section approaches the viewport (400px margin).
+    // This is the same pattern used by WhosHereSection.
     let ctx: { revert: () => void } | null = null;
-    Promise.all([
-      import("gsap"),
-      import("gsap/ScrollTrigger"),
-    ]).then(([gsapMod, stMod]) => {
-      const gsap = gsapMod.default;
-      const { ScrollTrigger } = stMod;
-      gsap.registerPlugin(ScrollTrigger);
-      gsapRef.current = gsap;
 
-      ctx = gsap.context(() => {
-        gsap.fromTo(".map-heading",
-          { opacity: 0, y: 24 },
-          {
-            opacity: 1, y: 0, duration: 0.9, ease: "power2.out",
-            scrollTrigger: { trigger: ".map-heading", start: "top 85%" }
-          }
-        );
-        gsap.fromTo(".map-canvas-wrap",
-          { opacity: 0 },
-          {
-            opacity: 1, duration: 1.1, ease: "power2.out",
-            scrollTrigger: { trigger: ".map-canvas-wrap", start: "top 82%" }
-          }
-        );
-      }, sectionRef);
-    });
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (!entry.isIntersecting) return;
+        observer.disconnect();
 
-    return () => { ctx?.revert(); };
+        setIsMobile(window.innerWidth < 768);
+        setMounted(true);
+
+        Promise.all([
+          import("gsap"),
+          import("gsap/ScrollTrigger"),
+        ]).then(([gsapMod, stMod]) => {
+          const gsap = gsapMod.default;
+          const { ScrollTrigger } = stMod;
+          gsap.registerPlugin(ScrollTrigger);
+          gsapRef.current = gsap;
+
+          ctx = gsap.context(() => {
+            gsap.fromTo(".map-heading",
+              { opacity: 0, y: 24 },
+              {
+                opacity: 1, y: 0, duration: 0.9, ease: "power2.out",
+                scrollTrigger: { trigger: ".map-heading", start: "top 85%" }
+              }
+            );
+            gsap.fromTo(".map-canvas-wrap",
+              { opacity: 0 },
+              {
+                opacity: 1, duration: 1.1, ease: "power2.out",
+                scrollTrigger: { trigger: ".map-canvas-wrap", start: "top 82%" }
+              }
+            );
+          }, sectionRef);
+        });
+      },
+      { rootMargin: "400px", threshold: 0 }
+    );
+    observer.observe(el);
+
+    return () => {
+      observer.disconnect();
+      ctx?.revert();
+    };
   }, []);
 
   const handleSelect = useCallback((id: number | null) => setSelected(id), []);

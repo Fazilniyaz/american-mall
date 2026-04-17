@@ -12,12 +12,12 @@ export default function HeroSection() {
   const [isDesktop, setIsDesktop] = useState(false);
   const [videoReady, setVideoReady] = useState(false);
 
-  // Step 1: Detect desktop once on client
+  // Detect desktop AFTER hydration - only affects video/particles, not the LCP poster
   useEffect(() => {
     setIsDesktop(window.matchMedia("(min-width: 769px)").matches);
   }, []);
 
-  // Step 2: Load video AFTER the <video> element mounts
+  // Load video AFTER the <video> element mounts, only on desktop, only on idle
   useEffect(() => {
     if (!isDesktop || !videoRef.current) return;
 
@@ -49,7 +49,6 @@ export default function HeroSection() {
       }}
     >
       {/* ── DESKTOP: gradient fallback while video loads ── */}
-      {/* Always rendered (cheap CSS), visible on desktop behind video/particles */}
       <div
         className="hero-desktop-bg"
         style={{
@@ -60,10 +59,16 @@ export default function HeroSection() {
         }}
       />
 
-      {/* ── MOBILE: poster image via <picture> ──
-          <picture> + <source media> prevents the browser from downloading
-          the 222 KB poster on desktop — it loads a 1-byte data URI instead.
-          On mobile, the real poster loads as the LCP element. */}
+      {/*
+        ── MOBILE: poster image — ALWAYS RENDERED (SSR + hydration) ──────────
+        KEY FIX: The poster is NO LONGER gated behind `isDesktop` state.
+        Previously the entire <picture> was hidden by JS state causing 2,250ms
+        element render delay (LCP). Now it renders immediately from SSR.
+        CSS handles hiding it on desktop — zero JS needed.
+
+        <picture> + <source media> prevents the browser from downloading
+        the 227 KB poster on desktop — a 1-pixel SVG data URI is served instead.
+      */}
       <picture className="hero-poster-mobile">
         <source
           media="(min-width: 769px)"
@@ -75,7 +80,7 @@ export default function HeroSection() {
           width={1920}
           height={1080}
           fetchPriority="high"
-          decoding="async"
+          decoding="sync"
           style={{
             position: "absolute",
             inset: 0,

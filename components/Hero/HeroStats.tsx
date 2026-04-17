@@ -189,7 +189,7 @@ export default function HeroStats() {
         );
       }, wrapRef);
       return () => ctx.revert();
-    }, 2000); // Defer 2 seconds - let page render first!
+    }, 800); // Reduced from 2000ms — clears LCP (which fires ~0-500ms) with room to spare
 
     return () => clearTimeout(animationTimer);
   }, []);

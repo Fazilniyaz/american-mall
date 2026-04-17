@@ -32,9 +32,10 @@
     "typescript": "^5"
   },
   "browserslist": [
-    "last 2 Chrome versions",
-    "last 2 Firefox versions",
-    "last 2 Safari versions",
-    "last 2 Edge versions"
+    "Chrome >= 109",
+    "Firefox >= 109",
+    "Safari >= 16",
+    "Edge >= 109",
+    "not dead"
   ]
 }
