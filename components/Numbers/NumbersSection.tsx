@@ -1,8 +1,10 @@
 "use client";
 
 import { useEffect, useRef } from "react";
-import { select } from "d3-selection";
-import { arc as d3Arc } from "d3-shape";
+
+// D3 modules loaded lazily inside useEffect (no top-level import)
+type D3Select = typeof import("d3-selection");
+type D3Shape = typeof import("d3-shape");
 
 
 const STATS = [
@@ -47,105 +49,113 @@ function ArcCounter({ stat, index }: { stat: typeof STATS[0]; index: number }) {
 
   useEffect(() => {
     if (!svgRef.current || !countRef.current) return;
+    let cancelled = false;
 
-    const size = 160;
-    const radius = 66;
-    const stroke = 3;
-    const cx = size / 2;
-    const cy = size / 2;
+    const svgEl = svgRef.current;
+    const countEl = countRef.current;
 
-    const svg = select(svgRef.current)
-      .attr("width", size)
-      .attr("height", size)
-      .attr("viewBox", `0 0 ${size} ${size}`);
+    Promise.all([
+      import("d3-selection"),
+      import("d3-shape"),
+    ]).then(([d3Select, d3Shape]) => {
+      if (cancelled || !svgEl || !countEl) return;
 
-    // Background track arc
-    const arcBg = d3Arc<unknown, unknown>()
-      .innerRadius(radius - stroke / 2)
-      .outerRadius(radius + stroke / 2)
-      .startAngle(-Math.PI * 0.85)
-      .endAngle(Math.PI * 0.85)
-      .cornerRadius(4);
+      const size = 160;
+      const radius = 66;
+      const stroke = 3;
+      const cx = size / 2;
+      const cy = size / 2;
 
-    svg.append("path")
-      // @ts-expect-error d3 arc with no data
-      .attr("d", arcBg())
-      .attr("transform", `translate(${cx},${cy})`)
-      .attr("fill", "rgba(255,255,255,0.06)");
+      const svg = d3Select.select(svgEl)
+        .attr("width", size)
+        .attr("height", size)
+        .attr("viewBox", `0 0 ${size} ${size}`);
 
-    // Foreground arc — animated
-    const arcFg = d3Arc<unknown, unknown>()
-      .innerRadius(radius - stroke / 2)
-      .outerRadius(radius + stroke / 2)
-      .startAngle(-Math.PI * 0.85)
-      .cornerRadius(4);
+      // Background track arc
+      const arcBg = d3Shape.arc<unknown, unknown>()
+        .innerRadius(radius - stroke / 2)
+        .outerRadius(radius + stroke / 2)
+        .startAngle(-Math.PI * 0.85)
+        .endAngle(Math.PI * 0.85)
+        .cornerRadius(4);
 
-    const path = svg.append("path")
-      .attr("transform", `translate(${cx},${cy})`)
-      .attr("fill", stat.color);
+      svg.append("path")
+        // @ts-expect-error d3 arc with no data
+        .attr("d", arcBg())
+        .attr("transform", `translate(${cx},${cy})`)
+        .attr("fill", "rgba(255,255,255,0.06)");
 
-    // Tick marks
-    const tickCount = 8;
-    for (let t = 0; t <= tickCount; t++) {
-      const angle = -Math.PI * 0.85 + (t / tickCount) * Math.PI * 1.7;
-      const inner = radius - 10;
-      const outer = radius - 6;
-      svg.append("line")
-        .attr("x1", cx + Math.sin(angle) * inner)
-        .attr("y1", cy - Math.cos(angle) * inner)
-        .attr("x2", cx + Math.sin(angle) * outer)
-        .attr("y2", cy - Math.cos(angle) * outer)
-        .attr("stroke", "rgba(255,255,255,0.15)")
-        .attr("stroke-width", 1);
-    }
+      // Foreground arc — animated
+      const arcFg = d3Shape.arc<unknown, unknown>()
+        .innerRadius(radius - stroke / 2)
+        .outerRadius(radius + stroke / 2)
+        .startAngle(-Math.PI * 0.85)
+        .cornerRadius(4);
 
-    // ── Scroll trigger via IntersectionObserver — NO GSAP on critical path ──
-    // ScrollTrigger was previously imported at the TOP LEVEL which added
-    // ~17 KB to the initial bundle and ran setup JS blocking the main thread.
-    // IntersectionObserver is zero-cost until the section actually enters view.
-    const observer = new IntersectionObserver(
-      ([entry]) => {
-        if (!entry.isIntersecting || triggered.current) return;
-        triggered.current = true;
-        observer.disconnect();
+      const path = svg.append("path")
+        .attr("transform", `translate(${cx},${cy})`)
+        .attr("fill", stat.color);
 
-        // Lazy-load GSAP only after section is visible
-        import("gsap").then(({ default: gsap }) => {
-          const endAngle = -Math.PI * 0.85 + Math.PI * 1.7 * stat.arc;
-          gsap.to({ angle: -Math.PI * 0.85 }, {
-            angle: endAngle,
-            duration: 1.6,
-            ease: "power2.out",
-            delay: index * 0.12,
-            onUpdate: function () {
-              const a = this.targets()[0].angle;
-              // @ts-expect-error d3 arc
-              path.attr("d", arcFg.endAngle(a)());
-            },
+      // Tick marks
+      const tickCount = 8;
+      for (let t = 0; t <= tickCount; t++) {
+        const angle = -Math.PI * 0.85 + (t / tickCount) * Math.PI * 1.7;
+        const inner = radius - 10;
+        const outer = radius - 6;
+        svg.append("line")
+          .attr("x1", cx + Math.sin(angle) * inner)
+          .attr("y1", cy - Math.cos(angle) * inner)
+          .attr("x2", cx + Math.sin(angle) * outer)
+          .attr("y2", cy - Math.cos(angle) * outer)
+          .attr("stroke", "rgba(255,255,255,0.15)")
+          .attr("stroke-width", 1);
+      }
+
+      // Scroll trigger via IntersectionObserver (zero-cost until visible)
+      const observer = new IntersectionObserver(
+        ([entry]) => {
+          if (!entry.isIntersecting || triggered.current) return;
+          triggered.current = true;
+          observer.disconnect();
+
+          import("gsap").then(({ default: gsap }) => {
+            const endAngle = -Math.PI * 0.85 + Math.PI * 1.7 * stat.arc;
+            gsap.to({ angle: -Math.PI * 0.85 }, {
+              angle: endAngle,
+              duration: 1.6,
+              ease: "power2.out",
+              delay: index * 0.12,
+              onUpdate: function () {
+                const a = this.targets()[0].angle;
+                // @ts-expect-error d3 arc
+                path.attr("d", arcFg.endAngle(a)());
+              },
+            });
+
+            const isDecimal = stat.value % 1 !== 0;
+            gsap.to({ val: 0 }, {
+              val: stat.value,
+              duration: 1.8,
+              ease: "power2.out",
+              delay: index * 0.12,
+              onUpdate: function () {
+                const v = this.targets()[0].val;
+                if (countEl) {
+                  countEl.textContent = isDecimal
+                    ? v.toFixed(1) + stat.suffix
+                    : Math.round(v) + stat.suffix;
+                }
+              },
+            });
           });
+        },
+        { rootMargin: "100px", threshold: 0 }
+      );
 
-          const isDecimal = stat.value % 1 !== 0;
-          gsap.to({ val: 0 }, {
-            val: stat.value,
-            duration: 1.8,
-            ease: "power2.out",
-            delay: index * 0.12,
-            onUpdate: function () {
-              const v = this.targets()[0].val;
-              if (countRef.current) {
-                countRef.current.textContent = isDecimal
-                  ? v.toFixed(1) + stat.suffix
-                  : Math.round(v) + stat.suffix;
-              }
-            },
-          });
-        });
-      },
-      { rootMargin: "100px", threshold: 0 }
-    );
+      observer.observe(svgEl);
+    });
 
-    if (svgRef.current) observer.observe(svgRef.current);
-    return () => observer.disconnect();
+    return () => { cancelled = true; };
   }, [stat, index]);
 
   return (

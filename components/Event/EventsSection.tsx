@@ -7,10 +7,25 @@ import {
     useCallback,
     memo,
 } from "react";
-import gsap from "gsap";
-import { ScrollTrigger } from "gsap/ScrollTrigger";
 
-gsap.registerPlugin(ScrollTrigger);
+// ── Lazy GSAP loader ──────────────────────────────────────────────────────
+type GsapType = typeof import("gsap")["default"];
+type ScrollTriggerType = typeof import("gsap/ScrollTrigger")["ScrollTrigger"];
+
+let _gsap: GsapType | null = null;
+let _ST: ScrollTriggerType | null = null;
+
+const loadGsap = async () => {
+    if (_gsap && _ST) return { gsap: _gsap, ScrollTrigger: _ST };
+    const [gsapMod, stMod] = await Promise.all([
+        import("gsap"),
+        import("gsap/ScrollTrigger"),
+    ]);
+    _gsap = gsapMod.default;
+    _ST = stMod.ScrollTrigger;
+    _gsap.registerPlugin(_ST);
+    return { gsap: _gsap, ScrollTrigger: _ST };
+};
 
 // ─── Event category cards ─────────────────────────────────────────────────────
 const EVENT_TYPES = [
@@ -106,18 +121,22 @@ const EventTypeCard = memo(function EventTypeCard({
         const r = e.currentTarget.getBoundingClientRect();
         const mx = ((e.clientX - r.left) / r.width - 0.5) * 12;
         const my = ((e.clientY - r.top) / r.height - 0.5) * -12;
-        gsap.to(e.currentTarget, {
-            rotateY: mx, rotateX: my,
-            duration: 0.3, ease: "power2.out",
-            transformPerspective: 700,
+        loadGsap().then(({ gsap }) => {
+            gsap.to(e.currentTarget, {
+                rotateY: mx, rotateX: my,
+                duration: 0.3, ease: "power2.out",
+                transformPerspective: 700,
+            });
         });
     };
 
     const onLeave = (e: React.MouseEvent<HTMLDivElement>) => {
-        gsap.to(e.currentTarget, {
-            rotateY: 0, rotateX: 0,
-            duration: 0.55, ease: "elastic.out(1,0.6)",
-            transformPerspective: 700,
+        loadGsap().then(({ gsap }) => {
+            gsap.to(e.currentTarget, {
+                rotateY: 0, rotateX: 0,
+                duration: 0.55, ease: "elastic.out(1,0.6)",
+                transformPerspective: 700,
+            });
         });
     };
 
@@ -266,11 +285,11 @@ const BrandEventCard = memo(function BrandEventCard({
             }}
             onMouseEnter={e => {
                 e.currentTarget.style.borderColor = "rgba(201,168,76,0.4)";
-                gsap.to(e.currentTarget, { scale: 1.02, duration: 0.28, ease: "power2.out" });
+                loadGsap().then(({ gsap }) => gsap.to(e.currentTarget, { scale: 1.02, duration: 0.28, ease: "power2.out" }));
             }}
             onMouseLeave={e => {
                 e.currentTarget.style.borderColor = "rgba(201,168,76,0.1)";
-                gsap.to(e.currentTarget, { scale: 1, duration: 0.4, ease: "power2.out" });
+                loadGsap().then(({ gsap }) => gsap.to(e.currentTarget, { scale: 1, duration: 0.4, ease: "power2.out" }));
             }}
         >
             {/* Category pill */}
@@ -371,62 +390,74 @@ function BrandCarousel() {
         const track = trackRef.current;
         if (!track) return;
 
-        // Auto scroll
-        const totalW = track.scrollWidth / 2;
-        gsap.set(track, { x: 0 });
+        let cancelled = false;
 
-        tlRef.current = gsap.to(track, {
-            x: -totalW,
-            duration: 36,
-            ease: "none",
-            repeat: -1,
-            paused: document.hidden,
-            modifiers: {
-                x: gsap.utils.unitize(x => parseFloat(x) % totalW),
-            },
+        loadGsap().then(({ gsap }) => {
+            if (cancelled || !track) return;
+
+            // Auto scroll
+            const totalW = track.scrollWidth / 2;
+            gsap.set(track, { x: 0 });
+
+            tlRef.current = gsap.to(track, {
+                x: -totalW,
+                duration: 36,
+                ease: "none",
+                repeat: -1,
+                paused: document.hidden,
+                modifiers: {
+                    x: gsap.utils.unitize(x => parseFloat(x) % totalW),
+                },
+            });
+
+            const onVis = () => {
+                if (document.hidden) tlRef.current?.pause();
+                else tlRef.current?.resume();
+            };
+            document.addEventListener("visibilitychange", onVis);
+
+            // Hover slow
+            const onEnter = () => gsap.to(tlRef.current, { timeScale: 0.25, duration: 0.5 });
+            const onLeave = () => gsap.to(tlRef.current, { timeScale: 1, duration: 0.5 });
+            track.parentElement?.addEventListener("mouseenter", onEnter);
+            track.parentElement?.addEventListener("mouseleave", onLeave);
+
+            // Drag on mobile
+            const onTouchStart = (e: TouchEvent) => {
+                isDrag.current = true;
+                startX.current = e.touches[0].clientX;
+                scrollX.current = gsap.getProperty(track, "x") as number;
+                tlRef.current?.pause();
+            };
+            const onTouchMove = (e: TouchEvent) => {
+                if (!isDrag.current) return;
+                const dx = e.touches[0].clientX - startX.current;
+                gsap.set(track, { x: scrollX.current + dx });
+            };
+            const onTouchEnd = () => {
+                isDrag.current = false;
+                setTimeout(() => tlRef.current?.resume(), 1500);
+            };
+
+            track.addEventListener("touchstart", onTouchStart, { passive: true });
+            track.addEventListener("touchmove", onTouchMove, { passive: true });
+            track.addEventListener("touchend", onTouchEnd);
+
+            // Store cleanup references
+            (track as any).__evtCleanup = () => {
+                tlRef.current?.kill();
+                document.removeEventListener("visibilitychange", onVis);
+                track.parentElement?.removeEventListener("mouseenter", onEnter);
+                track.parentElement?.removeEventListener("mouseleave", onLeave);
+                track.removeEventListener("touchstart", onTouchStart);
+                track.removeEventListener("touchmove", onTouchMove);
+                track.removeEventListener("touchend", onTouchEnd);
+            };
         });
 
-        const onVis = () => {
-            if (document.hidden) tlRef.current?.pause();
-            else tlRef.current?.resume();
-        };
-        document.addEventListener("visibilitychange", onVis);
-
-        // Hover slow
-        const onEnter = () => gsap.to(tlRef.current, { timeScale: 0.25, duration: 0.5 });
-        const onLeave = () => gsap.to(tlRef.current, { timeScale: 1, duration: 0.5 });
-        track.parentElement?.addEventListener("mouseenter", onEnter);
-        track.parentElement?.addEventListener("mouseleave", onLeave);
-
-        // Drag on mobile
-        const onTouchStart = (e: TouchEvent) => {
-            isDrag.current = true;
-            startX.current = e.touches[0].clientX;
-            scrollX.current = gsap.getProperty(track, "x") as number;
-            tlRef.current?.pause();
-        };
-        const onTouchMove = (e: TouchEvent) => {
-            if (!isDrag.current) return;
-            const dx = e.touches[0].clientX - startX.current;
-            gsap.set(track, { x: scrollX.current + dx });
-        };
-        const onTouchEnd = () => {
-            isDrag.current = false;
-            setTimeout(() => tlRef.current?.resume(), 1500);
-        };
-
-        track.addEventListener("touchstart", onTouchStart, { passive: true });
-        track.addEventListener("touchmove", onTouchMove, { passive: true });
-        track.addEventListener("touchend", onTouchEnd);
-
         return () => {
-            tlRef.current?.kill();
-            document.removeEventListener("visibilitychange", onVis);
-            track.parentElement?.removeEventListener("mouseenter", onEnter);
-            track.parentElement?.removeEventListener("mouseleave", onLeave);
-            track.removeEventListener("touchstart", onTouchStart);
-            track.removeEventListener("touchmove", onTouchMove);
-            track.removeEventListener("touchend", onTouchEnd);
+            cancelled = true;
+            if ((trackRef.current as any)?.__evtCleanup) (trackRef.current as any).__evtCleanup();
         };
     }, []);
 
@@ -470,30 +501,34 @@ function EventReel() {
     const textRef = useRef<HTMLDivElement>(null);
 
     useEffect(() => {
-        const ctx = gsap.context(() => {
-            gsap.fromTo(".reel-tagline",
-                { opacity: 0, y: 20 },
-                {
-                    opacity: 1, y: 0, duration: 0.8, ease: "power2.out",
-                    scrollTrigger: { trigger: ".reel-tagline", start: "top 80%" },
-                }
-            );
-            gsap.fromTo(".reel-headline",
-                { opacity: 0, y: 32 },
-                {
-                    opacity: 1, y: 0, duration: 1, ease: "power2.out", delay: 0.15,
-                    scrollTrigger: { trigger: ".reel-headline", start: "top 80%" },
-                }
-            );
-            gsap.fromTo(".reel-sub",
-                { opacity: 0, y: 20 },
-                {
-                    opacity: 1, y: 0, duration: 0.8, ease: "power2.out", delay: 0.3,
-                    scrollTrigger: { trigger: ".reel-sub", start: "top 80%" },
-                }
-            );
-        }, reelRef);
-        return () => ctx.revert();
+        let cancelled = false;
+        loadGsap().then(({ gsap, ScrollTrigger }) => {
+            if (cancelled || !reelRef.current) return;
+            const ctx = gsap.context(() => {
+                gsap.fromTo(".reel-tagline",
+                    { opacity: 0, y: 20 },
+                    {
+                        opacity: 1, y: 0, duration: 0.8, ease: "power2.out",
+                        scrollTrigger: { trigger: ".reel-tagline", start: "top 80%" },
+                    }
+                );
+                gsap.fromTo(".reel-headline",
+                    { opacity: 0, y: 32 },
+                    {
+                        opacity: 1, y: 0, duration: 1, ease: "power2.out", delay: 0.15,
+                        scrollTrigger: { trigger: ".reel-headline", start: "top 80%" },
+                    }
+                );
+                gsap.fromTo(".reel-sub",
+                    { opacity: 0, y: 20 },
+                    {
+                        opacity: 1, y: 0, duration: 0.8, ease: "power2.out", delay: 0.3,
+                        scrollTrigger: { trigger: ".reel-sub", start: "top 80%" },
+                    }
+                );
+            }, reelRef);
+        });
+        return () => { cancelled = true; };
     }, []);
 
     return (
@@ -651,37 +686,41 @@ export default function EventsSection() {
     const sectionRef = useRef<HTMLElement>(null);
 
     useEffect(() => {
-        const ctx = gsap.context(() => {
-            // Section heading
-            gsap.fromTo(".events-heading",
-                { opacity: 0, y: 28 },
-                {
-                    opacity: 1, y: 0, duration: 0.9, ease: "power2.out",
-                    scrollTrigger: { trigger: ".events-heading", start: "top 85%" },
-                }
-            );
+        let cancelled = false;
+        loadGsap().then(({ gsap, ScrollTrigger }) => {
+            if (cancelled || !sectionRef.current) return;
+            const ctx = gsap.context(() => {
+                // Section heading
+                gsap.fromTo(".events-heading",
+                    { opacity: 0, y: 28 },
+                    {
+                        opacity: 1, y: 0, duration: 0.9, ease: "power2.out",
+                        scrollTrigger: { trigger: ".events-heading", start: "top 85%" },
+                    }
+                );
 
-            // Type cards stagger
-            gsap.fromTo(".evt-type-card",
-                { opacity: 0, y: 44 },
-                {
-                    opacity: 1, y: 0,
-                    duration: 0.75, ease: "power2.out", stagger: 0.13,
-                    scrollTrigger: { trigger: ".evt-types-grid", start: "top 82%" },
-                }
-            );
+                // Type cards stagger
+                gsap.fromTo(".evt-type-card",
+                    { opacity: 0, y: 44 },
+                    {
+                        opacity: 1, y: 0,
+                        duration: 0.75, ease: "power2.out", stagger: 0.13,
+                        scrollTrigger: { trigger: ".evt-types-grid", start: "top 82%" },
+                    }
+                );
 
-            // Carousel heading
-            gsap.fromTo(".carousel-heading",
-                { opacity: 0, y: 24 },
-                {
-                    opacity: 1, y: 0, duration: 0.8, ease: "power2.out",
-                    scrollTrigger: { trigger: ".carousel-heading", start: "top 85%" },
-                }
-            );
-        }, sectionRef);
+                // Carousel heading
+                gsap.fromTo(".carousel-heading",
+                    { opacity: 0, y: 24 },
+                    {
+                        opacity: 1, y: 0, duration: 0.8, ease: "power2.out",
+                        scrollTrigger: { trigger: ".carousel-heading", start: "top 85%" },
+                    }
+                );
+            }, sectionRef);
+        });
 
-        return () => ctx.revert();
+        return () => { cancelled = true; };
     }, []);
 
     return (

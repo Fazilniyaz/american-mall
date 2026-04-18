@@ -1,19 +1,18 @@
-import NumbersSection from "@/components/Numbers/NumbersSection";
 import HeroSection from "@/components/Hero/HeroSection";
 import Navbar from "@/components/Navbar/Navbar";
 import dynamic from "next/dynamic";
-import EntertainmentSection from "@/components/Entertainment/EntertainmentSection";
-import EventsSection from "@/components/Event/EventsSection";
-import SponsorshipSection from "@/components/Sponsorship/SponsorshipSection";
-import CTASection from "@/components/CTA/CTASection";
 
-// Lazy load WhosHereSection — it's heavy and below the fold
-// Dynamic import without ssr:false will still lazy load the component code
+// ── Below-fold components — dynamically imported for code splitting ──
+// Each dynamic() call creates a separate JS chunk that only loads when
+// the component is about to render. This keeps GSAP, D3, Three.js etc.
+// OUT of the initial bundle, dramatically reducing FCP/LCP/TBT.
+const NumbersSection = dynamic(() => import("@/components/Numbers/NumbersSection"));
 const WhosHereSection = dynamic(() => import("@/components/WhoIsHere/WhosHereSection"));
-
-// Lazy load MallMapSection — heaviest component (Three.js + D3 + GSAP),
-// always below the fold. Code-split into a separate chunk.
 const MallMapSection = dynamic(() => import("@/components/MallMap/MallMapSection"));
+const EntertainmentSection = dynamic(() => import("@/components/Entertainment/EntertainmentSection"));
+const EventsSection = dynamic(() => import("@/components/Event/EventsSection"));
+const SponsorshipSection = dynamic(() => import("@/components/Sponsorship/SponsorshipSection"));
+const CTASection = dynamic(() => import("@/components/CTA/CTASection"));
 
 export const metadata = {
   title: "The American Mall Experience",
@@ -30,7 +29,7 @@ export default function Home() {
       <MallMapSection />
       <EntertainmentSection />
       <EventsSection />
-       <SponsorshipSection />
+      <SponsorshipSection />
       <CTASection />
     </main>
   );

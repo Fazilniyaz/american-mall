@@ -1,8 +1,20 @@
 "use client";
 
 import { useEffect, useRef, useCallback } from "react";
-import gsap from "gsap";
 import MallLogo from "./MallLogo";
+
+// ── Lazy GSAP loader ────────────────────────────────────────────────────
+// GSAP is NOT imported at top level to keep it out of the critical bundle.
+// It's only used here for deferred animations (800ms delay) and hover effects,
+// so we load it on first use and cache the reference.
+let _gsap: typeof import("gsap")["default"] | null = null;
+const loadGsap = () =>
+  _gsap
+    ? Promise.resolve(_gsap)
+    : import("gsap").then((m) => {
+      _gsap = m.default;
+      return _gsap;
+    });
 
 const stats = [
   { value: "40M+", label: "Annual Visitors" },
@@ -67,35 +79,41 @@ function StatItem({ value, label }: { value: string; label: string }) {
   const onEnter = useCallback(() => {
     if (!valueRef.current || !labelRef.current || !borderRef.current) return;
     shuffle(valueRef.current);
-    gsap.killTweensOf(labelRef.current);
-    gsap.to(labelRef.current, {
-      y: -4, opacity: 0.45, letterSpacing: "0.24em",
-      duration: 0.25, ease: "power2.out",
-      yoyo: true, repeat: 1,
-      onComplete: () =>
-        gsap.to(labelRef.current, {
-          y: 0, opacity: 1, letterSpacing: "0.08em",
-          duration: 0.35, ease: "power2.inOut",
-        }),
+    loadGsap().then((gsap) => {
+      if (!labelRef.current || !borderRef.current || !valueRef.current) return;
+      gsap.killTweensOf(labelRef.current);
+      gsap.to(labelRef.current, {
+        y: -4, opacity: 0.45, letterSpacing: "0.24em",
+        duration: 0.25, ease: "power2.out",
+        yoyo: true, repeat: 1,
+        onComplete: () =>
+          gsap.to(labelRef.current, {
+            y: 0, opacity: 1, letterSpacing: "0.08em",
+            duration: 0.35, ease: "power2.inOut",
+          }),
+      });
+      gsap.killTweensOf(borderRef.current);
+      gsap.to(borderRef.current, { opacity: 1, scaleY: 1.18, duration: 0.2, ease: "power2.out" });
+      gsap.killTweensOf(valueRef.current);
+      gsap.to(valueRef.current, { scale: 1.06, duration: 0.2, ease: "power2.out" });
     });
-    gsap.killTweensOf(borderRef.current);
-    gsap.to(borderRef.current, { opacity: 1, scaleY: 1.18, duration: 0.2, ease: "power2.out" });
-    gsap.killTweensOf(valueRef.current);
-    gsap.to(valueRef.current, { scale: 1.06, duration: 0.2, ease: "power2.out" });
   }, [shuffle]);
 
   const onLeave = useCallback(() => {
     if (!valueRef.current || !labelRef.current || !borderRef.current) return;
     cancel(valueRef.current);
-    gsap.killTweensOf(labelRef.current);
-    gsap.to(labelRef.current, {
-      y: 0, opacity: 1, letterSpacing: "0.08em",
-      duration: 0.35, ease: "power2.inOut",
+    loadGsap().then((gsap) => {
+      if (!labelRef.current || !borderRef.current || !valueRef.current) return;
+      gsap.killTweensOf(labelRef.current);
+      gsap.to(labelRef.current, {
+        y: 0, opacity: 1, letterSpacing: "0.08em",
+        duration: 0.35, ease: "power2.inOut",
+      });
+      gsap.killTweensOf(borderRef.current);
+      gsap.to(borderRef.current, { opacity: 0.5, scaleY: 1, duration: 0.3, ease: "power2.inOut" });
+      gsap.killTweensOf(valueRef.current);
+      gsap.to(valueRef.current, { scale: 1, duration: 0.3, ease: "power2.inOut" });
     });
-    gsap.killTweensOf(borderRef.current);
-    gsap.to(borderRef.current, { opacity: 0.5, scaleY: 1, duration: 0.3, ease: "power2.inOut" });
-    gsap.killTweensOf(valueRef.current);
-    gsap.to(valueRef.current, { scale: 1, duration: 0.3, ease: "power2.inOut" });
   }, [cancel]);
 
   return (
@@ -169,26 +187,28 @@ export default function HeroStats() {
     // CRITICAL: Defer animation MUCH later to not block initial paint
     // Stats items should be visible (opacity: 1) before animation starts
     const animationTimer = setTimeout(() => {
-      const ctx = gsap.context(() => {
-        // Animate stats IN (they're already visible)
-        gsap.to(
-          ".stat-item",
-          {
-            opacity: 1,
-            y: 0,
-            duration: 0.7,
-            ease: "power2.out",
-            stagger: 0.15,
-            delay: 0,
-          }
-        );
-        // Tagline: subtle animation only
-        gsap.to(
-          ".hero-tagline",
-          { y: -6, duration: 0.5, ease: "power2.out", delay: 0.05, yoyo: true, repeat: 1 }
-        );
-      }, wrapRef);
-      return () => ctx.revert();
+      loadGsap().then((gsap) => {
+        if (!wrapRef.current) return;
+        const ctx = gsap.context(() => {
+          // Animate stats IN (they're already visible)
+          gsap.to(
+            ".stat-item",
+            {
+              opacity: 1,
+              y: 0,
+              duration: 0.7,
+              ease: "power2.out",
+              stagger: 0.15,
+              delay: 0,
+            }
+          );
+          // Tagline: subtle animation only
+          gsap.to(
+            ".hero-tagline",
+            { y: -6, duration: 0.5, ease: "power2.out", delay: 0.05, yoyo: true, repeat: 1 }
+          );
+        }, wrapRef);
+      });
     }, 800); // Reduced from 2000ms — clears LCP (which fires ~0-500ms) with room to spare
 
     return () => clearTimeout(animationTimer);

@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import dynamic from "next/dynamic";
+import Image from "next/image";
 import HeroStats from "./HeroStats";
 
 // Three.js — never on mobile, lazy on desktop
@@ -61,36 +62,22 @@ export default function HeroSection() {
 
       {/*
         ── MOBILE: poster image — ALWAYS RENDERED (SSR + hydration) ──────────
-        KEY FIX: The poster is NO LONGER gated behind `isDesktop` state.
-        Previously the entire <picture> was hidden by JS state causing 2,250ms
-        element render delay (LCP). Now it renders immediately from SSR.
-        CSS handles hiding it on desktop — zero JS needed.
-
-        <picture> + <source media> prevents the browser from downloading
-        the 227 KB poster on desktop — a 1-pixel SVG data URI is served instead.
+        Uses Next.js <Image> for automatic WebP/AVIF conversion + responsive sizing.
+        CSS class hides on desktop. The fill + priority props ensure it's the LCP element.
       */}
-      <picture className="hero-poster-mobile">
-        <source
-          media="(min-width: 769px)"
-          srcSet="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='1' height='1'/%3E"
-        />
-        <img
+      <div className="hero-poster-mobile" style={{ position: "absolute", inset: 0, zIndex: 1 }}>
+        <Image
           src="/photos/hero-poster.jpg"
-          alt=""
-          width={1920}
-          height={1080}
-          fetchPriority="high"
-          decoding="sync"
+          alt="Mall of America interior"
+          fill
+          priority
+          sizes="100vw"
+          quality={75}
           style={{
-            position: "absolute",
-            inset: 0,
-            width: "100%",
-            height: "100%",
             objectFit: "cover",
-            zIndex: 1,
           }}
         />
-      </picture>
+      </div>
 
       {/* ── DESKTOP: lazy-loaded video ── */}
       {isDesktop && (

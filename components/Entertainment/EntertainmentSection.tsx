@@ -6,21 +6,43 @@ import {
     useState,
     memo,
 } from "react";
-import gsap from "gsap";
-import { ScrollTrigger } from "gsap/ScrollTrigger";
-import * as d3 from "d3";
-import {
-    Scene,
-    PerspectiveCamera,
-    WebGLRenderer,
-    BufferGeometry,
-    BufferAttribute,
-    PointsMaterial,
-    Points,
-    Color as ThreeColor,
-} from "three";
 
-gsap.registerPlugin(ScrollTrigger);
+// ── Lazy library loaders ──────────────────────────────────────────────────
+// These heavy libraries are loaded on-demand and cached after first load.
+// This prevents them from blocking initial JS parse/eval.
+type GsapType = typeof import("gsap")["default"];
+type ScrollTriggerType = typeof import("gsap/ScrollTrigger")["ScrollTrigger"];
+type D3Type = typeof import("d3");
+type ThreeTypes = typeof import("three");
+
+let _gsap: GsapType | null = null;
+let _ST: ScrollTriggerType | null = null;
+let _d3: D3Type | null = null;
+let _three: ThreeTypes | null = null;
+
+const loadGsap = async () => {
+    if (_gsap && _ST) return { gsap: _gsap, ScrollTrigger: _ST };
+    const [gsapMod, stMod] = await Promise.all([
+        import("gsap"),
+        import("gsap/ScrollTrigger"),
+    ]);
+    _gsap = gsapMod.default;
+    _ST = stMod.ScrollTrigger;
+    _gsap.registerPlugin(_ST);
+    return { gsap: _gsap, ScrollTrigger: _ST };
+};
+
+const loadD3 = async () => {
+    if (_d3) return _d3;
+    _d3 = await import("d3");
+    return _d3;
+};
+
+const loadThree = async () => {
+    if (_three) return _three;
+    _three = await import("three");
+    return _three;
+};
 
 // ─── Panel data ───────────────────────────────────────────────────────────────
 const PANELS = [
@@ -96,73 +118,87 @@ function PanelParticles({ color }: { color: string }) {
         const el = mountRef.current;
         if (!el) return;
 
-        const W = el.clientWidth;
-        const H = el.clientHeight;
+        let cancelled = false;
 
-        const scene = new Scene();
-        const camera = new PerspectiveCamera(60, W / H, 0.1, 100);
-        camera.position.z = 4;
+        loadThree().then((THREE) => {
+            if (cancelled || !el) return;
 
-        const renderer = new WebGLRenderer({ alpha: true, antialias: false });
-        renderer.setSize(W, H);
-        renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.5));
-        renderer.setClearColor(0x000000, 0);
-        el.appendChild(renderer.domElement);
+            const W = el.clientWidth;
+            const H = el.clientHeight;
 
-        // Ring of particles
-        const count = 800;
-        const geo = new BufferGeometry();
-        const pos = new Float32Array(count * 3);
-        const cols = new Float32Array(count * 3);
-        const c = new ThreeColor(color);
+            const scene = new THREE.Scene();
+            const camera = new THREE.PerspectiveCamera(60, W / H, 0.1, 100);
+            camera.position.z = 4;
 
-        for (let i = 0; i < count; i++) {
-            const angle = (i / count) * Math.PI * 2;
-            const radius = 2.2 + (Math.random() - 0.5) * 1.2;
-            const spread = (Math.random() - 0.5) * 0.6;
-            pos[i * 3] = Math.cos(angle) * radius;
-            pos[i * 3 + 1] = spread;
-            pos[i * 3 + 2] = Math.sin(angle) * radius;
-            cols[i * 3] = c.r + (Math.random() - 0.5) * 0.2;
-            cols[i * 3 + 1] = c.g + (Math.random() - 0.5) * 0.2;
-            cols[i * 3 + 2] = c.b;
-        }
+            const renderer = new THREE.WebGLRenderer({ alpha: true, antialias: false });
+            renderer.setSize(W, H);
+            renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.5));
+            renderer.setClearColor(0x000000, 0);
+            el.appendChild(renderer.domElement);
 
-        geo.setAttribute("position", new BufferAttribute(pos, 3));
-        geo.setAttribute("color", new BufferAttribute(cols, 3));
+            // Ring of particles
+            const count = 800;
+            const geo = new THREE.BufferGeometry();
+            const pos = new Float32Array(count * 3);
+            const cols = new Float32Array(count * 3);
+            const c = new THREE.Color(color);
 
-        const mat = new PointsMaterial({
-            size: 0.018,
-            vertexColors: true,
-            transparent: true,
-            opacity: 0.55,
+            for (let i = 0; i < count; i++) {
+                const angle = (i / count) * Math.PI * 2;
+                const radius = 2.2 + (Math.random() - 0.5) * 1.2;
+                const spread = (Math.random() - 0.5) * 0.6;
+                pos[i * 3] = Math.cos(angle) * radius;
+                pos[i * 3 + 1] = spread;
+                pos[i * 3 + 2] = Math.sin(angle) * radius;
+                cols[i * 3] = c.r + (Math.random() - 0.5) * 0.2;
+                cols[i * 3 + 1] = c.g + (Math.random() - 0.5) * 0.2;
+                cols[i * 3 + 2] = c.b;
+            }
+
+            geo.setAttribute("position", new THREE.BufferAttribute(pos, 3));
+            geo.setAttribute("color", new THREE.BufferAttribute(cols, 3));
+
+            const mat = new THREE.PointsMaterial({
+                size: 0.018,
+                vertexColors: true,
+                transparent: true,
+                opacity: 0.55,
+            });
+
+            const ring = new THREE.Points(geo, mat);
+            scene.add(ring);
+
+            const obs = new IntersectionObserver(
+                ([e]) => { isVis.current = e.isIntersecting; },
+                { threshold: 0.1 }
+            );
+            obs.observe(el);
+
+            const animate = () => {
+                rafRef.current = requestAnimationFrame(animate);
+                if (!isVis.current) return;
+                ring.rotation.y += 0.0015;
+                ring.rotation.x = 0.3;
+                renderer.render(scene, camera);
+            };
+            animate();
+
+            // Store cleanup
+            const cleanup = () => {
+                cancelAnimationFrame(rafRef.current);
+                obs.disconnect();
+                mat.dispose();
+                geo.dispose();
+                renderer.dispose();
+                if (el.contains(renderer.domElement)) el.removeChild(renderer.domElement);
+            };
+            (el as any).__cleanup = cleanup;
         });
 
-        const ring = new Points(geo, mat);
-        scene.add(ring);
-
-        const obs = new IntersectionObserver(
-            ([e]) => { isVis.current = e.isIntersecting; },
-            { threshold: 0.1 }
-        );
-        obs.observe(el);
-
-        const animate = () => {
-            rafRef.current = requestAnimationFrame(animate);
-            if (!isVis.current) return;
-            ring.rotation.y += 0.0015;
-            ring.rotation.x = 0.3;
-            renderer.render(scene, camera);
-        };
-        animate();
-
         return () => {
+            cancelled = true;
             cancelAnimationFrame(rafRef.current);
-            obs.disconnect();
-            mat.dispose();
-            geo.dispose();
-            renderer.dispose();
-            if (el.contains(renderer.domElement)) el.removeChild(renderer.domElement);
+            if ((el as any).__cleanup) (el as any).__cleanup();
         };
     }, [color]);
 
@@ -189,180 +225,189 @@ const FootfallChart = memo(function FootfallChart() {
         if (!svgRef.current) return;
 
         const el = svgRef.current;
-        const W = el.parentElement?.clientWidth || 600;
-        const H = 220;
-        const mb = 32;
-        const ml = 36;
-        const mr = 16;
-        const mt = 16;
-        const iW = W - ml - mr;
-        const iH = H - mt - mb;
+        let cancelled = false;
 
-        const svg = d3.select(el)
-            .attr("width", W)
-            .attr("height", H)
-            .attr("viewBox", `0 0 ${W} ${H}`);
+        Promise.all([loadD3(), loadGsap()]).then(([d3, { gsap, ScrollTrigger }]) => {
+            if (cancelled || !el) return;
 
-        const x = d3.scalePoint()
-            .domain(FOOTFALL_DATA.map(d => d.month))
-            .range([0, iW])
-            .padding(0.3);
+            const W = el.parentElement?.clientWidth || 600;
+            const H = 220;
+            const mb = 32;
+            const ml = 36;
+            const mr = 16;
+            const mt = 16;
+            const iW = W - ml - mr;
+            const iH = H - mt - mb;
 
-        const y = d3.scaleLinear()
-            .domain([0, 6])
-            .range([iH, 0]);
+            const svg = d3.select(el)
+                .attr("width", W)
+                .attr("height", H)
+                .attr("viewBox", `0 0 ${W} ${H}`);
 
-        const g = svg.append("g").attr("transform", `translate(${ml},${mt})`);
+            const x = d3.scalePoint()
+                .domain(FOOTFALL_DATA.map(d => d.month))
+                .range([0, iW])
+                .padding(0.3);
 
-        // Gridlines
-        y.ticks(4).forEach(tick => {
-            g.append("line")
-                .attr("x1", 0).attr("x2", iW)
-                .attr("y1", y(tick)).attr("y2", y(tick))
-                .attr("stroke", "rgba(255,255,255,0.06)")
-                .attr("stroke-width", 1);
-        });
+            const y = d3.scaleLinear()
+                .domain([0, 6])
+                .range([iH, 0]);
 
-        // X axis labels
-        FOOTFALL_DATA.forEach(d => {
-            g.append("text")
-                .attr("x", x(d.month) ?? 0)
-                .attr("y", iH + 18)
-                .attr("text-anchor", "middle")
-                .attr("font-size", "9px")
-                .attr("font-family", "var(--font-montserrat)")
-                .attr("font-weight", "600")
-                .attr("fill", "rgba(255,255,255,0.28)")
-                .attr("letter-spacing", "0.06em")
-                .text(d.month.toUpperCase());
-        });
+            const g = svg.append("g").attr("transform", `translate(${ml},${mt})`);
 
-        // Y axis labels
-        y.ticks(4).forEach(tick => {
-            g.append("text")
-                .attr("x", -8)
-                .attr("y", y(tick) + 4)
-                .attr("text-anchor", "end")
-                .attr("font-size", "9px")
-                .attr("font-family", "var(--font-montserrat)")
-                .attr("fill", "rgba(255,255,255,0.22)")
-                .text(tick + "M");
-        });
+            // Gridlines
+            y.ticks(4).forEach(tick => {
+                g.append("line")
+                    .attr("x1", 0).attr("x2", iW)
+                    .attr("y1", y(tick)).attr("y2", y(tick))
+                    .attr("stroke", "rgba(255,255,255,0.06)")
+                    .attr("stroke-width", 1);
+            });
 
-        // Area + line generators
-        const areaGen = d3.area<(typeof FOOTFALL_DATA)[0]>()
-            .x(d => x(d.month) ?? 0)
-            .y0(iH)
-            .y1(d => y(d.retail))
-            .curve(d3.curveCatmullRom);
+            // X axis labels
+            FOOTFALL_DATA.forEach(d => {
+                g.append("text")
+                    .attr("x", x(d.month) ?? 0)
+                    .attr("y", iH + 18)
+                    .attr("text-anchor", "middle")
+                    .attr("font-size", "9px")
+                    .attr("font-family", "var(--font-montserrat)")
+                    .attr("font-weight", "600")
+                    .attr("fill", "rgba(255,255,255,0.28)")
+                    .attr("letter-spacing", "0.06em")
+                    .text(d.month.toUpperCase());
+            });
 
-        const lineGen = d3.line<(typeof FOOTFALL_DATA)[0]>()
-            .x(d => x(d.month) ?? 0)
-            .y(d => y(d.retail))
-            .curve(d3.curveCatmullRom);
+            // Y axis labels
+            y.ticks(4).forEach(tick => {
+                g.append("text")
+                    .attr("x", -8)
+                    .attr("y", y(tick) + 4)
+                    .attr("text-anchor", "end")
+                    .attr("font-size", "9px")
+                    .attr("font-family", "var(--font-montserrat)")
+                    .attr("fill", "rgba(255,255,255,0.22)")
+                    .text(tick + "M");
+            });
 
-        const lineGen2 = d3.line<(typeof FOOTFALL_DATA)[0]>()
-            .x(d => x(d.month) ?? 0)
-            .y(d => y(d.entertainment))
-            .curve(d3.curveCatmullRom);
+            // Area + line generators
+            const areaGen = d3.area<(typeof FOOTFALL_DATA)[0]>()
+                .x(d => x(d.month) ?? 0)
+                .y0(iH)
+                .y1(d => y(d.retail))
+                .curve(d3.curveCatmullRom);
 
-        // Gradient fill
-        const defs = svg.append("defs");
-        const grad = defs.append("linearGradient")
-            .attr("id", "ent-area-grad")
-            .attr("x1", "0%").attr("y1", "0%")
-            .attr("x2", "0%").attr("y2", "100%");
-        grad.append("stop")
-            .attr("offset", "0%")
-            .attr("stop-color", "#C9A84C")
-            .attr("stop-opacity", "0.18");
-        grad.append("stop")
-            .attr("offset", "100%")
-            .attr("stop-color", "#C9A84C")
-            .attr("stop-opacity", "0.0");
+            const lineGen = d3.line<(typeof FOOTFALL_DATA)[0]>()
+                .x(d => x(d.month) ?? 0)
+                .y(d => y(d.retail))
+                .curve(d3.curveCatmullRom);
 
-        // Area fill
-        g.append("path")
-            .datum(FOOTFALL_DATA)
-            .attr("d", areaGen)
-            .attr("fill", "url(#ent-area-grad)");
+            const lineGen2 = d3.line<(typeof FOOTFALL_DATA)[0]>()
+                .x(d => x(d.month) ?? 0)
+                .y(d => y(d.entertainment))
+                .curve(d3.curveCatmullRom);
 
-        // Retail line (gold)
-        const retailPath = g.append("path")
-            .datum(FOOTFALL_DATA)
-            .attr("d", lineGen)
-            .attr("fill", "none")
-            .attr("stroke", "#C9A84C")
-            .attr("stroke-width", "2")
-            .attr("stroke-linecap", "round");
+            // Gradient fill
+            const defs = svg.append("defs");
+            const grad = defs.append("linearGradient")
+                .attr("id", "ent-area-grad")
+                .attr("x1", "0%").attr("y1", "0%")
+                .attr("x2", "0%").attr("y2", "100%");
+            grad.append("stop")
+                .attr("offset", "0%")
+                .attr("stop-color", "#C9A84C")
+                .attr("stop-opacity", "0.18");
+            grad.append("stop")
+                .attr("offset", "100%")
+                .attr("stop-color", "#C9A84C")
+                .attr("stop-opacity", "0.0");
 
-        // Entertainment line (dim gold)
-        const entPath = g.append("path")
-            .datum(FOOTFALL_DATA)
-            .attr("d", lineGen2)
-            .attr("fill", "none")
-            .attr("stroke", "rgba(201,168,76,0.4)")
-            .attr("stroke-width", "1.5")
-            .attr("stroke-dasharray", "4 3")
-            .attr("stroke-linecap", "round");
+            // Area fill
+            g.append("path")
+                .datum(FOOTFALL_DATA)
+                .attr("d", areaGen)
+                .attr("fill", "url(#ent-area-grad)");
 
-        // Animate lines on scroll
-        const animateLine = (path: d3.Selection<SVGPathElement, unknown, null, undefined>) => {
-            const len = (path.node() as SVGPathElement).getTotalLength();
-            path
-                .attr("stroke-dasharray", `${len} ${len}`)
-                .attr("stroke-dashoffset", len);
-            return len;
-        };
+            // Retail line (gold)
+            const retailPath = g.append("path")
+                .datum(FOOTFALL_DATA)
+                .attr("d", lineGen)
+                .attr("fill", "none")
+                .attr("stroke", "#C9A84C")
+                .attr("stroke-width", "2")
+                .attr("stroke-linecap", "round");
 
-        const rLen = animateLine(retailPath as d3.Selection<SVGPathElement, unknown, null, undefined>);
-        const eLen = animateLine(entPath as d3.Selection<SVGPathElement, unknown, null, undefined>);
+            // Entertainment line (dim gold)
+            const entPath = g.append("path")
+                .datum(FOOTFALL_DATA)
+                .attr("d", lineGen2)
+                .attr("fill", "none")
+                .attr("stroke", "rgba(201,168,76,0.4)")
+                .attr("stroke-width", "1.5")
+                .attr("stroke-dasharray", "4 3")
+                .attr("stroke-linecap", "round");
 
-        // Dots on retail line
-        const dots = g.selectAll(".ent-dot")
-            .data(FOOTFALL_DATA)
-            .enter()
-            .append("circle")
-            .attr("cx", d => x(d.month) ?? 0)
-            .attr("cy", d => y(d.retail))
-            .attr("r", 3)
-            .attr("fill", "#C9A84C")
-            .attr("opacity", 0);
+            // Animate lines on scroll
+            const animateLine = (path: d3.Selection<SVGPathElement, unknown, null, undefined>) => {
+                const len = (path.node() as SVGPathElement).getTotalLength();
+                path
+                    .attr("stroke-dasharray", `${len} ${len}`)
+                    .attr("stroke-dashoffset", len);
+                return len;
+            };
 
-        // Scroll trigger
-        ScrollTrigger.create({
-            trigger: el,
-            start: "top 85%",
-            once: true,
-            onEnter: () => {
-                if (triggered.current) return;
-                triggered.current = true;
+            const rLen = animateLine(retailPath as d3.Selection<SVGPathElement, unknown, null, undefined>);
+            const eLen = animateLine(entPath as d3.Selection<SVGPathElement, unknown, null, undefined>);
 
-                gsap.to(retailPath.node(), {
-                    strokeDashoffset: 0,
-                    duration: 1.6,
-                    ease: "power2.out",
-                });
-                gsap.to(entPath.node(), {
-                    strokeDashoffset: 0,
-                    duration: 1.8,
-                    ease: "power2.out",
-                    delay: 0.2,
-                });
-                dots.each(function (_, i) {
-                    gsap.to(this, {
-                        opacity: 1,
-                        duration: 0.3,
-                        delay: 0.8 + i * 0.06,
+            // Dots on retail line
+            const dots = g.selectAll(".ent-dot")
+                .data(FOOTFALL_DATA)
+                .enter()
+                .append("circle")
+                .attr("cx", d => x(d.month) ?? 0)
+                .attr("cy", d => y(d.retail))
+                .attr("r", 3)
+                .attr("fill", "#C9A84C")
+                .attr("opacity", 0);
+
+            // Scroll trigger
+            ScrollTrigger.create({
+                trigger: el,
+                start: "top 85%",
+                once: true,
+                onEnter: () => {
+                    if (triggered.current) return;
+                    triggered.current = true;
+
+                    gsap.to(retailPath.node(), {
+                        strokeDashoffset: 0,
+                        duration: 1.6,
+                        ease: "power2.out",
                     });
-                });
-            },
+                    gsap.to(entPath.node(), {
+                        strokeDashoffset: 0,
+                        duration: 1.8,
+                        ease: "power2.out",
+                        delay: 0.2,
+                    });
+                    dots.each(function (_, i) {
+                        gsap.to(this, {
+                            opacity: 1,
+                            duration: 0.3,
+                            delay: 0.8 + i * 0.06,
+                        });
+                    });
+                },
+            });
         });
 
         return () => {
-            ScrollTrigger.getAll()
-                .filter(st => st.vars.trigger === el)
-                .forEach(st => st.kill());
+            cancelled = true;
+            loadGsap().then(({ ScrollTrigger }) => {
+                ScrollTrigger.getAll()
+                    .filter(st => st.vars.trigger === el)
+                    .forEach(st => st.kill());
+            });
         };
     }, []);
 
@@ -543,44 +588,50 @@ export default function EntertainmentSection() {
     const [isMobile, setIsMobile] = useState(false);
 
     useEffect(() => {
-        setIsMobile(window.innerWidth < 768);
+        let cancelled = false;
 
-        const ctx = gsap.context(() => {
-            // Heading entrance
-            gsap.fromTo(".ent-heading",
-                { opacity: 0, y: 28 },
-                {
-                    opacity: 1, y: 0, duration: 0.9, ease: "power2.out",
-                    scrollTrigger: { trigger: ".ent-heading", start: "top 85%" },
-                }
-            );
+        loadGsap().then(({ gsap, ScrollTrigger }) => {
+            if (cancelled || !sectionRef.current) return;
 
-            // Each panel animates in on scroll
-            PANELS.forEach((_, i) => {
-                const tl = gsap.timeline({
-                    scrollTrigger: {
-                        trigger: `.ent-panel-${i}`,
-                        start: "top 72%",
-                        once: true,
-                    },
+            setIsMobile(window.innerWidth < 768);
+
+            const ctx = gsap.context(() => {
+                // Heading entrance
+                gsap.fromTo(".ent-heading",
+                    { opacity: 0, y: 28 },
+                    {
+                        opacity: 1, y: 0, duration: 0.9, ease: "power2.out",
+                        scrollTrigger: { trigger: ".ent-heading", start: "top 85%" },
+                    }
+                );
+
+                // Each panel animates in on scroll
+                PANELS.forEach((_, i) => {
+                    const tl = gsap.timeline({
+                        scrollTrigger: {
+                            trigger: `.ent-panel-${i}`,
+                            start: "top 72%",
+                            once: true,
+                        },
+                    });
+                    tl.to(`.ent-cat-${i}`, { opacity: 1, y: 0, duration: 0.6, ease: "power2.out" })
+                        .to(`.ent-headline-${i}`, { opacity: 1, y: 0, duration: 0.7, ease: "power2.out" }, "-=0.3")
+                        .to(`.ent-sub-${i}`, { opacity: 1, y: 0, duration: 0.7, ease: "power2.out" }, "-=0.4")
+                        .to(`.ent-body-${i}`, { opacity: 1, y: 0, duration: 0.7, ease: "power2.out" }, "-=0.3");
                 });
-                tl.to(`.ent-cat-${i}`, { opacity: 1, y: 0, duration: 0.6, ease: "power2.out" })
-                    .to(`.ent-headline-${i}`, { opacity: 1, y: 0, duration: 0.7, ease: "power2.out" }, "-=0.3")
-                    .to(`.ent-sub-${i}`, { opacity: 1, y: 0, duration: 0.7, ease: "power2.out" }, "-=0.4")
-                    .to(`.ent-body-${i}`, { opacity: 1, y: 0, duration: 0.7, ease: "power2.out" }, "-=0.3");
-            });
 
-            // Chart heading
-            gsap.fromTo(".ent-chart-head",
-                { opacity: 0, y: 24 },
-                {
-                    opacity: 1, y: 0, duration: 0.8, ease: "power2.out",
-                    scrollTrigger: { trigger: ".ent-chart-head", start: "top 85%" },
-                }
-            );
-        }, sectionRef);
+                // Chart heading
+                gsap.fromTo(".ent-chart-head",
+                    { opacity: 0, y: 24 },
+                    {
+                        opacity: 1, y: 0, duration: 0.8, ease: "power2.out",
+                        scrollTrigger: { trigger: ".ent-chart-head", start: "top 85%" },
+                    }
+                );
+            }, sectionRef);
+        });
 
-        return () => ctx.revert();
+        return () => { cancelled = true; };
     }, []);
 
     return (
