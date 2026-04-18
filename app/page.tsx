@@ -1,5 +1,6 @@
 import HeroSection from "@/components/Hero/HeroSection";
 import Navbar from "@/components/Navbar/Navbar";
+import LazySection from "@/components/Performance/LazySection";
 import dynamic from "next/dynamic";
 
 // ── Below-fold components — dynamically imported for code splitting ──
@@ -24,13 +25,27 @@ export default function Home() {
     <main>
       <Navbar />
       <HeroSection />
-      <NumbersSection />
-      <WhosHereSection />
-      <MallMapSection />
-      <EntertainmentSection />
-      <EventsSection />
-      <SponsorshipSection />
-      <CTASection />
+      <LazySection placeholderHeight="80vh">
+        <NumbersSection />
+      </LazySection>
+      <LazySection placeholderHeight="90vh">
+        <WhosHereSection />
+      </LazySection>
+      <LazySection placeholderHeight="100vh">
+        <MallMapSection />
+      </LazySection>
+      <LazySection placeholderHeight="100vh">
+        <EntertainmentSection />
+      </LazySection>
+      <LazySection placeholderHeight="90vh">
+        <EventsSection />
+      </LazySection>
+      <LazySection placeholderHeight="90vh">
+        <SponsorshipSection />
+      </LazySection>
+      <LazySection placeholderHeight="70vh">
+        <CTASection />
+      </LazySection>
     </main>
   );
 }
