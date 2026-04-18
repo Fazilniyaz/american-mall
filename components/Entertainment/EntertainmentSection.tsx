@@ -6,6 +6,8 @@ import {
     useState,
     memo,
 } from "react";
+import NickelodeonPanel from "./NickelodeonPanel";
+
 
 // ── Lazy library loaders ──────────────────────────────────────────────────
 // These heavy libraries are loaded on-demand and cached after first load.
@@ -692,9 +694,10 @@ export default function EntertainmentSection() {
 
             {/* ── Cinematic panels ── */}
             <div style={{ display: "flex", flexDirection: "column" }}>
-                {PANELS.map((panel, i) => (
-                    <EntPanel key={panel.id} panel={panel} index={i} />
-                ))}
+            <NickelodeonPanel />
+{PANELS.slice(1).map((panel, i) => (
+  <EntPanel key={panel.id} panel={panel} index={i + 1} />
+))}
             </div>
 
             {/* ── Footfall chart section ── */}
