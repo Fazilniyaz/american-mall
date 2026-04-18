@@ -10,6 +10,7 @@ import Image from "next/image";
 import gsap from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
 import * as d3 from "d3";
+import EventsPanel from "./EventsPanel";
 import {
   Scene,
   PerspectiveCamera,
@@ -24,6 +25,7 @@ import {
 gsap.registerPlugin(ScrollTrigger);
 
 // ─── Text-only panels (dining, events) ───────────────────────────────────────
+// Dining only — Events is now EventsPanel component
 const TEXT_PANELS = [
   {
     id:       "dining",
@@ -35,17 +37,6 @@ const TEXT_PANELS = [
     body:     "From Michelin-calibre dining to fast-casual, the food ecosystem at Mall of America keeps visitors on-property longer — and spending more.",
     bg:       "linear-gradient(135deg, #0a0400 0%, #140800 40%, #080300 100%)",
     panelNum: "03",
-  },
-  {
-    id:       "events",
-    category: "Live Events",
-    headline: "300+ events",
-    sub:      "every single year.",
-    stat:     "500K+",
-    statLabel:"Event attendees annually",
-    body:     "Concerts, celebrity appearances, product launches, conventions. The property operates like a global platform — not a shopping centre.",
-    bg:       "linear-gradient(135deg, #060006 0%, #0e000e 40%, #040004 100%)",
-    panelNum: "04",
   },
 ];
 
@@ -620,7 +611,7 @@ function NickelodeonPanel() {
     }}>
       {/* Background image */}
       <div style={{ position:"absolute", inset:0, zIndex:1 }}>
-        <picture>
+        <picture style={{ display:"block", width:"100%", height:"100%" }}>
           <source
             media="(max-width: 767px)"
             srcSet="/photos/nickelodeon-park-mobile.jpg"
@@ -628,13 +619,13 @@ function NickelodeonPanel() {
           <img
             src="/photos/nickelodeon-park.jpg"
             alt="Nickelodeon Universe — pirate ship atrium at Mall of America"
-            loading="lazy"
+            loading="eager"
             decoding="async"
             style={{
-              width: "100%",
-              height: "100%",
-              objectFit: "cover",
-              objectPosition: "center 30%",
+              width:"100%",
+              height:"100%",
+              objectFit:"cover",
+              objectPosition:"center 30%",
             }}
           />
         </picture>
@@ -853,6 +844,9 @@ export default function EntertainmentSection() {
           <TextPanel key={panel.id} panel={panel} index={i} />
         ))}
       </div>
+
+      {/* Events panel — full image-driven component */}
+      <EventsPanel />
 
       {/* Footfall chart */}
       <div style={{ padding:"6rem clamp(1.5rem,6vw,6rem)", maxWidth:"900px", margin:"0 auto" }}>
