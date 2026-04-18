@@ -4,6 +4,8 @@ import Navbar from "@/components/Navbar/Navbar";
 import dynamic from "next/dynamic";
 import EntertainmentSection from "@/components/Entertainment/EntertainmentSection";
 import EventsSection from "@/components/Event/EventsSection";
+import SponsorshipSection from "@/components/Sponsorship/SponsorshipSection";
+import CTASection from "@/components/CTA/CTASection";
 
 // Lazy load WhosHereSection — it's heavy and below the fold
 // Dynamic import without ssr:false will still lazy load the component code
@@ -28,6 +30,8 @@ export default function Home() {
       <MallMapSection />
       <EntertainmentSection />
       <EventsSection />
+       <SponsorshipSection />
+      <CTASection />
     </main>
   );
 }

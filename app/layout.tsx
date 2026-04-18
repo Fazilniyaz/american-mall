@@ -49,7 +49,7 @@ export default function RootLayout({
           as="image"
           href="/photos/hero-poster.jpg"
           type="image/jpeg"
-          {...({ fetchpriority: "high" } as Record<string, string>)}
+          {...({ fetchPriority: "high" } as Record<string, string>)}
           media="(max-width: 768px)"
         />
 
