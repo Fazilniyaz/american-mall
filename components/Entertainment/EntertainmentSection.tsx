@@ -620,14 +620,24 @@ function NickelodeonPanel() {
     }}>
       {/* Background image */}
       <div style={{ position:"absolute", inset:0, zIndex:1 }}>
-        <Image
-          src="/photos/nickelodeon-park.jpg"
-          alt="Nickelodeon Universe — pirate ship atrium at Mall of America"
-          fill
-          priority={false}
-          sizes="100vw"
-          style={{ objectFit:"cover", objectPosition:"center 30%" }}
-        />
+        <picture>
+          <source
+            media="(max-width: 767px)"
+            srcSet="/photos/nickelodeon-park-mobile.jpg"
+          />
+          <img
+            src="/photos/nickelodeon-park.jpg"
+            alt="Nickelodeon Universe — pirate ship atrium at Mall of America"
+            loading="lazy"
+            decoding="async"
+            style={{
+              width: "100%",
+              height: "100%",
+              objectFit: "cover",
+              objectPosition: "center 30%",
+            }}
+          />
+        </picture>
         {/* Gradient overlay — dark left, reveals right */}
         <div style={{
           position:"absolute", inset:0,
