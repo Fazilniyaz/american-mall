@@ -732,6 +732,7 @@ const FloorButtons = memo(function FloorButtons({
             display: "flex",
             alignItems: "center",
             gap: "0.55rem",
+            marginRight : "0.5rem",
           }}>
           <span style={{
             width: "5px", height: "5px", flexShrink: 0,

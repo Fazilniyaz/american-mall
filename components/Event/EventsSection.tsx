@@ -3,8 +3,6 @@
 import {
     useEffect,
     useRef,
-    useState,
-    useCallback,
     memo,
 } from "react";
 
@@ -27,7 +25,7 @@ const loadGsap = async () => {
     return { gsap: _gsap, ScrollTrigger: _ST };
 };
 
-// ─── Event category cards ─────────────────────────────────────────────────────
+// ─── Event category cards data ────────────────────────────────────────────────
 const EVENT_TYPES = [
     {
         id: "concerts",
@@ -55,7 +53,7 @@ const EVENT_TYPES = [
     },
 ];
 
-// ─── Past brand showcase carousel data ───────────────────────────────────────
+// ─── Brand events with SVG paths from public/svg/ ────────────────────────────
 const BRAND_EVENTS = [
     {
         brand: "Samsung",
@@ -64,6 +62,8 @@ const BRAND_EVENTS = [
         stat: "22K attendees",
         category: "Product Launch",
         gradient: "linear-gradient(135deg, #1428A0 0%, #0a1560 100%)",
+        logo: "/svg/samsung.svg",
+        logoStyle: { width: "72%", height: "auto" },
     },
     {
         brand: "Nike",
@@ -72,15 +72,20 @@ const BRAND_EVENTS = [
         stat: "18K attendees",
         category: "Brand Activation",
         gradient: "linear-gradient(135deg, #111111 0%, #2a2a2a 100%)",
+        logo: "/svg/nike.svg",
+        logoStyle: { width: "52%", height: "auto" },
     },
     {
-        brand: "Lego",
-        event: "Flagship Store Opening",
-        year: "2024",
-        stat: "14K attendees",
-        category: "Store Launch",
-        gradient: "linear-gradient(135deg, #006DB7 0%, #003d6b 100%)",
-    },
+    brand: "Lego",
+    event: "Flagship Store Opening",
+    year: "2024",
+    stat: "14K attendees",
+    category: "Store Launch",
+    gradient: "linear-gradient(135deg, #006DB7 0%, #003d6b 100%)",
+    logo: "/svg/lego.svg",
+    logoFilter: "brightness(0) invert(1) drop-shadow(0 0 18px rgba(255,255,255,0.15))",
+    logoStyle: { width: "62%", height: "auto" },
+},
     {
         brand: "Coca-Cola",
         event: "Summer Sponsorship Takeover",
@@ -88,6 +93,8 @@ const BRAND_EVENTS = [
         stat: "31K reach",
         category: "Sponsorship",
         gradient: "linear-gradient(135deg, #c8102e 0%, #6b0018 100%)",
+        logo: "/svg/coca-cola.svg",
+        logoStyle: { width: "76%", height: "auto" },
     },
     {
         brand: "Marvel",
@@ -95,7 +102,9 @@ const BRAND_EVENTS = [
         year: "2023",
         stat: "27K attendees",
         category: "Entertainment",
-        gradient: "linear-gradient(135deg, #ed1d24 0%, #7a0d11 100%)",
+        gradient: "linear-gradient(135deg, #1a1a1a 0%, #0d0d0d 100%)",
+        logo: "/svg/marvel.svg",
+        logoStyle: { width: "66%", height: "auto" },
     },
     {
         brand: "Tesla",
@@ -103,7 +112,19 @@ const BRAND_EVENTS = [
         year: "2023",
         stat: "12K visitors",
         category: "Product Experience",
-        gradient: "linear-gradient(135deg, #cc0000 0%, #660000 100%)",
+        gradient: "linear-gradient(135deg, #1a1a1a 0%, #0a0000 100%)",
+        logo: "/svg/tesla.svg",
+        logoStyle: { width: "60%", height: "auto" },
+    },
+    {
+        brand: "Apple",
+        event: "iPhone 15 Launch Event",
+        year: "2023",
+        stat: "19K attendees",
+        category: "Product Launch",
+        gradient: "linear-gradient(135deg, #1c1c1e 0%, #000000 100%)",
+        logo: "/svg/apple.svg",
+        logoStyle: { width: "28%", height: "auto" },
     },
 ];
 
@@ -115,8 +136,6 @@ const EventTypeCard = memo(function EventTypeCard({
     evt: typeof EVENT_TYPES[0];
     index: number;
 }) {
-    const cardRef = useRef<HTMLDivElement>(null);
-
     const onMove = (e: React.MouseEvent<HTMLDivElement>) => {
         const r = e.currentTarget.getBoundingClientRect();
         const mx = ((e.clientX - r.left) / r.width - 0.5) * 12;
@@ -142,7 +161,6 @@ const EventTypeCard = memo(function EventTypeCard({
 
     return (
         <div
-            ref={cardRef}
             className={`evt-type-card evt-type-card-${index}`}
             onMouseMove={onMove}
             onMouseLeave={onLeave}
@@ -269,11 +287,11 @@ const BrandEventCard = memo(function BrandEventCard({
         <div
             className="brand-evt-card"
             style={{
-                minWidth: "clamp(200px, 30vw, 280px)",
-                height: "clamp(180px, 25vw, 240px)",
+                minWidth: "clamp(200px, 28vw, 290px)",
+                height: "clamp(185px, 22vw, 245px)",
                 background: evt.gradient,
                 border: "1px solid rgba(201,168,76,0.1)",
-                padding: "1.5rem",
+                padding: "1.4rem",
                 display: "flex",
                 flexDirection: "column",
                 justifyContent: "space-between",
@@ -284,79 +302,91 @@ const BrandEventCard = memo(function BrandEventCard({
                 transition: "border-color 0.25s ease",
             }}
             onMouseEnter={e => {
-                e.currentTarget.style.borderColor = "rgba(201,168,76,0.4)";
-                loadGsap().then(({ gsap }) => gsap.to(e.currentTarget, { scale: 1.02, duration: 0.28, ease: "power2.out" }));
+                e.currentTarget.style.borderColor = "rgba(201,168,76,0.45)";
+                loadGsap().then(({ gsap }) =>
+                    gsap.to(e.currentTarget, { scale: 1.025, duration: 0.28, ease: "power2.out" })
+                );
             }}
             onMouseLeave={e => {
                 e.currentTarget.style.borderColor = "rgba(201,168,76,0.1)";
-                loadGsap().then(({ gsap }) => gsap.to(e.currentTarget, { scale: 1, duration: 0.4, ease: "power2.out" }));
+                loadGsap().then(({ gsap }) =>
+                    gsap.to(e.currentTarget, { scale: 1, duration: 0.4, ease: "power2.out" })
+                );
             }}
         >
             {/* Category pill */}
             <div style={{
                 display: "inline-flex",
                 alignSelf: "flex-start",
-                background: "rgba(0,0,0,0.35)",
+                background: "rgba(0,0,0,0.4)",
                 border: "1px solid rgba(201,168,76,0.2)",
-                color: "rgba(201,168,76,0.8)",
-                fontSize: "0.55rem",
+                color: "rgba(201,168,76,0.85)",
+                fontSize: "0.52rem",
                 letterSpacing: "0.22em",
                 textTransform: "uppercase",
                 fontFamily: "var(--font-montserrat)",
                 fontWeight: 700,
                 padding: "3px 8px",
+                position: "relative",
+                zIndex: 2,
             }}>
                 {evt.category}
             </div>
 
-            {/* Brand name watermark */}
+            {/* Real brand logo — centered, luminous white */}
             <div style={{
                 position: "absolute",
-                right: "1rem",
-                top: "50%",
-                transform: "translateY(-50%)",
-                color: "rgba(255,255,255,0.04)",
-                fontSize: "clamp(2.5rem, 5vw, 3.5rem)",
-                fontWeight: 800,
-                fontFamily: "var(--font-montserrat)",
-                userSelect: "none",
+                inset: 0,
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                zIndex: 1,
                 pointerEvents: "none",
-                whiteSpace: "nowrap",
             }}>
-                {evt.brand}
+                <img
+                    src={evt.logo}
+                    alt={evt.brand}
+                    style={{
+                    ...evt.logoStyle,
+                    opacity: 0.9,
+                    filter: evt.logoFilter ?? "brightness(0) invert(1) drop-shadow(0 0 18px rgba(255,255,255,0.15))",
+                    objectFit: "contain",
+                    }}
+                />
             </div>
 
-            {/* Bottom content */}
-            <div>
-                <div style={{
-                    color: "#ffffff",
-                    fontSize: "clamp(1rem, 2vw, 1.2rem)",
-                    fontWeight: 800,
-                    fontFamily: "var(--font-montserrat)",
-                    letterSpacing: "0.04em",
-                    lineHeight: 1.2,
-                    marginBottom: "0.3rem",
-                }}>
-                    {evt.brand}
-                </div>
+            {/* Bottom vignette so text stays readable */}
+            <div style={{
+                position: "absolute",
+                bottom: 0,
+                left: 0,
+                right: 0,
+                height: "52%",
+                background: "linear-gradient(to top, rgba(0,0,0,0.72) 0%, transparent 100%)",
+                zIndex: 1,
+                pointerEvents: "none",
+            }} />
+
+            {/* Bottom info */}
+            <div style={{ position: "relative", zIndex: 2 }}>
                 <div style={{
                     color: "rgba(255,255,255,0.55)",
-                    fontSize: "0.68rem",
+                    fontSize: "0.64rem",
                     fontFamily: "var(--font-montserrat)",
                     fontWeight: 400,
                     lineHeight: 1.4,
-                    marginBottom: "0.6rem",
+                    marginBottom: "0.4rem",
                 }}>
                     {evt.event}
                 </div>
                 <div style={{
                     display: "flex",
                     alignItems: "center",
-                    gap: "0.8rem",
+                    gap: "0.7rem",
                 }}>
                     <span style={{
                         color: "#C9A84C",
-                        fontSize: "0.62rem",
+                        fontSize: "0.64rem",
                         fontWeight: 700,
                         fontFamily: "var(--font-montserrat)",
                         letterSpacing: "0.1em",
@@ -364,7 +394,7 @@ const BrandEventCard = memo(function BrandEventCard({
                         {evt.stat}
                     </span>
                     <span style={{
-                        color: "rgba(255,255,255,0.22)",
+                        color: "rgba(255,255,255,0.25)",
                         fontSize: "0.58rem",
                         fontFamily: "var(--font-montserrat)",
                         fontWeight: 500,
@@ -378,7 +408,7 @@ const BrandEventCard = memo(function BrandEventCard({
     );
 });
 
-// ─── Carousel (GSAP drag + auto scroll) ──────────────────────────────────────
+// ─── Carousel — GSAP infinite scroll + hover slow + touch drag ───────────────
 function BrandCarousel() {
     const trackRef = useRef<HTMLDivElement>(null);
     const tlRef = useRef<gsap.core.Tween | null>(null);
@@ -389,19 +419,17 @@ function BrandCarousel() {
     useEffect(() => {
         const track = trackRef.current;
         if (!track) return;
-
         let cancelled = false;
 
         loadGsap().then(({ gsap }) => {
             if (cancelled || !track) return;
 
-            // Auto scroll
             const totalW = track.scrollWidth / 2;
             gsap.set(track, { x: 0 });
 
             tlRef.current = gsap.to(track, {
                 x: -totalW,
-                duration: 36,
+                duration: 40,
                 ease: "none",
                 repeat: -1,
                 paused: document.hidden,
@@ -416,13 +444,11 @@ function BrandCarousel() {
             };
             document.addEventListener("visibilitychange", onVis);
 
-            // Hover slow
-            const onEnter = () => gsap.to(tlRef.current, { timeScale: 0.25, duration: 0.5 });
-            const onLeave = () => gsap.to(tlRef.current, { timeScale: 1, duration: 0.5 });
+            const onEnter = () => gsap.to(tlRef.current, { timeScale: 0.2, duration: 0.6 });
+            const onLeave = () => gsap.to(tlRef.current, { timeScale: 1, duration: 0.6 });
             track.parentElement?.addEventListener("mouseenter", onEnter);
             track.parentElement?.addEventListener("mouseleave", onLeave);
 
-            // Drag on mobile
             const onTouchStart = (e: TouchEvent) => {
                 isDrag.current = true;
                 startX.current = e.touches[0].clientX;
@@ -436,14 +462,13 @@ function BrandCarousel() {
             };
             const onTouchEnd = () => {
                 isDrag.current = false;
-                setTimeout(() => tlRef.current?.resume(), 1500);
+                setTimeout(() => tlRef.current?.resume(), 1800);
             };
 
             track.addEventListener("touchstart", onTouchStart, { passive: true });
             track.addEventListener("touchmove", onTouchMove, { passive: true });
             track.addEventListener("touchend", onTouchEnd);
 
-            // Store cleanup references
             (track as any).__evtCleanup = () => {
                 tlRef.current?.kill();
                 document.removeEventListener("visibilitychange", onVis);
@@ -457,23 +482,25 @@ function BrandCarousel() {
 
         return () => {
             cancelled = true;
-            if ((trackRef.current as any)?.__evtCleanup) (trackRef.current as any).__evtCleanup();
+            if ((trackRef.current as any)?.__evtCleanup)
+                (trackRef.current as any).__evtCleanup();
         };
     }, []);
 
-    // Duplicate for seamless loop
+    // Duplicate for seamless infinite loop
     const doubled = [...BRAND_EVENTS, ...BRAND_EVENTS];
 
     return (
         <div style={{ overflow: "hidden", position: "relative", width: "100%" }}>
-            {/* Fade edges */}
+            {/* Left fade */}
             <div style={{
-                position: "absolute", left: 0, top: 0, bottom: 0, width: "80px",
+                position: "absolute", left: 0, top: 0, bottom: 0, width: "100px",
                 background: "linear-gradient(to right, #050402, transparent)",
                 zIndex: 2, pointerEvents: "none",
             }} />
+            {/* Right fade */}
             <div style={{
-                position: "absolute", right: 0, top: 0, bottom: 0, width: "80px",
+                position: "absolute", right: 0, top: 0, bottom: 0, width: "100px",
                 background: "linear-gradient(to left, #050402, transparent)",
                 zIndex: 2, pointerEvents: "none",
             }} />
@@ -484,7 +511,7 @@ function BrandCarousel() {
                     display: "flex",
                     gap: "1px",
                     willChange: "transform",
-                    background: "rgba(201,168,76,0.06)",
+                    background: "rgba(201,168,76,0.05)",
                 }}
             >
                 {doubled.map((evt, i) => (
@@ -498,13 +525,12 @@ function BrandCarousel() {
 // ─── Video reel hero ──────────────────────────────────────────────────────────
 function EventReel() {
     const reelRef = useRef<HTMLDivElement>(null);
-    const textRef = useRef<HTMLDivElement>(null);
 
     useEffect(() => {
         let cancelled = false;
         loadGsap().then(({ gsap, ScrollTrigger }) => {
             if (cancelled || !reelRef.current) return;
-            const ctx = gsap.context(() => {
+            gsap.context(() => {
                 gsap.fromTo(".reel-tagline",
                     { opacity: 0, y: 20 },
                     {
@@ -547,29 +573,38 @@ function EventReel() {
                 borderBottom: "1px solid rgba(201,168,76,0.08)",
             }}
         >
-            {/* Large gold grid lines — decorative */}
+            {/* Grid lines */}
             <div style={{
                 position: "absolute",
                 inset: 0,
                 backgroundImage: `
-          linear-gradient(rgba(201,168,76,0.04) 1px, transparent 1px),
-          linear-gradient(90deg, rgba(201,168,76,0.04) 1px, transparent 1px)
-        `,
+                    linear-gradient(rgba(201,168,76,0.04) 1px, transparent 1px),
+                    linear-gradient(90deg, rgba(201,168,76,0.04) 1px, transparent 1px)
+                `,
                 backgroundSize: "60px 60px",
                 pointerEvents: "none",
             }} />
 
+            {/* Radial glow */}
+            <div style={{
+                position: "absolute",
+                top: "50%", left: "50%",
+                transform: "translate(-50%, -50%)",
+                width: "600px", height: "600px",
+                borderRadius: "50%",
+                background: "radial-gradient(circle, rgba(201,168,76,0.07) 0%, transparent 70%)",
+                pointerEvents: "none",
+                zIndex: 1,
+            }} />
+
             {/* Centre content */}
-            <div
-                ref={textRef}
-                style={{
-                    position: "relative",
-                    zIndex: 2,
-                    textAlign: "center",
-                    padding: "4rem clamp(1.5rem, 6vw, 6rem)",
-                    maxWidth: "800px",
-                }}
-            >
+            <div style={{
+                position: "relative",
+                zIndex: 2,
+                textAlign: "center",
+                padding: "4rem clamp(1.5rem, 6vw, 6rem)",
+                maxWidth: "800px",
+            }}>
                 <p
                     className="reel-tagline"
                     style={{
@@ -600,16 +635,14 @@ function EventReel() {
                 >
                     40 million
                 </h2>
-                <h2
-                    style={{
-                        color: "#C9A84C",
-                        fontSize: "clamp(2.2rem, 6vw, 5rem)",
-                        fontWeight: 800,
-                        fontFamily: "var(--font-montserrat)",
-                        margin: "0 0 2rem",
-                        lineHeight: 1.0,
-                    }}
-                >
+                <h2 style={{
+                    color: "#C9A84C",
+                    fontSize: "clamp(2.2rem, 6vw, 5rem)",
+                    fontWeight: 800,
+                    fontFamily: "var(--font-montserrat)",
+                    margin: "0 0 2rem",
+                    lineHeight: 1.0,
+                }}>
                     witnesses.
                 </h2>
 
@@ -631,7 +664,6 @@ function EventReel() {
                     becomes part of a global conversation.
                 </p>
 
-                {/* CTA */}
                 <button
                     className="reel-sub"
                     style={{
@@ -663,20 +695,6 @@ function EventReel() {
                     Book Your Event
                 </button>
             </div>
-
-            {/* Radial glow */}
-            <div style={{
-                position: "absolute",
-                top: "50%",
-                left: "50%",
-                transform: "translate(-50%, -50%)",
-                width: "600px",
-                height: "600px",
-                borderRadius: "50%",
-                background: "radial-gradient(circle, rgba(201,168,76,0.07) 0%, transparent 70%)",
-                pointerEvents: "none",
-                zIndex: 1,
-            }} />
         </div>
     );
 }
@@ -689,8 +707,7 @@ export default function EventsSection() {
         let cancelled = false;
         loadGsap().then(({ gsap, ScrollTrigger }) => {
             if (cancelled || !sectionRef.current) return;
-            const ctx = gsap.context(() => {
-                // Section heading
+            gsap.context(() => {
                 gsap.fromTo(".events-heading",
                     { opacity: 0, y: 28 },
                     {
@@ -698,8 +715,6 @@ export default function EventsSection() {
                         scrollTrigger: { trigger: ".events-heading", start: "top 85%" },
                     }
                 );
-
-                // Type cards stagger
                 gsap.fromTo(".evt-type-card",
                     { opacity: 0, y: 44 },
                     {
@@ -708,8 +723,6 @@ export default function EventsSection() {
                         scrollTrigger: { trigger: ".evt-types-grid", start: "top 82%" },
                     }
                 );
-
-                // Carousel heading
                 gsap.fromTo(".carousel-heading",
                     { opacity: 0, y: 24 },
                     {
@@ -719,7 +732,6 @@ export default function EventsSection() {
                 );
             }, sectionRef);
         });
-
         return () => { cancelled = true; };
     }, []);
 
@@ -780,9 +792,7 @@ export default function EventsSection() {
             </div>
 
             {/* ── Event type cards ── */}
-            <div
-                style={{ padding: "0 clamp(1.2rem, 4vw, 4rem)", marginBottom: "5rem" }}
-            >
+            <div style={{ padding: "0 clamp(1.2rem, 4vw, 4rem)", marginBottom: "5rem" }}>
                 <div className="evt-types-grid">
                     {EVENT_TYPES.map((evt, i) => (
                         <EventTypeCard key={evt.id} evt={evt} index={i} />
@@ -841,7 +851,7 @@ export default function EventsSection() {
                         lineHeight: 1.6,
                         textAlign: "right",
                     }}>
-                        Drag to explore past brand events and activations.
+                        Hover to pause · Drag to explore past brand events and activations.
                     </p>
                 </div>
 
@@ -910,21 +920,21 @@ export default function EventsSection() {
                 background: "linear-gradient(to right, transparent, rgba(201,168,76,0.15), transparent)",
             }} />
 
-            {/* Responsive */}
+            {/* Responsive grid */}
             <style>{`
-        .evt-types-grid {
-          display: grid;
-          grid-template-columns: 1fr;
-          gap: 1px;
-          background: rgba(201,168,76,0.07);
-          border: 1px solid rgba(201,168,76,0.07);
-        }
-        @media (min-width: 640px) {
-          .evt-types-grid {
-            grid-template-columns: repeat(3, 1fr);
-          }
-        }
-      `}</style>
+                .evt-types-grid {
+                    display: grid;
+                    grid-template-columns: 1fr;
+                    gap: 1px;
+                    background: rgba(201,168,76,0.07);
+                    border: 1px solid rgba(201,168,76,0.07);
+                }
+                @media (min-width: 640px) {
+                    .evt-types-grid {
+                        grid-template-columns: repeat(3, 1fr);
+                    }
+                }
+            `}</style>
         </section>
     );
 }
