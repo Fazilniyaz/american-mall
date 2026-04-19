@@ -25,25 +25,25 @@ export default function Home() {
     <main>
       <Navbar />
       <HeroSection />
-      <LazySection placeholderHeight="80vh">
+      <LazySection id="numbers" placeholderHeight="80vh">
         <NumbersSection />
       </LazySection>
-      <LazySection placeholderHeight="90vh">
+      <LazySection id="whos-here" placeholderHeight="90vh">
         <WhosHereSection />
       </LazySection>
-      <LazySection placeholderHeight="100vh">
+      <LazySection id="mall-map" placeholderHeight="100vh">
         <MallMapSection />
       </LazySection>
-      <LazySection placeholderHeight="100vh">
+      <LazySection id="entertainment" placeholderHeight="100vh">
         <EntertainmentSection />
       </LazySection>
-      <LazySection placeholderHeight="90vh">
+      <LazySection id="events" placeholderHeight="90vh">
         <EventsSection />
       </LazySection>
-      <LazySection placeholderHeight="90vh">
+      <LazySection id="sponsorship" placeholderHeight="90vh">
         <SponsorshipSection />
       </LazySection>
-      <LazySection placeholderHeight="70vh">
+      <LazySection id="cta" placeholderHeight="70vh">
         <CTASection />
       </LazySection>
     </main>

@@ -6,12 +6,14 @@ type LazySectionProps = {
   children: ReactNode;
   placeholderHeight?: string;
   rootMargin?: string;
+  id?: string;
 };
 
 export default function LazySection({
   children,
   placeholderHeight = "60vh",
   rootMargin = "300px 0px",
+  id,
 }: LazySectionProps) {
   const wrapperRef = useRef<HTMLDivElement>(null);
   const [isVisible, setIsVisible] = useState(false);
@@ -35,7 +37,7 @@ export default function LazySection({
   }, [isVisible, rootMargin]);
 
   return (
-    <div ref={wrapperRef}>
+    <div ref={wrapperRef} id={id}>
       {isVisible ? children : <div style={{ minHeight: placeholderHeight }} aria-hidden="true" />}
     </div>
   );
