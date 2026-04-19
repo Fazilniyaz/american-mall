@@ -5,7 +5,7 @@ import dynamic from "next/dynamic";
 import Image from "next/image";
 import HeroStats from "./HeroStats";
 
-// Three.js — never on mobile, lazy on desktop
+// Three.js — never on mobile, lazy on desktop!
 const ParticleCanvas = dynamic(() => import("./ParticleCanvas"), { ssr: false });
 
 export default function HeroSection() {
