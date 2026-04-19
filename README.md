@@ -32,6 +32,12 @@ The aesthetic is tailored to feel **ultra-premium, intuitive, and delightful**. 
 
 We delivered an incredibly complex, media-heavy site while respecting strict performance budgets (maintaining **90%+ Lighthouse Scores on both Mobile and Desktop**).
 
+### **Validated Performance Audits (Lighthouse 90%+)**
+- [Desktop Analysis 1 (Performance/SEO/Best Practices) - Pagespeed Insights](https://pagespeed.web.dev/analysis/https-american-mall-vercel-app/549x4l1yor?form_factor=desktop&category=performance&category=accessibility&category=best-practices&category=seo&hl=en-US&utm_source=lh-chrome-ext)
+- [Mobile Analysis 1 - Pagespeed Insights](https://pagespeed.web.dev/analysis/https-american-mall-vercel-app/xkewry1m6k?hl=en-US&form_factor=mobile)
+- [Desktop Analysis 2 - Pagespeed Insights](https://pagespeed.web.dev/analysis/https-american-mall-vercel-app/5dwcis54xt?form_factor=desktop&category=performance&category=accessibility&category=best-practices&category=seo&hl=en-US&utm_source=lh-chrome-ext)
+- [Desktop Analysis 3 - Pagespeed Insights](https://pagespeed.web.dev/analysis/https-american-mall-vercel-app/hxl5ald6cg?form_factor=desktop&category=performance&category=accessibility&category=best-practices&category=seo&hl=en-US&utm_source=lh-chrome-ext)
+
 ### **The Tech Stack:**
 - **Core:** Next.js 16 (App Router), React 19, TypeScript
 - **Styling:** Tailwind CSS 4
