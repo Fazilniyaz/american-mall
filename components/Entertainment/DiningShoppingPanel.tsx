@@ -2,10 +2,25 @@
 
 import { useEffect, useRef } from "react";
 import Image from "next/image";
-import gsap from "gsap";
-import { ScrollTrigger } from "gsap/ScrollTrigger";
 
-gsap.registerPlugin(ScrollTrigger);
+// ── Lazy GSAP loader ─────────────────────────────────────────────────────────────
+type GsapType = typeof import("gsap")["default"];
+type ScrollTriggerType = typeof import("gsap/ScrollTrigger")["ScrollTrigger"];
+
+let _gsap: GsapType | null = null;
+let _ST: ScrollTriggerType | null = null;
+
+const loadGsap = async () => {
+    if (_gsap && _ST) return { gsap: _gsap, ScrollTrigger: _ST };
+    const [gsapMod, stMod] = await Promise.all([
+        import("gsap"),
+        import("gsap/ScrollTrigger"),
+    ]);
+    _gsap = gsapMod.default;
+    _ST = stMod.ScrollTrigger;
+    _gsap.registerPlugin(_ST);
+    return { gsap: _gsap, ScrollTrigger: _ST };
+};
 
 // ─── Restaurant stats ─────────────────────────────────────────────────────────
 const REST_STATS = [
@@ -165,25 +180,33 @@ function RestaurantPanel() {
 
     useEffect(() => {
         if (!panelRef.current) return;
-        ScrollTrigger.create({
-            trigger: panelRef.current, start: "top 72%", once: true,
-            onEnter: () => {
-                if (triggered.current) return;
-                triggered.current = true;
-                gsap.timeline()
-                    .to(".rest-cat", { opacity: 1, y: 0, duration: 0.55, ease: "power2.out" })
-                    .to(".rest-headline", { opacity: 1, y: 0, duration: 0.65, ease: "power2.out" }, "-=0.25")
-                    .to(".rest-sub", { opacity: 1, y: 0, duration: 0.6, ease: "power2.out" }, "-=0.35")
-                    .to(".rest-divider", { scaleX: 1, duration: 0.4, ease: "power2.out" }, "-=0.2")
-                    .to(".rest-body", { opacity: 1, y: 0, duration: 0.6, ease: "power2.out" }, "-=0.2")
-                    .to(".rest-stat", { opacity: 1, y: 0, duration: 0.5, ease: "power2.out", stagger: 0.09 }, "-=0.2")
-                    .to(".rest-thumb", { opacity: 1, x: 0, duration: 0.6, ease: "power2.out", stagger: 0.1 }, "-=0.35");
-            },
+        let cancelled = false;
+        const el = panelRef.current;
+        loadGsap().then(({ gsap, ScrollTrigger }) => {
+            if (cancelled || !el) return;
+            ScrollTrigger.create({
+                trigger: el, start: "top 72%", once: true,
+                onEnter: () => {
+                    if (triggered.current) return;
+                    triggered.current = true;
+                    gsap.timeline()
+                        .to(".rest-cat", { opacity: 1, y: 0, duration: 0.55, ease: "power2.out" })
+                        .to(".rest-headline", { opacity: 1, y: 0, duration: 0.65, ease: "power2.out" }, "-=0.25")
+                        .to(".rest-sub", { opacity: 1, y: 0, duration: 0.6, ease: "power2.out" }, "-=0.35")
+                        .to(".rest-divider", { scaleX: 1, duration: 0.4, ease: "power2.out" }, "-=0.2")
+                        .to(".rest-body", { opacity: 1, y: 0, duration: 0.6, ease: "power2.out" }, "-=0.2")
+                        .to(".rest-stat", { opacity: 1, y: 0, duration: 0.5, ease: "power2.out", stagger: 0.09 }, "-=0.2")
+                        .to(".rest-thumb", { opacity: 1, x: 0, duration: 0.6, ease: "power2.out", stagger: 0.1 }, "-=0.35");
+                },
+            });
         });
         return () => {
-            ScrollTrigger.getAll()
-                .filter(st => st.vars.trigger === panelRef.current)
-                .forEach(st => st.kill());
+            cancelled = true;
+            loadGsap().then(({ ScrollTrigger }) => {
+                ScrollTrigger.getAll()
+                    .filter(st => st.vars.trigger === el)
+                    .forEach(st => st.kill());
+            });
         };
     }, []);
 
@@ -388,25 +411,33 @@ function ShoppingPanel() {
 
     useEffect(() => {
         if (!panelRef.current) return;
-        ScrollTrigger.create({
-            trigger: panelRef.current, start: "top 72%", once: true,
-            onEnter: () => {
-                if (triggered.current) return;
-                triggered.current = true;
-                gsap.timeline()
-                    .to(".shop-cat", { opacity: 1, y: 0, duration: 0.55, ease: "power2.out" })
-                    .to(".shop-headline", { opacity: 1, y: 0, duration: 0.65, ease: "power2.out" }, "-=0.25")
-                    .to(".shop-sub", { opacity: 1, y: 0, duration: 0.6, ease: "power2.out" }, "-=0.35")
-                    .to(".shop-divider", { scaleX: 1, duration: 0.4, ease: "power2.out" }, "-=0.2")
-                    .to(".shop-body", { opacity: 1, y: 0, duration: 0.6, ease: "power2.out" }, "-=0.2")
-                    .to(".shop-stat", { opacity: 1, y: 0, duration: 0.5, ease: "power2.out", stagger: 0.09 }, "-=0.2")
-                    .to(".shop-thumb", { opacity: 1, x: 0, duration: 0.6, ease: "power2.out", stagger: 0.14 }, "-=0.35");
-            },
+        let cancelled = false;
+        const el = panelRef.current;
+        loadGsap().then(({ gsap, ScrollTrigger }) => {
+            if (cancelled || !el) return;
+            ScrollTrigger.create({
+                trigger: el, start: "top 72%", once: true,
+                onEnter: () => {
+                    if (triggered.current) return;
+                    triggered.current = true;
+                    gsap.timeline()
+                        .to(".shop-cat", { opacity: 1, y: 0, duration: 0.55, ease: "power2.out" })
+                        .to(".shop-headline", { opacity: 1, y: 0, duration: 0.65, ease: "power2.out" }, "-=0.25")
+                        .to(".shop-sub", { opacity: 1, y: 0, duration: 0.6, ease: "power2.out" }, "-=0.35")
+                        .to(".shop-divider", { scaleX: 1, duration: 0.4, ease: "power2.out" }, "-=0.2")
+                        .to(".shop-body", { opacity: 1, y: 0, duration: 0.6, ease: "power2.out" }, "-=0.2")
+                        .to(".shop-stat", { opacity: 1, y: 0, duration: 0.5, ease: "power2.out", stagger: 0.09 }, "-=0.2")
+                        .to(".shop-thumb", { opacity: 1, x: 0, duration: 0.6, ease: "power2.out", stagger: 0.14 }, "-=0.35");
+                },
+            });
         });
         return () => {
-            ScrollTrigger.getAll()
-                .filter(st => st.vars.trigger === panelRef.current)
-                .forEach(st => st.kill());
+            cancelled = true;
+            loadGsap().then(({ ScrollTrigger }) => {
+                ScrollTrigger.getAll()
+                    .filter(st => st.vars.trigger === el)
+                    .forEach(st => st.kill());
+            });
         };
     }, []);
 

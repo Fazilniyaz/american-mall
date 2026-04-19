@@ -7,31 +7,6 @@ import {
   useCallback,
   memo,
 } from "react";
-import { select } from "d3-selection";
-import {
-  Scene,
-  PerspectiveCamera,
-  WebGLRenderer,
-  Group,
-  BoxGeometry,
-  MeshStandardMaterial,
-  MeshBasicMaterial,
-  Mesh,
-  EdgesGeometry,
-  LineSegments,
-  LineBasicMaterial,
-  Raycaster,
-  Vector2,
-  Color,
-  DirectionalLight,
-  AmbientLight,
-  PlaneGeometry,
-  MeshLambertMaterial,
-  PointLight,
-  CylinderGeometry,
-  Vector3,
-  Fog,
-} from "three";
 
 // GSAP type for passing to sub-components after lazy load
 type GsapInstance = typeof import("gsap").default;
@@ -113,40 +88,48 @@ const ZoneChart = memo(function ZoneChart({
   useEffect(() => {
     if (!svgRef.current || !visible || !gsapRef.current) return;
     const gsap = gsapRef.current;
-    const svg = select(svgRef.current);
-    svg.selectAll("*").remove();
-    const W = svgRef.current.clientWidth || 260;
-    const rowH = 36;
-    const H = zones.length * rowH;
-    const barMaxW = W - 110;
-    svg.attr("width", W).attr("height", H).attr("viewBox", `0 0 ${W} ${H}`);
-    const g = svg.append("g");
+    let cancelled = false;
+    const el = svgRef.current;
 
-    zones.forEach((z, i) => {
-      const y = i * rowH + rowH / 2;
-      g.append("text").attr("x", 0).attr("y", y + 4)
-        .attr("font-size", "9.5px").attr("font-weight", "500")
-        .attr("font-family", "var(--font-montserrat)")
-        .attr("fill", "rgba(255,255,255,0.48)").attr("letter-spacing", "0.05em")
-        .text(z.label.toUpperCase());
-      g.append("rect").attr("x", 100).attr("y", y - 3)
-        .attr("width", barMaxW).attr("height", 5).attr("rx", 2.5)
-        .attr("fill", "rgba(255,255,255,0.05)");
-      const bar = g.append("rect").attr("x", 100).attr("y", y - 3)
-        .attr("width", 0).attr("height", 5).attr("rx", 2.5).attr("fill", "#C9A84C");
-      const pctText = g.append("text").attr("x", W).attr("y", y + 4)
-        .attr("text-anchor", "end").attr("font-size", "9.5px").attr("font-weight", "700")
-        .attr("font-family", "var(--font-montserrat)").attr("fill", "#C9A84C").text("0%");
-      const targetW = barMaxW * (z.pct / 100);
-      gsap.to({ w: 0, p: 0 }, {
-        w: targetW, p: z.pct, duration: 0.9, ease: "power2.out", delay: i * 0.1,
-        onUpdate: function () {
-          const t = this.targets()[0] as { w: number; p: number };
-          bar.attr("width", Math.max(0, t.w));
-          pctText.text(Math.round(t.p) + "%");
-        },
+    import("d3-selection").then(({ select }) => {
+      if (cancelled || !el) return;
+      const svg = select(el);
+      svg.selectAll("*").remove();
+      const W = el.clientWidth || 260;
+      const rowH = 36;
+      const H = zones.length * rowH;
+      const barMaxW = W - 110;
+      svg.attr("width", W).attr("height", H).attr("viewBox", `0 0 ${W} ${H}`);
+      const g = svg.append("g");
+
+      zones.forEach((z, i) => {
+        const y = i * rowH + rowH / 2;
+        g.append("text").attr("x", 0).attr("y", y + 4)
+          .attr("font-size", "9.5px").attr("font-weight", "500")
+          .attr("font-family", "var(--font-montserrat)")
+          .attr("fill", "rgba(255,255,255,0.48)").attr("letter-spacing", "0.05em")
+          .text(z.label.toUpperCase());
+        g.append("rect").attr("x", 100).attr("y", y - 3)
+          .attr("width", barMaxW).attr("height", 5).attr("rx", 2.5)
+          .attr("fill", "rgba(255,255,255,0.05)");
+        const bar = g.append("rect").attr("x", 100).attr("y", y - 3)
+          .attr("width", 0).attr("height", 5).attr("rx", 2.5).attr("fill", "#C9A84C");
+        const pctText = g.append("text").attr("x", W).attr("y", y + 4)
+          .attr("text-anchor", "end").attr("font-size", "9.5px").attr("font-weight", "700")
+          .attr("font-family", "var(--font-montserrat)").attr("fill", "#C9A84C").text("0%");
+        const targetW = barMaxW * (z.pct / 100);
+        gsap.to({ w: 0, p: 0 }, {
+          w: targetW, p: z.pct, duration: 0.9, ease: "power2.out", delay: i * 0.1,
+          onUpdate: function () {
+            const t = this.targets()[0] as { w: number; p: number };
+            bar.attr("width", Math.max(0, t.w));
+            pctText.text(Math.round(t.p) + "%");
+          },
+        });
       });
     });
+
+    return () => { cancelled = true; };
   }, [zones, visible, gsapRef]);
 
   return (
@@ -234,11 +217,13 @@ const SidePanel = memo(function SidePanel({
 });
 
 // ─── Building geometry helpers ────────────────────────────────────────────────
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 function createWindowGrid(
+  THREE: any,
   floorW: number, floorH: number, floorD: number,
   cols: number, rows: number, color: number
-): Group {
-  const group = new Group();
+) {
+  const group = new THREE.Group();
   const winW = 0.18;
   const winH = 0.14;
   const winD = 0.01;
@@ -250,9 +235,9 @@ function createWindowGrid(
       const y = -floorH / 2 + (floorH / (rows + 1)) * (r + 1);
       const z = floorD / 2 + winD / 2;
 
-      const geo = new BoxGeometry(winW, winH, winD);
-      const mat = new MeshBasicMaterial({ color });
-      const win = new Mesh(geo, mat);
+      const geo = new THREE.BoxGeometry(winW, winH, winD);
+      const mat = new THREE.MeshBasicMaterial({ color });
+      const win = new THREE.Mesh(geo, mat);
       win.position.set(x, y, z);
       win.userData.isWindow = true;
       group.add(win);
@@ -272,9 +257,9 @@ function createWindowGrid(
       const y = -floorH / 2 + (floorH / (rows + 1)) * (r + 1);
       const x = floorW / 2 + winD / 2;
 
-      const geo = new BoxGeometry(winD, winH, winW);
-      const mat = new MeshBasicMaterial({ color });
-      const win = new Mesh(geo, mat);
+      const geo = new THREE.BoxGeometry(winD, winH, winW);
+      const mat = new THREE.MeshBasicMaterial({ color });
+      const win = new THREE.Mesh(geo, mat);
       win.position.set(x, y, z);
       win.userData.isWindow = true;
       group.add(win);
@@ -297,10 +282,10 @@ function BuildingCanvas({
   isMobile: boolean;
 }) {
   const mountRef = useRef<HTMLDivElement>(null);
-  const rendRef = useRef<WebGLRenderer | null>(null);
-  const camRef = useRef<PerspectiveCamera | null>(null);
-  const meshesRef = useRef<Mesh[]>([]);
-  const groupRef = useRef<Group | null>(null);
+  const rendRef = useRef<any>(null);
+  const camRef = useRef<any>(null);
+  const meshesRef = useRef<any[]>([]);
+  const groupRef = useRef<any>(null);
   const rafRef = useRef<number>(0);
   const isVisRef = useRef(true);
   const hoveredRef = useRef<number | null>(null);
@@ -316,390 +301,400 @@ function BuildingCanvas({
   useEffect(() => {
     if (!mountRef.current) return;
     const el = mountRef.current;
-    const W = el.clientWidth;
-    const H = el.clientHeight;
+    let cancelled = false;
 
-    // ── Scene setup ──────────────────────────────────────────────────────────
-    const scene = new Scene();
-    scene.background = new Color(0x060504);
-    scene.fog = new Fog(0x060504, 18, 32);
+    import("three").then((THREE) => {
+      if (cancelled || !el) return;
+      const W = el.clientWidth;
+      const H = el.clientHeight;
 
-    const camera = new PerspectiveCamera(38, W / H, 0.1, 100);
-    camera.position.set(isMobile ? 0 : -1.5, 9, 14);
-    camera.lookAt(0, 1.5, 0);
-    camRef.current = camera;
+      // ── Scene setup ──────────────────────────────────────────────────────────
+      const scene = new THREE.Scene();
+      scene.background = new THREE.Color(0x060504);
+      scene.fog = new THREE.Fog(0x060504, 18, 32);
 
-    const renderer = new WebGLRenderer({ antialias: !isMobile, powerPreference: "high-performance" });
-    renderer.setSize(W, H);
-    renderer.setPixelRatio(Math.min(window.devicePixelRatio, isMobile ? 1 : 1.5));
-    renderer.shadowMap.enabled = !isMobile;
-    el.appendChild(renderer.domElement);
-    rendRef.current = renderer;
+      const camera = new THREE.PerspectiveCamera(38, W / H, 0.1, 100);
+      camera.position.set(isMobile ? 0 : -1.5, 9, 14);
+      camera.lookAt(0, 1.5, 0);
+      camRef.current = camera;
 
-    // ── Lighting ─────────────────────────────────────────────────────────────
-    const ambient = new AmbientLight(0x1a1408, 2.5);
-    scene.add(ambient);
+      const renderer = new THREE.WebGLRenderer({ antialias: !isMobile, powerPreference: "high-performance" });
+      renderer.setSize(W, H);
+      renderer.setPixelRatio(Math.min(window.devicePixelRatio, isMobile ? 1 : 1.5));
+      renderer.shadowMap.enabled = !isMobile;
+      el.appendChild(renderer.domElement);
+      rendRef.current = renderer;
 
-    const sunLight = new DirectionalLight(0xfff5e0, 2.2);
-    sunLight.position.set(8, 14, 8);
-    sunLight.castShadow = !isMobile;
-    scene.add(sunLight);
+      // ── Lighting ─────────────────────────────────────────────────────────────
+      const ambient = new THREE.AmbientLight(0x1a1408, 2.5);
+      scene.add(ambient);
 
-    const fillLight = new DirectionalLight(0x0a0a1a, 0.8);
-    fillLight.position.set(-6, 4, -6);
-    scene.add(fillLight);
+      const sunLight = new THREE.DirectionalLight(0xfff5e0, 2.2);
+      sunLight.position.set(8, 14, 8);
+      sunLight.castShadow = !isMobile;
+      scene.add(sunLight);
 
-    // ── Ground plane ─────────────────────────────────────────────────────────
-    const groundGeo = new PlaneGeometry(30, 30);
-    const groundMat = new MeshLambertMaterial({ color: 0x0c0b08 });
-    const ground = new Mesh(groundGeo, groundMat);
-    ground.rotation.x = -Math.PI / 2;
-    ground.receiveShadow = true;
-    scene.add(ground);
+      const fillLight = new THREE.DirectionalLight(0x0a0a1a, 0.8);
+      fillLight.position.set(-6, 4, -6);
+      scene.add(fillLight);
 
-    // Ground grid lines
-    for (let i = -5; i <= 5; i++) {
-      const hGeo = new BoxGeometry(10, 0.005, 0.01);
-      const hMat = new MeshBasicMaterial({ color: 0x1a1508, transparent: true, opacity: 0.6 });
-      const hLine = new Mesh(hGeo, hMat);
-      hLine.position.set(0, 0.001, i * 1);
-      scene.add(hLine);
+      // ── Ground plane ─────────────────────────────────────────────────────────
+      const groundGeo = new THREE.PlaneGeometry(30, 30);
+      const groundMat = new THREE.MeshLambertMaterial({ color: 0x0c0b08 });
+      const ground = new THREE.Mesh(groundGeo, groundMat);
+      ground.rotation.x = -Math.PI / 2;
+      ground.receiveShadow = true;
+      scene.add(ground);
 
-      const vLine = hLine.clone();
-      vLine.rotation.y = Math.PI / 2;
-      vLine.position.set(i * 1, 0.001, 0);
-      scene.add(vLine);
-    }
+      // Ground grid lines
+      for (let i = -5; i <= 5; i++) {
+        const hGeo = new THREE.BoxGeometry(10, 0.005, 0.01);
+        const hMat = new THREE.MeshBasicMaterial({ color: 0x1a1508, transparent: true, opacity: 0.6 });
+        const hLine = new THREE.Mesh(hGeo, hMat);
+        hLine.position.set(0, 0.001, i * 1);
+        scene.add(hLine);
 
-    // ── Building group ───────────────────────────────────────────────────────
-    const buildingGroup = new Group();
-    groupRef.current = buildingGroup;
-    scene.add(buildingGroup);
+        const vLine = hLine.clone();
+        vLine.rotation.y = Math.PI / 2;
+        vLine.position.set(i * 1, 0.001, 0);
+        scene.add(vLine);
+      }
 
-    // Building dimensions per floor (bottom = wider, top = narrower = setback)
-    const floorConfigs = [
-      { w: 6.0, d: 4.0, h: 1.1 },  // Floor 1 — widest
-      { w: 5.6, d: 3.7, h: 1.0 },  // Floor 2
-      { w: 5.2, d: 3.4, h: 1.0 },  // Floor 3
-      { w: 4.6, d: 3.0, h: 0.9 },  // Floor 4 — narrowest
-    ];
+      // ── Building group ───────────────────────────────────────────────────────
+      const buildingGroup = new THREE.Group();
+      groupRef.current = buildingGroup;
+      scene.add(buildingGroup);
 
-    let cumulativeY = 0;
-
-    FLOORS.forEach((f, i) => {
-      const cfg = floorConfigs[i];
-      const floorGroup = new Group();
-
-      // ── Slab body ──
-      const bodyGeo = new BoxGeometry(cfg.w, cfg.h, cfg.d);
-      const bodyMat = new MeshStandardMaterial({
-        color: new Color(f.dimColor),
-        roughness: 0.85,
-        metalness: 0.15,
-        envMapIntensity: 0.5,
-      });
-      const body = new Mesh(bodyGeo, bodyMat);
-      body.castShadow = !isMobile;
-      body.receiveShadow = !isMobile;
-      body.userData = {
-        floorId: i,
-        baseY: cumulativeY + cfg.h / 2,
-        baseColor: f.dimColor,
-        activeColor: f.color,
-        bodyMat,
-      };
-      meshesRef.current[i] = body;
-      floorGroup.add(body);
-
-      // ── Edge wireframe ──
-      const edges = new EdgesGeometry(bodyGeo);
-      const edgeMat = new LineBasicMaterial({
-        color: new Color(f.color),
-        transparent: true,
-        opacity: 0.25,
-      });
-      const edgeLines = new LineSegments(edges, edgeMat);
-      edgeLines.userData.isEdge = true;
-      body.add(edgeLines);
-
-      // ── Windows ──
-      const winCols = i === 0 ? 8 : i === 1 ? 7 : i === 2 ? 6 : 5;
-      const winRows = 2;
-      const winColor = 0x1a1408; // dark by default
-      const winGroup = createWindowGrid(cfg.w, cfg.h, cfg.d, winCols, winRows, winColor);
-      winGroup.userData.isWindowGroup = true;
-      body.add(winGroup);
-
-      // ── Floor ledge (thin slab at top of each floor) ──
-      const ledgeGeo = new BoxGeometry(cfg.w + 0.12, 0.06, cfg.d + 0.12);
-      const ledgeMat = new MeshStandardMaterial({
-        color: new Color("#1a1408"),
-        roughness: 0.7,
-        metalness: 0.3,
-      });
-      const ledge = new Mesh(ledgeGeo, ledgeMat);
-      ledge.position.y = cfg.h / 2 + 0.03;
-      ledge.castShadow = !isMobile;
-      floorGroup.add(ledge);
-
-      // ── Column pillars at corners ──
-      const pillarPositions = [
-        [-cfg.w / 2 + 0.08, cfg.d / 2 - 0.08],
-        [cfg.w / 2 - 0.08, cfg.d / 2 - 0.08],
-        [-cfg.w / 2 + 0.08, -cfg.d / 2 + 0.08],
-        [cfg.w / 2 - 0.08, -cfg.d / 2 + 0.08],
+      // Building dimensions per floor (bottom = wider, top = narrower = setback)
+      const floorConfigs = [
+        { w: 6.0, d: 4.0, h: 1.1 },  // Floor 1 — widest
+        { w: 5.6, d: 3.7, h: 1.0 },  // Floor 2
+        { w: 5.2, d: 3.4, h: 1.0 },  // Floor 3
+        { w: 4.6, d: 3.0, h: 0.9 },  // Floor 4 — narrowest
       ];
-      pillarPositions.forEach(([px, pz]) => {
-        const pGeo = new CylinderGeometry(0.055, 0.055, cfg.h + 0.1, 6);
-        const pMat = new MeshStandardMaterial({ color: new Color("#0f0d06"), roughness: 0.6, metalness: 0.4 });
-        const pillar = new Mesh(pGeo, pMat);
-        pillar.position.set(px, 0, pz);
-        pillar.castShadow = !isMobile;
-        body.add(pillar);
+
+      let cumulativeY = 0;
+
+      FLOORS.forEach((f, i) => {
+        const cfg = floorConfigs[i];
+        const floorGroup = new THREE.Group();
+
+        // ── Slab body ──
+        const bodyGeo = new THREE.BoxGeometry(cfg.w, cfg.h, cfg.d);
+        const bodyMat = new THREE.MeshStandardMaterial({
+          color: new THREE.Color(f.dimColor),
+          roughness: 0.85,
+          metalness: 0.15,
+          envMapIntensity: 0.5,
+        });
+        const body = new THREE.Mesh(bodyGeo, bodyMat);
+        body.castShadow = !isMobile;
+        body.receiveShadow = !isMobile;
+        body.userData = {
+          floorId: i,
+          baseY: cumulativeY + cfg.h / 2,
+          baseColor: f.dimColor,
+          activeColor: f.color,
+          bodyMat,
+        };
+        meshesRef.current[i] = body;
+        floorGroup.add(body);
+
+        // ── Edge wireframe ──
+        const edges = new THREE.EdgesGeometry(bodyGeo);
+        const edgeMat = new THREE.LineBasicMaterial({
+          color: new THREE.Color(f.color),
+          transparent: true,
+          opacity: 0.25,
+        });
+        const edgeLines = new THREE.LineSegments(edges, edgeMat);
+        edgeLines.userData.isEdge = true;
+        body.add(edgeLines);
+
+        // ── Windows ──
+        const winCols = i === 0 ? 8 : i === 1 ? 7 : i === 2 ? 6 : 5;
+        const winRows = 2;
+        const winColor = 0x1a1408; // dark by default
+        const winGroup = createWindowGrid(THREE, cfg.w, cfg.h, cfg.d, winCols, winRows, winColor);
+        winGroup.userData.isWindowGroup = true;
+        body.add(winGroup);
+
+        // ── Floor ledge (thin slab at top of each floor) ──
+        const ledgeGeo = new THREE.BoxGeometry(cfg.w + 0.12, 0.06, cfg.d + 0.12);
+        const ledgeMat = new THREE.MeshStandardMaterial({
+          color: new THREE.Color("#1a1408"),
+          roughness: 0.7,
+          metalness: 0.3,
+        });
+        const ledge = new THREE.Mesh(ledgeGeo, ledgeMat);
+        ledge.position.y = cfg.h / 2 + 0.03;
+        ledge.castShadow = !isMobile;
+        floorGroup.add(ledge);
+
+        // ── Column pillars at corners ──
+        const pillarPositions = [
+          [-cfg.w / 2 + 0.08, cfg.d / 2 - 0.08],
+          [cfg.w / 2 - 0.08, cfg.d / 2 - 0.08],
+          [-cfg.w / 2 + 0.08, -cfg.d / 2 + 0.08],
+          [cfg.w / 2 - 0.08, -cfg.d / 2 + 0.08],
+        ];
+        pillarPositions.forEach(([px, pz]) => {
+          const pGeo = new THREE.CylinderGeometry(0.055, 0.055, cfg.h + 0.1, 6);
+          const pMat = new THREE.MeshStandardMaterial({ color: new THREE.Color("#0f0d06"), roughness: 0.6, metalness: 0.4 });
+          const pillar = new THREE.Mesh(pGeo, pMat);
+          pillar.position.set(px, 0, pz);
+          pillar.castShadow = !isMobile;
+          body.add(pillar);
+        });
+
+        // ── Central atrium indent (front facade detail) ──
+        if (i === 0) {
+          const entranceGeo = new THREE.BoxGeometry(1.4, cfg.h * 0.7, 0.08);
+          const entranceMat = new THREE.MeshBasicMaterial({ color: 0x080604 });
+          const entrance = new THREE.Mesh(entranceGeo, entranceMat);
+          entrance.position.set(0, -cfg.h * 0.15, cfg.d / 2 - 0.02);
+          body.add(entrance);
+
+          // Entrance frame
+          const frameGeo = new THREE.BoxGeometry(1.5, cfg.h * 0.72, 0.04);
+          const frameMat = new THREE.MeshBasicMaterial({ color: 0x3a2e10, transparent: true, opacity: 0.8 });
+          const frame = new THREE.Mesh(frameGeo, frameMat);
+          frame.position.set(0, -cfg.h * 0.15, cfg.d / 2 + 0.01);
+          body.add(frame);
+        }
+
+        // ── Rooftop details on top floor ──
+        if (i === FLOORS.length - 1) {
+          // Central rooftop structure
+          const roofGeo = new THREE.BoxGeometry(1.8, 0.5, 1.2);
+          const roofMat = new THREE.MeshStandardMaterial({ color: new THREE.Color("#0e0c06"), roughness: 0.8, metalness: 0.2 });
+          const roof = new THREE.Mesh(roofGeo, roofMat);
+          roof.position.y = cfg.h / 2 + 0.28;
+          floorGroup.add(roof);
+
+          // Antenna / spire
+          const spireGeo = new THREE.CylinderGeometry(0.02, 0.04, 1.2, 6);
+          const spireMat = new THREE.MeshStandardMaterial({ color: new THREE.Color("#C9A84C"), roughness: 0.3, metalness: 0.8 });
+          const spire = new THREE.Mesh(spireGeo, spireMat);
+          spire.position.y = cfg.h / 2 + 0.5 + 0.6;
+          floorGroup.add(spire);
+
+          // Spire tip glow point light
+          const spireLight = new THREE.PointLight(0xC9A84C, 0.8, 3);
+          spireLight.position.y = cfg.h / 2 + 1.2;
+          spireLight.userData.isSpireLight = true;
+          floorGroup.add(spireLight);
+        }
+
+        floorGroup.position.y = cumulativeY + cfg.h / 2;
+        buildingGroup.add(floorGroup);
+
+        cumulativeY += cfg.h;
       });
 
-      // ── Central atrium indent (front facade detail) ──
-      if (i === 0) {
-        const entranceGeo = new BoxGeometry(1.4, cfg.h * 0.7, 0.08);
-        const entranceMat = new MeshBasicMaterial({ color: 0x080604 });
-        const entrance = new Mesh(entranceGeo, entranceMat);
-        entrance.position.set(0, -cfg.h * 0.15, cfg.d / 2 - 0.02);
-        body.add(entrance);
+      // Center building vertically
+      const totalBuildingH = cumulativeY;
+      buildingGroup.position.y = -totalBuildingH / 2 + 0.5;
 
-        // Entrance frame
-        const frameGeo = new BoxGeometry(1.5, cfg.h * 0.72, 0.04);
-        const frameMat = new MeshBasicMaterial({ color: 0x3a2e10, transparent: true, opacity: 0.8 });
-        const frame = new Mesh(frameGeo, frameMat);
-        frame.position.set(0, -cfg.h * 0.15, cfg.d / 2 + 0.01);
-        body.add(frame);
-      }
+      // ── Raycaster ────────────────────────────────────────────────────────────
+      const raycaster = new THREE.Raycaster();
+      const mouse2d = new THREE.Vector2(-9, -9);
 
-      // ── Rooftop details on top floor ──
-      if (i === FLOORS.length - 1) {
-        // Central rooftop structure
-        const roofGeo = new BoxGeometry(1.8, 0.5, 1.2);
-        const roofMat = new MeshStandardMaterial({ color: new Color("#0e0c06"), roughness: 0.8, metalness: 0.2 });
-        const roof = new Mesh(roofGeo, roofMat);
-        roof.position.y = cfg.h / 2 + 0.28;
-        floorGroup.add(roof);
+      const getFloorId = (clientX: number, clientY: number): number | null => {
+        const rect = el.getBoundingClientRect();
+        mouse2d.x = ((clientX - rect.left) / rect.width) * 2 - 1;
+        mouse2d.y = -((clientY - rect.top) / rect.height) * 2 + 1;
+        raycaster.setFromCamera(mouse2d, camera);
+        const hits = raycaster.intersectObjects(meshesRef.current, true);
+        if (!hits.length) return null;
+        let obj: any = hits[0].object;
+        while (obj && obj.userData.floorId === undefined) obj = obj.parent;
+        return typeof obj?.userData.floorId === "number" ? obj.userData.floorId : null;
+      };
 
-        // Antenna / spire
-        const spireGeo = new CylinderGeometry(0.02, 0.04, 1.2, 6);
-        const spireMat = new MeshStandardMaterial({ color: new Color("#C9A84C"), roughness: 0.3, metalness: 0.8 });
-        const spire = new Mesh(spireGeo, spireMat);
-        spire.position.y = cfg.h / 2 + 0.5 + 0.6;
-        floorGroup.add(spire);
-
-        // Spire tip glow point light
-        const spireLight = new PointLight(0xC9A84C, 0.8, 3);
-        spireLight.position.y = cfg.h / 2 + 1.2;
-        spireLight.userData.isSpireLight = true;
-        floorGroup.add(spireLight);
-      }
-
-      floorGroup.position.y = cumulativeY + cfg.h / 2;
-      buildingGroup.add(floorGroup);
-
-      cumulativeY += cfg.h;
-    });
-
-    // Center building vertically
-    const totalBuildingH = cumulativeY;
-    buildingGroup.position.y = -totalBuildingH / 2 + 0.5;
-
-    // ── Raycaster ────────────────────────────────────────────────────────────
-    const raycaster = new Raycaster();
-    const mouse2d = new Vector2(-9, -9);
-
-    const getFloorId = (clientX: number, clientY: number): number | null => {
-      const rect = el.getBoundingClientRect();
-      mouse2d.x = ((clientX - rect.left) / rect.width) * 2 - 1;
-      mouse2d.y = -((clientY - rect.top) / rect.height) * 2 + 1;
-      raycaster.setFromCamera(mouse2d, camera);
-      const hits = raycaster.intersectObjects(meshesRef.current, true);
-      if (!hits.length) return null;
-      let obj: any = hits[0].object;
-      while (obj && obj.userData.floorId === undefined) obj = obj.parent;
-      return typeof obj?.userData.floorId === "number" ? obj.userData.floorId : null;
-    };
-
-    // ── Input handlers ───────────────────────────────────────────────────────
-    const onMouseMove = (e: MouseEvent) => {
-      autoRotRef.current = false;
-      if (isDragRef.current) {
-        rotYRef.current += (e.clientX - lastPosRef.current.x) * 0.007;
-        rotXRef.current += (e.clientY - lastPosRef.current.y) * 0.003;
-        rotXRef.current = Math.max(-0.45, Math.min(0.55, rotXRef.current));
-        lastPosRef.current = { x: e.clientX, y: e.clientY };
-      }
-      const fid = getFloorId(e.clientX, e.clientY);
-      hoveredRef.current = fid;
-      el.style.cursor = fid !== null ? "pointer" : "grab";
-    };
-
-    const onMouseDown = (e: MouseEvent) => {
-      isDragRef.current = true;
-      autoRotRef.current = false;
-      lastPosRef.current = { x: e.clientX, y: e.clientY };
-      el.style.cursor = "grabbing";
-    };
-
-    const onMouseUp = (e: MouseEvent) => {
-      const dx = Math.abs(e.clientX - lastPosRef.current.x);
-      if (isDragRef.current && dx < 5) {
+      // ── Input handlers ───────────────────────────────────────────────────────
+      const onMouseMove = (e: MouseEvent) => {
+        autoRotRef.current = false;
+        if (isDragRef.current) {
+          rotYRef.current += (e.clientX - lastPosRef.current.x) * 0.007;
+          rotXRef.current += (e.clientY - lastPosRef.current.y) * 0.003;
+          rotXRef.current = Math.max(-0.45, Math.min(0.55, rotXRef.current));
+          lastPosRef.current = { x: e.clientX, y: e.clientY };
+        }
         const fid = getFloorId(e.clientX, e.clientY);
-        onFloorSelect(fid === selectedRef.current ? null : fid);
-      }
-      isDragRef.current = false;
+        hoveredRef.current = fid;
+        el.style.cursor = fid !== null ? "pointer" : "grab";
+      };
+
+      const onMouseDown = (e: MouseEvent) => {
+        isDragRef.current = true;
+        autoRotRef.current = false;
+        lastPosRef.current = { x: e.clientX, y: e.clientY };
+        el.style.cursor = "grabbing";
+      };
+
+      const onMouseUp = (e: MouseEvent) => {
+        const dx = Math.abs(e.clientX - lastPosRef.current.x);
+        if (isDragRef.current && dx < 5) {
+          const fid = getFloorId(e.clientX, e.clientY);
+          onFloorSelect(fid === selectedRef.current ? null : fid);
+        }
+        isDragRef.current = false;
+        el.style.cursor = "grab";
+        setTimeout(() => { autoRotRef.current = true; }, 3000);
+      };
+
+      const onMouseLeave = () => {
+        isDragRef.current = false;
+        hoveredRef.current = null;
+        el.style.cursor = "grab";
+        setTimeout(() => { autoRotRef.current = true; }, 1200);
+      };
+
+      let touchStartPos = { x: 0, y: 0 };
+      const onTouchStart = (e: TouchEvent) => {
+        touchStartPos = { x: e.touches[0].clientX, y: e.touches[0].clientY };
+        isDragRef.current = true;
+        autoRotRef.current = false;
+        lastPosRef.current = { x: e.touches[0].clientX, y: e.touches[0].clientY };
+      };
+      const onTouchMove = (e: TouchEvent) => {
+        if (!isDragRef.current) return;
+        rotYRef.current += (e.touches[0].clientX - lastPosRef.current.x) * 0.006;
+        rotXRef.current += (e.touches[0].clientY - lastPosRef.current.y) * 0.003;
+        rotXRef.current = Math.max(-0.45, Math.min(0.55, rotXRef.current));
+        lastPosRef.current = { x: e.touches[0].clientX, y: e.touches[0].clientY };
+      };
+      const onTouchEnd = (e: TouchEvent) => {
+        isDragRef.current = false;
+        const dx = Math.abs(e.changedTouches[0].clientX - touchStartPos.x);
+        const dy = Math.abs(e.changedTouches[0].clientY - touchStartPos.y);
+        if (dx < 8 && dy < 8) {
+          const fid = getFloorId(e.changedTouches[0].clientX, e.changedTouches[0].clientY);
+          onFloorSelect(fid === selectedRef.current ? null : fid);
+        }
+        setTimeout(() => { autoRotRef.current = true; }, 2500);
+      };
+
+      el.addEventListener("mousemove", onMouseMove);
+      el.addEventListener("mousedown", onMouseDown);
+      el.addEventListener("mouseup", onMouseUp);
+      el.addEventListener("mouseleave", onMouseLeave);
+      el.addEventListener("touchstart", onTouchStart, { passive: true });
+      el.addEventListener("touchmove", onTouchMove, { passive: true });
+      el.addEventListener("touchend", onTouchEnd);
       el.style.cursor = "grab";
-      setTimeout(() => { autoRotRef.current = true; }, 3000);
-    };
 
-    const onMouseLeave = () => {
-      isDragRef.current = false;
-      hoveredRef.current = null;
-      el.style.cursor = "grab";
-      setTimeout(() => { autoRotRef.current = true; }, 1200);
-    };
+      // ── Visibility observer — pause when off screen ───────────────────────
+      const observer = new IntersectionObserver(
+        ([e]) => { isVisRef.current = e.isIntersecting; },
+        { threshold: 0.05 }
+      );
+      observer.observe(el);
 
-    let touchStartPos = { x: 0, y: 0 };
-    const onTouchStart = (e: TouchEvent) => {
-      touchStartPos = { x: e.touches[0].clientX, y: e.touches[0].clientY };
-      isDragRef.current = true;
-      autoRotRef.current = false;
-      lastPosRef.current = { x: e.touches[0].clientX, y: e.touches[0].clientY };
-    };
-    const onTouchMove = (e: TouchEvent) => {
-      if (!isDragRef.current) return;
-      rotYRef.current += (e.touches[0].clientX - lastPosRef.current.x) * 0.006;
-      rotXRef.current += (e.touches[0].clientY - lastPosRef.current.y) * 0.003;
-      rotXRef.current = Math.max(-0.45, Math.min(0.55, rotXRef.current));
-      lastPosRef.current = { x: e.touches[0].clientX, y: e.touches[0].clientY };
-    };
-    const onTouchEnd = (e: TouchEvent) => {
-      isDragRef.current = false;
-      const dx = Math.abs(e.changedTouches[0].clientX - touchStartPos.x);
-      const dy = Math.abs(e.changedTouches[0].clientY - touchStartPos.y);
-      if (dx < 8 && dy < 8) {
-        const fid = getFloorId(e.changedTouches[0].clientX, e.changedTouches[0].clientY);
-        onFloorSelect(fid === selectedRef.current ? null : fid);
-      }
-      setTimeout(() => { autoRotRef.current = true; }, 2500);
-    };
+      // ── Window glow colors ────────────────────────────────────────────────
+      const windowDark = new THREE.Color(0x1a1408);
+      const windowActive = new THREE.Color(0xfff0a0);
+      const windowHover = new THREE.Color(0x8a6820);
 
-    el.addEventListener("mousemove", onMouseMove);
-    el.addEventListener("mousedown", onMouseDown);
-    el.addEventListener("mouseup", onMouseUp);
-    el.addEventListener("mouseleave", onMouseLeave);
-    el.addEventListener("touchstart", onTouchStart, { passive: true });
-    el.addEventListener("touchmove", onTouchMove, { passive: true });
-    el.addEventListener("touchend", onTouchEnd);
-    el.style.cursor = "grab";
+      // ── Render loop ───────────────────────────────────────────────────────
+      let frame = 0;
+      const animate = () => {
+        rafRef.current = requestAnimationFrame(animate);
+        if (!isVisRef.current) return;
 
-    // ── Visibility observer — pause when off screen ───────────────────────
-    const observer = new IntersectionObserver(
-      ([e]) => { isVisRef.current = e.isIntersecting; },
-      { threshold: 0.05 }
-    );
-    observer.observe(el);
+        frame++;
+        if (autoRotRef.current) rotYRef.current += 0.0025;
 
-    // ── Window glow colors ────────────────────────────────────────────────
-    const windowDark = new Color(0x1a1408);
-    const windowActive = new Color(0xfff0a0);
-    const windowHover = new Color(0x8a6820);
+        buildingGroup.rotation.y = rotYRef.current;
+        buildingGroup.rotation.x = rotXRef.current;
 
-    // ── Render loop ───────────────────────────────────────────────────────
-    let frame = 0;
-    const animate = () => {
-      rafRef.current = requestAnimationFrame(animate);
-      if (!isVisRef.current) return;
+        const sel = selectedRef.current;
+        const hov = hoveredRef.current;
 
-      frame++;
-      if (autoRotRef.current) rotYRef.current += 0.0025;
+        // Update floor appearance
+        meshesRef.current.forEach((mesh: any, i: number) => {
+          const { baseColor, activeColor, bodyMat } = mesh.userData;
+          const isActive = sel === i;
+          const isHov = hov === i && sel !== i;
 
-      buildingGroup.rotation.y = rotYRef.current;
-      buildingGroup.rotation.x = rotXRef.current;
+          // Body color lerp
+          const target = isActive ? activeColor : isHov ? "#5a4015" : baseColor;
+          bodyMat.color.lerp(new THREE.Color(target), 0.07);
 
-      const sel = selectedRef.current;
-      const hov = hoveredRef.current;
+          // Lift active floor
+          const floorGroup = buildingGroup.children[i] as any;
+          const targetY = mesh.userData.baseY + (isActive ? 0.55 : 0);
+          floorGroup.position.y += (targetY - floorGroup.position.y) * 0.1;
 
-      // Update floor appearance
-      meshesRef.current.forEach((mesh, i) => {
-        const { baseColor, activeColor, bodyMat } = mesh.userData;
-        const isActive = sel === i;
-        const isHov = hov === i && sel !== i;
-
-        // Body color lerp
-        const target = isActive ? activeColor : isHov ? "#5a4015" : baseColor;
-        bodyMat.color.lerp(new Color(target), 0.07);
-
-        // Lift active floor
-        const floorGroup = buildingGroup.children[i] as Group;
-        const targetY = mesh.userData.baseY + (isActive ? 0.55 : 0);
-        floorGroup.position.y += (targetY - floorGroup.position.y) * 0.1;
-
-        // Edge opacity
-        mesh.children.forEach((child) => {
-          if (child.userData.isEdge) {
-            const edgeMat = (child as LineSegments).material as LineBasicMaterial;
-            const targetOp = isActive ? 0.9 : isHov ? 0.55 : 0.2;
-            edgeMat.opacity += (targetOp - edgeMat.opacity) * 0.1;
-          }
-          // Window glow
-          if (child.userData.isWindowGroup) {
-            child.children.forEach((win) => {
-              const wMesh = win as Mesh;
-              const wMat = wMesh.material as MeshBasicMaterial;
-              const tgt = isActive ? windowActive : isHov ? windowHover : windowDark;
-              wMat.color.lerp(tgt, 0.08);
-            });
-          }
+          // Edge opacity
+          mesh.children.forEach((child: any) => {
+            if (child.userData.isEdge) {
+              const edgeMat = child.material as any;
+              const targetOp = isActive ? 0.9 : isHov ? 0.55 : 0.2;
+              edgeMat.opacity += (targetOp - edgeMat.opacity) * 0.1;
+            }
+            // Window glow
+            if (child.userData.isWindowGroup) {
+              child.children.forEach((win: any) => {
+                const wMat = win.material as any;
+                const tgt = isActive ? windowActive : isHov ? windowHover : windowDark;
+                wMat.color.lerp(tgt, 0.08);
+              });
+            }
+          });
         });
-      });
 
-      // Spire pulse (every 60 frames)
-      if (frame % 2 === 0) {
-        const topGroup = buildingGroup.children[FLOORS.length - 1] as Group;
-        topGroup.children.forEach((child) => {
-          if (child.userData.isSpireLight) {
-            (child as PointLight).intensity = 0.5 + Math.sin(frame * 0.04) * 0.3;
-          }
+        // Spire pulse (every 60 frames)
+        if (frame % 2 === 0) {
+          const topGroup = buildingGroup.children[FLOORS.length - 1] as any;
+          topGroup.children.forEach((child: any) => {
+            if (child.userData.isSpireLight) {
+              child.intensity = 0.5 + Math.sin(frame * 0.04) * 0.3;
+            }
+          });
+        }
+
+        renderer.render(scene, camera);
+      };
+      animate();
+
+      // ── Resize ───────────────────────────────────────────────────────────
+      const onResize = () => {
+        if (!mountRef.current) return;
+        const w = mountRef.current.clientWidth;
+        const h = mountRef.current.clientHeight;
+        camera.aspect = w / h;
+        camera.updateProjectionMatrix();
+        renderer.setSize(w, h);
+      };
+      window.addEventListener("resize", onResize, { passive: true });
+
+      // ── Store cleanup ──────────────────────────────────────────────────────
+      (el as any).__threeCleanup = () => {
+        cancelAnimationFrame(rafRef.current);
+        observer.disconnect();
+        window.removeEventListener("resize", onResize);
+        el.removeEventListener("mousemove", onMouseMove);
+        el.removeEventListener("mousedown", onMouseDown);
+        el.removeEventListener("mouseup", onMouseUp);
+        el.removeEventListener("mouseleave", onMouseLeave);
+        el.removeEventListener("touchstart", onTouchStart);
+        el.removeEventListener("touchmove", onTouchMove);
+        el.removeEventListener("touchend", onTouchEnd);
+        renderer.dispose();
+        meshesRef.current.forEach((m: any) => {
+          m.material?.dispose();
+          m.geometry?.dispose();
         });
-      }
-
-      renderer.render(scene, camera);
-    };
-    animate();
-
-    // ── Resize ───────────────────────────────────────────────────────────
-    const onResize = () => {
-      if (!mountRef.current) return;
-      const w = mountRef.current.clientWidth;
-      const h = mountRef.current.clientHeight;
-      camera.aspect = w / h;
-      camera.updateProjectionMatrix();
-      renderer.setSize(w, h);
-    };
-    window.addEventListener("resize", onResize, { passive: true });
+        if (el.contains(renderer.domElement)) el.removeChild(renderer.domElement);
+      };
+    });
 
     // ── Cleanup ──────────────────────────────────────────────────────────
     return () => {
-      cancelAnimationFrame(rafRef.current);
-      observer.disconnect();
-      window.removeEventListener("resize", onResize);
-      el.removeEventListener("mousemove", onMouseMove);
-      el.removeEventListener("mousedown", onMouseDown);
-      el.removeEventListener("mouseup", onMouseUp);
-      el.removeEventListener("mouseleave", onMouseLeave);
-      el.removeEventListener("touchstart", onTouchStart);
-      el.removeEventListener("touchmove", onTouchMove);
-      el.removeEventListener("touchend", onTouchEnd);
-      renderer.dispose();
-      meshesRef.current.forEach(m => {
-        (m.material as MeshStandardMaterial).dispose();
-        m.geometry.dispose();
-      });
-      if (el.contains(renderer.domElement)) el.removeChild(renderer.domElement);
+      cancelled = true;
+      if ((el as any)?.__threeCleanup) (el as any).__threeCleanup();
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isMobile]);
@@ -732,7 +727,7 @@ const FloorButtons = memo(function FloorButtons({
             display: "flex",
             alignItems: "center",
             gap: "0.55rem",
-            marginRight : "0.5rem",
+            marginRight: "0.5rem",
           }}>
           <span style={{
             width: "5px", height: "5px", flexShrink: 0,

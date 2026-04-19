@@ -1,36 +1,51 @@
 "use client";
 
 import { useEffect, useRef, useState, useCallback } from "react";
-import gsap from "gsap";
-import { ScrollTrigger } from "gsap/ScrollTrigger";
 
-gsap.registerPlugin(ScrollTrigger);
+// ── Lazy GSAP loader ─────────────────────────────────────────────────────────────
+type GsapType = typeof import("gsap")["default"];
+type ScrollTriggerType = typeof import("gsap/ScrollTrigger")["ScrollTrigger"];
+
+let _gsap: GsapType | null = null;
+let _ST: ScrollTriggerType | null = null;
+
+const loadGsap = async () => {
+  if (_gsap && _ST) return { gsap: _gsap, ScrollTrigger: _ST };
+  const [gsapMod, stMod] = await Promise.all([
+    import("gsap"),
+    import("gsap/ScrollTrigger"),
+  ]);
+  _gsap = gsapMod.default;
+  _ST = stMod.ScrollTrigger;
+  _gsap.registerPlugin(_ST);
+  return { gsap: _gsap, ScrollTrigger: _ST };
+};
 
 // ─── Three action paths ───────────────────────────────────────────────────────
 const PATHS = [
   {
-    number:  "01",
-    title:   "Lease a Space",
-    sub:     "Find your flagship location",
-    body:    "520+ stores. Room for one more iconic brand. From luxury flagships to pop-up concepts — find the space that fits your ambition.",
-    interest:"Retail Leasing",
-    arrow:   "→",
+    number: "01",
+    title: "Lease a Space",
+    sub: "Find your flagship location",
+    body: "520+ stores. Room for one more iconic brand. From luxury flagships to pop-up concepts — find the space that fits your ambition.",
+    interest: "Retail Leasing",
+    arrow: "→",
   },
   {
-    number:  "02",
-    title:   "Host an Event",
-    sub:     "Book your brand moment",
-    body:    "300+ events a year. 40 million witnesses. Whether it's a product launch or a global convention — this is the stage.",
-    interest:"Event Booking",
-    arrow:   "→",
+    number: "02",
+    title: "Host an Event",
+    sub: "Book your brand moment",
+    body: "300+ events a year. 40 million witnesses. Whether it's a product launch or a global convention — this is the stage.",
+    interest: "Event Booking",
+    arrow: "→",
   },
   {
-    number:  "03",
-    title:   "Become a Sponsor",
-    sub:     "Own your audience",
-    body:    "No platform delivers more impressions. Platinum, Gold, or Partner — own a zone, own a moment, own a conversation.",
-    interest:"Sponsorship",
-    arrow:   "→",
+    number: "03",
+    title: "Become a Sponsor",
+    sub: "Own your audience",
+    body: "No platform delivers more impressions. Platinum, Gold, or Partner — own a zone, own a moment, own a conversation.",
+    interest: "Sponsorship",
+    arrow: "→",
   },
 ];
 
@@ -43,25 +58,25 @@ function FormField({
   onChange,
   required = false,
 }: {
-  label:       string;
-  type?:       string;
+  label: string;
+  type?: string;
   placeholder: string;
-  value:       string;
-  onChange:    (v: string) => void;
-  required?:   boolean;
+  value: string;
+  onChange: (v: string) => void;
+  required?: boolean;
 }) {
   const [focused, setFocused] = useState(false);
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}>
       <label style={{
-        color:         focused ? "#C9A84C" : "rgba(255,255,255,0.35)",
-        fontSize:      "0.6rem",
-        fontWeight:    700,
+        color: focused ? "#C9A84C" : "rgba(255,255,255,0.35)",
+        fontSize: "0.6rem",
+        fontWeight: 700,
         letterSpacing: "0.28em",
         textTransform: "uppercase",
-        fontFamily:    "var(--font-montserrat)",
-        transition:    "color 0.2s ease",
+        fontFamily: "var(--font-montserrat)",
+        transition: "color 0.2s ease",
       }}>
         {label}{required && <span style={{ color: "#C9A84C", marginLeft: "3px" }}>*</span>}
       </label>
@@ -74,17 +89,17 @@ function FormField({
         onFocus={() => setFocused(true)}
         onBlur={() => setFocused(false)}
         style={{
-          background:   "rgba(255,255,255,0.03)",
-          border:       `1px solid ${focused ? "#C9A84C" : "rgba(201,168,76,0.15)"}`,
-          color:        "#ffffff",
-          fontSize:     "0.82rem",
-          fontFamily:   "var(--font-montserrat)",
-          fontWeight:   400,
-          padding:      "12px 14px",
-          outline:      "none",
-          transition:   "border-color 0.22s ease",
-          width:        "100%",
-          boxSizing:    "border-box",
+          background: "rgba(255,255,255,0.03)",
+          border: `1px solid ${focused ? "#C9A84C" : "rgba(201,168,76,0.15)"}`,
+          color: "#ffffff",
+          fontSize: "0.82rem",
+          fontFamily: "var(--font-montserrat)",
+          fontWeight: 400,
+          padding: "12px 14px",
+          outline: "none",
+          transition: "border-color 0.22s ease",
+          width: "100%",
+          boxSizing: "border-box",
         }}
         onMouseEnter={e => {
           if (!focused)
@@ -105,8 +120,8 @@ function FormSelect({
   value,
   onChange,
 }: {
-  label:    string;
-  value:    string;
+  label: string;
+  value: string;
   onChange: (v: string) => void;
 }) {
   const [focused, setFocused] = useState(false);
@@ -114,13 +129,13 @@ function FormSelect({
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}>
       <label style={{
-        color:         focused ? "#C9A84C" : "rgba(255,255,255,0.35)",
-        fontSize:      "0.6rem",
-        fontWeight:    700,
+        color: focused ? "#C9A84C" : "rgba(255,255,255,0.35)",
+        fontSize: "0.6rem",
+        fontWeight: 700,
         letterSpacing: "0.28em",
         textTransform: "uppercase",
-        fontFamily:    "var(--font-montserrat)",
-        transition:    "color 0.2s ease",
+        fontFamily: "var(--font-montserrat)",
+        transition: "color 0.2s ease",
       }}>
         {label} <span style={{ color: "#C9A84C" }}>*</span>
       </label>
@@ -130,18 +145,18 @@ function FormSelect({
         onFocus={() => setFocused(true)}
         onBlur={() => setFocused(false)}
         style={{
-          background:   "rgba(5,4,2,0.98)",
-          border:       `1px solid ${focused ? "#C9A84C" : "rgba(201,168,76,0.15)"}`,
-          color:        value ? "#ffffff" : "rgba(255,255,255,0.3)",
-          fontSize:     "0.82rem",
-          fontFamily:   "var(--font-montserrat)",
-          fontWeight:   400,
-          padding:      "12px 14px",
-          outline:      "none",
-          transition:   "border-color 0.22s ease",
-          width:        "100%",
-          cursor:       "pointer",
-          appearance:   "none",
+          background: "rgba(5,4,2,0.98)",
+          border: `1px solid ${focused ? "#C9A84C" : "rgba(201,168,76,0.15)"}`,
+          color: value ? "#ffffff" : "rgba(255,255,255,0.3)",
+          fontSize: "0.82rem",
+          fontFamily: "var(--font-montserrat)",
+          fontWeight: 400,
+          padding: "12px 14px",
+          outline: "none",
+          transition: "border-color 0.22s ease",
+          width: "100%",
+          cursor: "pointer",
+          appearance: "none",
           WebkitAppearance: "none",
         }}
       >
@@ -164,23 +179,23 @@ function FormTextarea({
   value,
   onChange,
 }: {
-  label:       string;
+  label: string;
   placeholder: string;
-  value:       string;
-  onChange:    (v: string) => void;
+  value: string;
+  onChange: (v: string) => void;
 }) {
   const [focused, setFocused] = useState(false);
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}>
       <label style={{
-        color:         focused ? "#C9A84C" : "rgba(255,255,255,0.35)",
-        fontSize:      "0.6rem",
-        fontWeight:    700,
+        color: focused ? "#C9A84C" : "rgba(255,255,255,0.35)",
+        fontSize: "0.6rem",
+        fontWeight: 700,
         letterSpacing: "0.28em",
         textTransform: "uppercase",
-        fontFamily:    "var(--font-montserrat)",
-        transition:    "color 0.2s ease",
+        fontFamily: "var(--font-montserrat)",
+        transition: "color 0.2s ease",
       }}>
         {label}
       </label>
@@ -192,19 +207,19 @@ function FormTextarea({
         onFocus={() => setFocused(true)}
         onBlur={() => setFocused(false)}
         style={{
-          background:  "rgba(255,255,255,0.03)",
-          border:      `1px solid ${focused ? "#C9A84C" : "rgba(201,168,76,0.15)"}`,
-          color:       "#ffffff",
-          fontSize:    "0.82rem",
-          fontFamily:  "var(--font-montserrat)",
-          fontWeight:  400,
-          padding:     "12px 14px",
-          outline:     "none",
-          transition:  "border-color 0.22s ease",
-          width:       "100%",
-          boxSizing:   "border-box",
-          resize:      "vertical",
-          minHeight:   "100px",
+          background: "rgba(255,255,255,0.03)",
+          border: `1px solid ${focused ? "#C9A84C" : "rgba(201,168,76,0.15)"}`,
+          color: "#ffffff",
+          fontSize: "0.82rem",
+          fontFamily: "var(--font-montserrat)",
+          fontWeight: 400,
+          padding: "12px 14px",
+          outline: "none",
+          transition: "border-color 0.22s ease",
+          width: "100%",
+          boxSizing: "border-box",
+          resize: "vertical",
+          minHeight: "100px",
         }}
         onMouseEnter={e => {
           if (!focused)
@@ -223,14 +238,14 @@ function FormTextarea({
 export default function CTASection() {
   const sectionRef = useRef<HTMLElement>(null);
   const [submitted, setSubmitted] = useState(false);
-  const [loading,   setLoading]   = useState(false);
+  const [loading, setLoading] = useState(false);
 
   const [form, setForm] = useState({
-    name:     "",
-    company:  "",
-    email:    "",
+    name: "",
+    company: "",
+    email: "",
     interest: "",
-    message:  "",
+    message: "",
   });
 
   const update = useCallback(
@@ -250,37 +265,47 @@ export default function CTASection() {
   };
 
   useEffect(() => {
-    const ctx = gsap.context(() => {
-      gsap.fromTo(".cta-heading",
-        { opacity: 0, y: 28 },
-        {
-          opacity: 1, y: 0, duration: 0.9, ease: "power2.out",
-          scrollTrigger: { trigger: ".cta-heading", start: "top 85%" },
-        }
-      );
-      gsap.fromTo(".cta-path-card",
-        { opacity: 0, y: 40 },
-        {
-          opacity: 1, y: 0, duration: 0.75, ease: "power2.out", stagger: 0.14,
-          scrollTrigger: { trigger: ".cta-paths-grid", start: "top 82%" },
-        }
-      );
-      gsap.fromTo(".cta-form-wrap",
-        { opacity: 0, y: 32 },
-        {
-          opacity: 1, y: 0, duration: 0.9, ease: "power2.out",
-          scrollTrigger: { trigger: ".cta-form-wrap", start: "top 82%" },
-        }
-      );
-      gsap.fromTo(".cta-watermark",
-        { opacity: 0 },
-        {
-          opacity: 1, duration: 1.4, ease: "power2.out",
-          scrollTrigger: { trigger: ".cta-watermark", start: "top 90%" },
-        }
-      );
-    }, sectionRef);
-    return () => ctx.revert();
+    let ctx: { revert: () => void } | null = null;
+    let cancelled = false;
+
+    loadGsap().then(({ gsap }) => {
+      if (cancelled || !sectionRef.current) return;
+      ctx = gsap.context(() => {
+        gsap.fromTo(".cta-heading",
+          { opacity: 0, y: 28 },
+          {
+            opacity: 1, y: 0, duration: 0.9, ease: "power2.out",
+            scrollTrigger: { trigger: ".cta-heading", start: "top 85%" },
+          }
+        );
+        gsap.fromTo(".cta-path-card",
+          { opacity: 0, y: 40 },
+          {
+            opacity: 1, y: 0, duration: 0.75, ease: "power2.out", stagger: 0.14,
+            scrollTrigger: { trigger: ".cta-paths-grid", start: "top 82%" },
+          }
+        );
+        gsap.fromTo(".cta-form-wrap",
+          { opacity: 0, y: 32 },
+          {
+            opacity: 1, y: 0, duration: 0.9, ease: "power2.out",
+            scrollTrigger: { trigger: ".cta-form-wrap", start: "top 82%" },
+          }
+        );
+        gsap.fromTo(".cta-watermark",
+          { opacity: 0 },
+          {
+            opacity: 1, duration: 1.4, ease: "power2.out",
+            scrollTrigger: { trigger: ".cta-watermark", start: "top 90%" },
+          }
+        );
+      }, sectionRef);
+    });
+
+    return () => {
+      cancelled = true;
+      ctx?.revert();
+    };
   }, []);
 
   return (
@@ -289,28 +314,28 @@ export default function CTASection() {
       ref={sectionRef}
       style={{
         background: "#050402",
-        overflow:   "hidden",
-        position:   "relative",
+        overflow: "hidden",
+        position: "relative",
       }}
     >
       {/* Top separator */}
       <div style={{
-        height:     "1px",
+        height: "1px",
         background: "linear-gradient(to right, transparent, rgba(201,168,76,0.2), transparent)",
       }} />
 
       {/* Radial glow background */}
       <div style={{
-        position:      "absolute",
-        top:           "20%",
-        left:          "50%",
-        transform:     "translateX(-50%)",
-        width:         "800px",
-        height:        "800px",
-        borderRadius:  "50%",
-        background:    "radial-gradient(circle, rgba(201,168,76,0.055) 0%, transparent 68%)",
+        position: "absolute",
+        top: "20%",
+        left: "50%",
+        transform: "translateX(-50%)",
+        width: "800px",
+        height: "800px",
+        borderRadius: "50%",
+        background: "radial-gradient(circle, rgba(201,168,76,0.055) 0%, transparent 68%)",
         pointerEvents: "none",
-        zIndex:        0,
+        zIndex: 0,
       }} />
 
       {/* ── Section heading ── */}
@@ -346,9 +371,9 @@ export default function CTASection() {
       {/* ── Three action paths ── */}
       <div
         style={{
-          padding:  "0 clamp(1.2rem, 4vw, 4rem) 5rem",
+          padding: "0 clamp(1.2rem, 4vw, 4rem) 5rem",
           position: "relative",
-          zIndex:   1,
+          zIndex: 1,
         }}
       >
         <div className="cta-paths-grid">
@@ -357,24 +382,24 @@ export default function CTASection() {
               key={path.number}
               className="cta-path-card"
               style={{
-                background:    "rgba(255,255,255,0.02)",
-                border:        "1px solid rgba(201,168,76,0.12)",
-                padding:       "2.2rem 1.8rem",
-                display:       "flex",
+                background: "rgba(255,255,255,0.02)",
+                border: "1px solid rgba(201,168,76,0.12)",
+                padding: "2.2rem 1.8rem",
+                display: "flex",
                 flexDirection: "column",
-                gap:           "1rem",
-                cursor:        "default",
-                transition:    "border-color 0.25s ease, background 0.25s ease",
-                position:      "relative",
-                overflow:      "hidden",
+                gap: "1rem",
+                cursor: "default",
+                transition: "border-color 0.25s ease, background 0.25s ease",
+                position: "relative",
+                overflow: "hidden",
               }}
               onMouseEnter={e => {
                 e.currentTarget.style.borderColor = "rgba(201,168,76,0.42)";
-                e.currentTarget.style.background  = "rgba(201,168,76,0.04)";
+                e.currentTarget.style.background = "rgba(201,168,76,0.04)";
               }}
               onMouseLeave={e => {
                 e.currentTarget.style.borderColor = "rgba(201,168,76,0.12)";
-                e.currentTarget.style.background  = "rgba(255,255,255,0.02)";
+                e.currentTarget.style.background = "rgba(255,255,255,0.02)";
               }}
               onClick={() =>
                 document.querySelector(".cta-form-wrap")
@@ -383,15 +408,15 @@ export default function CTASection() {
             >
               {/* Large number watermark */}
               <div style={{
-                position:      "absolute",
-                right:         "1rem",
-                top:           "1rem",
-                color:         "rgba(201,168,76,0.06)",
-                fontSize:      "5.5rem",
-                fontWeight:    800,
-                fontFamily:    "var(--font-montserrat)",
-                lineHeight:    1,
-                userSelect:    "none",
+                position: "absolute",
+                right: "1rem",
+                top: "1rem",
+                color: "rgba(201,168,76,0.06)",
+                fontSize: "5.5rem",
+                fontWeight: 800,
+                fontFamily: "var(--font-montserrat)",
+                lineHeight: 1,
+                userSelect: "none",
                 pointerEvents: "none",
               }}>
                 {path.number}
@@ -399,23 +424,23 @@ export default function CTASection() {
 
               {/* Number */}
               <div style={{
-                color:         "#C9A84C",
-                fontSize:      "0.62rem",
-                fontWeight:    700,
+                color: "#C9A84C",
+                fontSize: "0.62rem",
+                fontWeight: 700,
                 letterSpacing: "0.3em",
-                fontFamily:    "var(--font-montserrat)",
-                opacity:       0.65,
+                fontFamily: "var(--font-montserrat)",
+                opacity: 0.65,
               }}>
                 {path.number}
               </div>
 
               {/* Title */}
               <h3 style={{
-                color:      "#ffffff",
-                fontSize:   "clamp(1.1rem, 1.8vw, 1.35rem)",
+                color: "#ffffff",
+                fontSize: "clamp(1.1rem, 1.8vw, 1.35rem)",
                 fontWeight: 800,
                 fontFamily: "var(--font-montserrat)",
-                margin:     0,
+                margin: 0,
                 lineHeight: 1.2,
               }}>
                 {path.title}
@@ -423,44 +448,44 @@ export default function CTASection() {
 
               {/* Sub */}
               <p style={{
-                color:         "#C9A84C",
-                fontSize:      "0.68rem",
-                fontFamily:    "var(--font-montserrat)",
-                fontWeight:    600,
+                color: "#C9A84C",
+                fontSize: "0.68rem",
+                fontFamily: "var(--font-montserrat)",
+                fontWeight: 600,
                 letterSpacing: "0.08em",
-                margin:        0,
-                opacity:       0.75,
+                margin: 0,
+                opacity: 0.75,
               }}>
                 {path.sub}
               </p>
 
               {/* Body */}
               <p style={{
-                color:      "rgba(255,255,255,0.45)",
-                fontSize:   "0.76rem",
+                color: "rgba(255,255,255,0.45)",
+                fontSize: "0.76rem",
                 fontFamily: "var(--font-montserrat)",
                 fontWeight: 400,
                 lineHeight: 1.7,
-                margin:     0,
-                flexGrow:   1,
+                margin: 0,
+                flexGrow: 1,
               }}>
                 {path.body}
               </p>
 
               {/* Arrow CTA */}
               <div style={{
-                display:     "flex",
-                alignItems:  "center",
-                gap:         "0.6rem",
-                paddingTop:  "1rem",
-                borderTop:   "1px solid rgba(255,255,255,0.06)",
-                color:       "#C9A84C",
-                fontSize:    "0.65rem",
-                fontWeight:  700,
-                letterSpacing:"0.2em",
-                textTransform:"uppercase",
-                fontFamily:  "var(--font-montserrat)",
-                cursor:      "pointer",
+                display: "flex",
+                alignItems: "center",
+                gap: "0.6rem",
+                paddingTop: "1rem",
+                borderTop: "1px solid rgba(255,255,255,0.06)",
+                color: "#C9A84C",
+                fontSize: "0.65rem",
+                fontWeight: 700,
+                letterSpacing: "0.2em",
+                textTransform: "uppercase",
+                fontFamily: "var(--font-montserrat)",
+                cursor: "pointer",
               }}>
                 Get Started
                 <span style={{ fontSize: "0.9rem", marginTop: "1px" }}>{path.arrow}</span>
@@ -474,11 +499,11 @@ export default function CTASection() {
       <div
         className="cta-form-wrap"
         style={{
-          padding:   "0 clamp(1.2rem, 4vw, 4rem) 5rem",
-          position:  "relative",
-          zIndex:    1,
-          maxWidth:  "760px",
-          margin:    "0 auto",
+          padding: "0 clamp(1.2rem, 4vw, 4rem) 5rem",
+          position: "relative",
+          zIndex: 1,
+          maxWidth: "760px",
+          margin: "0 auto",
         }}
       >
         {/* Form heading */}
@@ -503,44 +528,44 @@ export default function CTASection() {
         {/* Form or success */}
         {submitted ? (
           <div style={{
-            border:        "1px solid rgba(201,168,76,0.3)",
-            background:    "rgba(201,168,76,0.05)",
-            padding:       "3rem 2rem",
-            textAlign:     "center",
-            display:       "flex",
+            border: "1px solid rgba(201,168,76,0.3)",
+            background: "rgba(201,168,76,0.05)",
+            padding: "3rem 2rem",
+            textAlign: "center",
+            display: "flex",
             flexDirection: "column",
-            alignItems:    "center",
-            gap:           "1rem",
+            alignItems: "center",
+            gap: "1rem",
           }}>
             <div style={{
-              width:      "1px",
-              height:     "40px",
+              width: "1px",
+              height: "40px",
               background: "linear-gradient(to bottom, transparent, #C9A84C)",
             }} />
             <h3 style={{
-              color:      "#C9A84C",
-              fontSize:   "clamp(1.2rem, 2vw, 1.6rem)",
+              color: "#C9A84C",
+              fontSize: "clamp(1.2rem, 2vw, 1.6rem)",
               fontWeight: 800,
               fontFamily: "var(--font-montserrat)",
-              margin:     0,
+              margin: 0,
             }}>
               Message received.
             </h3>
             <p style={{
-              color:      "rgba(255,255,255,0.45)",
-              fontSize:   "0.82rem",
+              color: "rgba(255,255,255,0.45)",
+              fontSize: "0.82rem",
               fontFamily: "var(--font-montserrat)",
               fontWeight: 400,
-              margin:     0,
+              margin: 0,
               lineHeight: 1.6,
-              maxWidth:   "340px",
+              maxWidth: "340px",
             }}>
               Our commercial team will be in touch within 24 hours.
               Welcome to the conversation.
             </p>
             <div style={{
-              width:      "1px",
-              height:     "40px",
+              width: "1px",
+              height: "40px",
               background: "linear-gradient(to bottom, #C9A84C, transparent)",
             }} />
           </div>
@@ -582,21 +607,21 @@ export default function CTASection() {
 
             {/* Submit */}
             <div style={{
-              display:        "flex",
-              alignItems:     "center",
+              display: "flex",
+              alignItems: "center",
               justifyContent: "space-between",
-              flexWrap:       "wrap",
-              gap:            "1rem",
-              paddingTop:     "0.5rem",
+              flexWrap: "wrap",
+              gap: "1rem",
+              paddingTop: "0.5rem",
             }}>
               <p style={{
-                color:      "rgba(255,255,255,0.2)",
-                fontSize:   "0.62rem",
+                color: "rgba(255,255,255,0.2)",
+                fontSize: "0.62rem",
                 fontFamily: "var(--font-montserrat)",
                 fontWeight: 400,
-                margin:     0,
+                margin: 0,
                 lineHeight: 1.5,
-                maxWidth:   "260px",
+                maxWidth: "260px",
               }}>
                 Our commercial team responds within 24 hours.
                 All enquiries are treated with full confidentiality.
@@ -605,19 +630,19 @@ export default function CTASection() {
                 type="submit"
                 disabled={loading}
                 style={{
-                  background:    loading ? "rgba(201,168,76,0.4)" : "#C9A84C",
-                  border:        "1px solid #C9A84C",
-                  color:         "#000000",
-                  fontSize:      "0.68rem",
-                  fontWeight:    800,
+                  background: loading ? "rgba(201,168,76,0.4)" : "#C9A84C",
+                  border: "1px solid #C9A84C",
+                  color: "#000000",
+                  fontSize: "0.68rem",
+                  fontWeight: 800,
                   letterSpacing: "0.25em",
                   textTransform: "uppercase",
-                  fontFamily:    "var(--font-montserrat)",
-                  padding:       "14px 36px",
-                  cursor:        loading ? "not-allowed" : "pointer",
-                  transition:    "background 0.22s, opacity 0.22s",
-                  opacity:       loading ? 0.7 : 1,
-                  whiteSpace:    "nowrap",
+                  fontFamily: "var(--font-montserrat)",
+                  padding: "14px 36px",
+                  cursor: loading ? "not-allowed" : "pointer",
+                  transition: "background 0.22s, opacity 0.22s",
+                  opacity: loading ? 0.7 : 1,
+                  whiteSpace: "nowrap",
                 }}
                 onMouseEnter={e => {
                   if (!loading) (e.currentTarget).style.background = "#E8C97A";
@@ -637,32 +662,32 @@ export default function CTASection() {
       <div
         className="cta-watermark"
         style={{
-          position:       "relative",
-          zIndex:         1,
-          textAlign:      "center",
-          padding:        "3rem 1.5rem 5rem",
-          display:        "flex",
-          flexDirection:  "column",
-          alignItems:     "center",
-          gap:            "1.5rem",
-          borderTop:      "1px solid rgba(201,168,76,0.08)",
+          position: "relative",
+          zIndex: 1,
+          textAlign: "center",
+          padding: "3rem 1.5rem 5rem",
+          display: "flex",
+          flexDirection: "column",
+          alignItems: "center",
+          gap: "1.5rem",
+          borderTop: "1px solid rgba(201,168,76,0.08)",
         }}
       >
         {/* Huge faint watermark text */}
         <div style={{
-          position:      "absolute",
-          top:           "50%",
-          left:          "50%",
-          transform:     "translate(-50%, -50%)",
-          color:         "rgba(201,168,76,0.03)",
-          fontSize:      "clamp(4rem, 14vw, 10rem)",
-          fontWeight:    800,
-          fontFamily:    "var(--font-montserrat)",
+          position: "absolute",
+          top: "50%",
+          left: "50%",
+          transform: "translate(-50%, -50%)",
+          color: "rgba(201,168,76,0.03)",
+          fontSize: "clamp(4rem, 14vw, 10rem)",
+          fontWeight: 800,
+          fontFamily: "var(--font-montserrat)",
           letterSpacing: "0.05em",
-          userSelect:    "none",
+          userSelect: "none",
           pointerEvents: "none",
-          whiteSpace:    "nowrap",
-          lineHeight:    1,
+          whiteSpace: "nowrap",
+          lineHeight: 1,
         }}>
           MALL OF AMERICA
         </div>
@@ -671,8 +696,8 @@ export default function CTASection() {
         <svg viewBox="0 0 44 44" width="36" height="36" aria-hidden="true" style={{ opacity: 0.55 }}>
           <defs>
             <linearGradient id="cta-g1" x1="0%" y1="0%" x2="100%" y2="100%">
-              <stop offset="0%"   stopColor="#F0D988" />
-              <stop offset="50%"  stopColor="#C9A84C" />
+              <stop offset="0%" stopColor="#F0D988" />
+              <stop offset="50%" stopColor="#C9A84C" />
               <stop offset="100%" stopColor="#8A6820" />
             </linearGradient>
           </defs>
@@ -685,25 +710,25 @@ export default function CTASection() {
         {/* Wordmark */}
         <div style={{ textAlign: "center" }}>
           <p style={{
-            color:         "#C9A84C",
-            fontSize:      "0.75rem",
-            fontWeight:    800,
+            color: "#C9A84C",
+            fontSize: "0.75rem",
+            fontWeight: 800,
             letterSpacing: "0.32em",
             textTransform: "uppercase",
-            fontFamily:    "var(--font-montserrat)",
-            margin:        "0 0 0.15rem",
-            lineHeight:    1,
+            fontFamily: "var(--font-montserrat)",
+            margin: "0 0 0.15rem",
+            lineHeight: 1,
           }}>
             Mall of America
           </p>
           <p style={{
-            color:         "rgba(255,255,255,0.18)",
-            fontSize:      "0.5rem",
+            color: "rgba(255,255,255,0.18)",
+            fontSize: "0.5rem",
             letterSpacing: "0.4em",
             textTransform: "uppercase",
-            fontFamily:    "var(--font-montserrat)",
-            fontWeight:    500,
-            margin:        0,
+            fontFamily: "var(--font-montserrat)",
+            fontWeight: 500,
+            margin: 0,
           }}>
             Bloomington · Minnesota
           </p>
@@ -711,13 +736,13 @@ export default function CTASection() {
 
         {/* Legal line */}
         <p style={{
-          color:         "rgba(255,255,255,0.12)",
-          fontSize:      "0.55rem",
-          fontFamily:    "var(--font-montserrat)",
-          fontWeight:    400,
-          margin:        0,
+          color: "rgba(255,255,255,0.12)",
+          fontSize: "0.55rem",
+          fontFamily: "var(--font-montserrat)",
+          fontWeight: 400,
+          margin: 0,
           letterSpacing: "0.06em",
-          textAlign:     "center",
+          textAlign: "center",
         }}>
           © {new Date().getFullYear()} Mall of America · All commercial enquiries treated in strict confidence
         </p>

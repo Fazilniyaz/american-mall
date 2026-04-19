@@ -2,142 +2,157 @@
 
 import { useEffect, useRef, useState, useCallback, memo } from "react";
 import Image from "next/image";
-import gsap from "gsap";
-import { ScrollTrigger } from "gsap/ScrollTrigger";
 
-gsap.registerPlugin(ScrollTrigger);
+// ── Lazy GSAP loader ──────────────────────────────────────────────────────
+type GsapType = typeof import("gsap")["default"];
+type ScrollTriggerType = typeof import("gsap/ScrollTrigger")["ScrollTrigger"];
+
+let _gsap: GsapType | null = null;
+let _ST: ScrollTriggerType | null = null;
+
+const loadGsap = async () => {
+  if (_gsap && _ST) return { gsap: _gsap, ScrollTrigger: _ST };
+  const [gsapMod, stMod] = await Promise.all([
+    import("gsap"),
+    import("gsap/ScrollTrigger"),
+  ]);
+  _gsap = gsapMod.default;
+  _ST = stMod.ScrollTrigger;
+  _gsap.registerPlugin(_ST);
+  return { gsap: _gsap, ScrollTrigger: _ST };
+};
 
 // ─── Hero slideshow data ──────────────────────────────────────────────────────
 const HERO_SLIDES = [
   {
-    src:      "/photos/event-hero-1.jpg",
-    alt:      "Live event production crew at Mall of America",
+    src: "/photos/event-hero-1.jpg",
+    alt: "Live event production crew at Mall of America",
     headline: "300+",
-    sub:      "Live events every year",
-    accent:   "#C9A84C",
-    overlay:  "linear-gradient(135deg, rgba(10,6,0,0.88) 0%, rgba(5,4,2,0.55) 60%, rgba(5,4,2,0.2) 100%)",
+    sub: "Live events every year",
+    accent: "#C9A84C",
+    overlay: "linear-gradient(135deg, rgba(10,6,0,0.88) 0%, rgba(5,4,2,0.55) 60%, rgba(5,4,2,0.2) 100%)",
   },
   {
-    src:      "/photos/event-hero-2.jpg",
-    alt:      "Samsung Galaxy Unpacked event arena",
+    src: "/photos/event-hero-2.jpg",
+    alt: "Samsung Galaxy Unpacked event arena",
     headline: "500K+",
-    sub:      "Annual event attendees",
-    accent:   "#00c8f0",
-    overlay:  "linear-gradient(135deg, rgba(0,10,20,0.92) 0%, rgba(0,15,30,0.6) 60%, rgba(0,10,20,0.2) 100%)",
+    sub: "Annual event attendees",
+    accent: "#00c8f0",
+    overlay: "linear-gradient(135deg, rgba(0,10,20,0.92) 0%, rgba(0,15,30,0.6) 60%, rgba(0,10,20,0.2) 100%)",
   },
   {
-    src:      "/photos/event-hero-3.jpg",
-    alt:      "Concert crowd energy at night event",
+    src: "/photos/event-hero-3.jpg",
+    alt: "Concert crowd energy at night event",
     headline: "40M",
-    sub:      "Witnesses per year",
-    accent:   "#C9A84C",
-    overlay:  "linear-gradient(135deg, rgba(15,4,0,0.9) 0%, rgba(10,2,0,0.6) 60%, rgba(5,4,2,0.2) 100%)",
+    sub: "Witnesses per year",
+    accent: "#C9A84C",
+    overlay: "linear-gradient(135deg, rgba(15,4,0,0.9) 0%, rgba(10,2,0,0.6) 60%, rgba(5,4,2,0.2) 100%)",
   },
 ];
 
 // ─── Hero stat pills ──────────────────────────────────────────────────────────
 const HERO_STATS = [
-  { value: "300+",  label: "Annual Events" },
+  { value: "300+", label: "Annual Events" },
   { value: "500K+", label: "Event Attendees" },
-  { value: "40M",   label: "Yearly Witnesses" },
-  { value: "20K",   label: "Max Capacity" },
+  { value: "40M", label: "Yearly Witnesses" },
+  { value: "20K", label: "Max Capacity" },
 ];
 
 // ─── Tech events data ─────────────────────────────────────────────────────────
 const TECH_EVENTS = [
   {
-    id:       "apple-vr",
-    brand:    "Apple",
-    event:    "Vision Pro Demo Experience",
-    year:     "2024–Present",
-    stat:     "8,000+",
-    statLabel:"Demo sessions",
-    desc:     "First hands-on Vision Pro demo experiences in the Midwest. Visitors queued for hours for a chance to step into spatial computing.",
-    images:   [
+    id: "apple-vr",
+    brand: "Apple",
+    event: "Vision Pro Demo Experience",
+    year: "2024–Present",
+    stat: "8,000+",
+    statLabel: "Demo sessions",
+    desc: "First hands-on Vision Pro demo experiences in the Midwest. Visitors queued for hours for a chance to step into spatial computing.",
+    images: [
       { src: "/photos/apple-vr-1.jpg", alt: "Apple Vision Pro launch crowd" },
       { src: "/photos/apple-vr-2.jpg", alt: "Woman wearing Apple Vision Pro" },
       { src: "/photos/apple-vr-3.jpg", alt: "Apple Vision Pro selfie event" },
     ],
     accent: "#f5f5f7",
-    tag:    "Tech · AR/VR",
+    tag: "Tech · AR/VR",
   },
   {
-    id:       "samsung-store",
-    brand:    "Samsung",
-    event:    "Galaxy Experience Store Grand Opening",
-    year:     "2025",
-    stat:     "22K+",
-    statLabel:"Opening day visitors",
-    desc:     "Samsung's first Midwest Experience Store launched at Mall of America. Crowds lined up before dawn for Galaxy S25 hands-on demos.",
-    images:   [
+    id: "samsung-store",
+    brand: "Samsung",
+    event: "Galaxy Experience Store Grand Opening",
+    year: "2025",
+    stat: "22K+",
+    statLabel: "Opening day visitors",
+    desc: "Samsung's first Midwest Experience Store launched at Mall of America. Crowds lined up before dawn for Galaxy S25 hands-on demos.",
+    images: [
       { src: "/photos/samsung-store-1.webp", alt: "Samsung Galaxy store opening" },
     ],
     accent: "#1428A0",
-    tag:    "Tech · Retail",
+    tag: "Tech · Retail",
   },
   {
-    id:       "samsung-vr",
-    brand:    "Samsung",
-    event:    "VR & Gaming Experience Zones",
-    year:     "2024",
-    stat:     "15K+",
-    statLabel:"VR sessions",
-    desc:     "Immersive Galaxy VR gaming zones activated across the property. Full-scale demo pods, headsets, and live competitions.",
-    images:   [
-      { src: "/photos/samsung-vr-1.avif",  alt: "Samsung VR experience" },
+    id: "samsung-vr",
+    brand: "Samsung",
+    event: "VR & Gaming Experience Zones",
+    year: "2024",
+    stat: "15K+",
+    statLabel: "VR sessions",
+    desc: "Immersive Galaxy VR gaming zones activated across the property. Full-scale demo pods, headsets, and live competitions.",
+    images: [
+      { src: "/photos/samsung-vr-1.avif", alt: "Samsung VR experience" },
       { src: "/photos/samsung-vr-2.jpg", alt: "Samsung VR gaming zone" },
     ],
     accent: "#1428A0",
-    tag:    "Tech · Gaming",
+    tag: "Tech · Gaming",
   },
 ];
 
 // ─── Entertainment + Gaming events ───────────────────────────────────────────
 const ENT_EVENTS = [
   {
-    id:       "nike",
-    brand:    "Nike",
-    event:    "Sneaker Launch Events",
-    year:     "2023–Present",
-    stat:     "18K+",
-    statLabel:"Attendees per event",
-    desc:     "Exclusive sneaker drops and athlete meet-and-greets. Nike transforms Mall of America's atrium into a full-scale brand experience.",
-    images:   [
+    id: "nike",
+    brand: "Nike",
+    event: "Sneaker Launch Events",
+    year: "2023–Present",
+    stat: "18K+",
+    statLabel: "Attendees per event",
+    desc: "Exclusive sneaker drops and athlete meet-and-greets. Nike transforms Mall of America's atrium into a full-scale brand experience.",
+    images: [
       { src: "/photos/nike-1.jpg", alt: "Nike sneaker launch event" },
       { src: "/photos/nike-2.jpg", alt: "Nike fan engagement" },
     ],
     accent: "#111111",
-    tag:    "Entertainment · Sport",
+    tag: "Entertainment · Sport",
   },
   {
-    id:       "adidas",
-    brand:    "Adidas",
-    event:    "Fan Engagement Events",
-    year:     "2023–Present",
-    stat:     "12K+",
-    statLabel:"Fan engagements",
-    desc:     "Premium Adidas brand activations with exclusive merchandise drops, athlete appearances, and immersive product showcases.",
-    images:   [
-      { src: "/photos/adidas-1.jpg",  alt: "Adidas fan event" },
+    id: "adidas",
+    brand: "Adidas",
+    event: "Fan Engagement Events",
+    year: "2023–Present",
+    stat: "12K+",
+    statLabel: "Fan engagements",
+    desc: "Premium Adidas brand activations with exclusive merchandise drops, athlete appearances, and immersive product showcases.",
+    images: [
+      { src: "/photos/adidas-1.jpg", alt: "Adidas fan event" },
       { src: "/photos/adidas-2.webp", alt: "Adidas Palace event space" },
     ],
     accent: "#000000",
-    tag:    "Entertainment · Sport",
+    tag: "Entertainment · Sport",
   },
   {
-    id:       "xbox",
-    brand:    "Xbox",
-    event:    "Gaming Events & Showcase",
-    year:     "2024",
-    stat:     "10K+",
-    statLabel:"Gaming sessions",
-    desc:     "Microsoft Xbox brought the Games Showcase experience to Mall of America. 4K gaming zones, early access titles, and live tournaments.",
-    images:   [
+    id: "xbox",
+    brand: "Xbox",
+    event: "Gaming Events & Showcase",
+    year: "2024",
+    stat: "10K+",
+    statLabel: "Gaming sessions",
+    desc: "Microsoft Xbox brought the Games Showcase experience to Mall of America. 4K gaming zones, early access titles, and live tournaments.",
+    images: [
       { src: "/photos/xbox1.jpg", alt: "Xbox Games Showcase" },
       { src: "/photos/xbox2.jpg", alt: "Xbox gaming devices" },
     ],
     accent: "#107C10",
-    tag:    "Gaming · Microsoft",
+    tag: "Gaming · Microsoft",
   },
 ];
 
@@ -171,9 +186,9 @@ function ImageCarousel({
         <div
           key={img.src}
           style={{
-            position:   "absolute",
-            inset:      0,
-            opacity:    i === active ? 1 : 0,
+            position: "absolute",
+            inset: 0,
+            opacity: i === active ? 1 : 0,
             transition: "opacity 0.75s ease",
           }}
         >
@@ -190,34 +205,34 @@ function ImageCarousel({
 
       {/* Overlay */}
       <div style={{
-        position:   "absolute",
-        inset:      0,
+        position: "absolute",
+        inset: 0,
         background: "linear-gradient(to top, rgba(5,4,2,0.85) 0%, rgba(5,4,2,0.1) 55%)",
-        zIndex:     2,
+        zIndex: 2,
       }} />
 
       {/* Dot indicators */}
       {images.length > 1 && (
         <div style={{
-          position:       "absolute",
-          bottom:         "0.7rem",
-          left:           "50%",
-          transform:      "translateX(-50%)",
-          display:        "flex",
-          gap:            "5px",
-          zIndex:         3,
+          position: "absolute",
+          bottom: "0.7rem",
+          left: "50%",
+          transform: "translateX(-50%)",
+          display: "flex",
+          gap: "5px",
+          zIndex: 3,
         }}>
           {images.map((_, i) => (
             <button
               key={i}
               onClick={() => go(i)}
               style={{
-                width:      i === active ? "16px" : "5px",
-                height:     "5px",
+                width: i === active ? "16px" : "5px",
+                height: "5px",
                 background: i === active ? accent : "rgba(255,255,255,0.35)",
-                border:     "none",
-                cursor:     "pointer",
-                padding:    0,
+                border: "none",
+                cursor: "pointer",
+                padding: 0,
                 transition: "all 0.3s ease",
               }}
               aria-label={`View image ${i + 1}`}
@@ -242,18 +257,22 @@ const EventCard = memo(function EventCard({
   const cardRef = useRef<HTMLDivElement>(null);
 
   const onMove = (e: React.MouseEvent<HTMLDivElement>) => {
-    const r  = e.currentTarget.getBoundingClientRect();
-    const mx = ((e.clientX - r.left) / r.width  - 0.5) * 10;
-    const my = ((e.clientY - r.top)  / r.height - 0.5) * -10;
-    gsap.to(e.currentTarget, {
-      rotateY: mx, rotateX: my, duration: 0.3, ease: "power2.out",
-      transformPerspective: 700,
+    const r = e.currentTarget.getBoundingClientRect();
+    const mx = ((e.clientX - r.left) / r.width - 0.5) * 10;
+    const my = ((e.clientY - r.top) / r.height - 0.5) * -10;
+    loadGsap().then(({ gsap }) => {
+      gsap.to(e.currentTarget, {
+        rotateY: mx, rotateX: my, duration: 0.3, ease: "power2.out",
+        transformPerspective: 700,
+      });
     });
   };
   const onLeave = (e: React.MouseEvent<HTMLDivElement>) => {
-    gsap.to(e.currentTarget, {
-      rotateY: 0, rotateX: 0, duration: 0.55, ease: "elastic.out(1,0.6)",
-      transformPerspective: 700,
+    loadGsap().then(({ gsap }) => {
+      gsap.to(e.currentTarget, {
+        rotateY: 0, rotateX: 0, duration: 0.55, ease: "elastic.out(1,0.6)",
+        transformPerspective: 700,
+      });
     });
   };
 
@@ -264,16 +283,16 @@ const EventCard = memo(function EventCard({
       onMouseMove={onMove}
       onMouseLeave={onLeave}
       style={{
-        background:    "rgba(255,255,255,0.025)",
-        border:        "1px solid rgba(201,168,76,0.12)",
-        display:       "flex",
+        background: "rgba(255,255,255,0.025)",
+        border: "1px solid rgba(201,168,76,0.12)",
+        display: "flex",
         flexDirection: "column",
-        overflow:      "hidden",
-        willChange:    "transform",
-        transformStyle:"preserve-3d",
-        opacity:       0,
-        transform:     "translateY(32px)",
-        transition:    "border-color 0.25s ease",
+        overflow: "hidden",
+        willChange: "transform",
+        transformStyle: "preserve-3d",
+        opacity: 0,
+        transform: "translateY(32px)",
+        transition: "border-color 0.25s ease",
       }}
       onMouseEnter={e => {
         e.currentTarget.style.borderColor = "rgba(201,168,76,0.38)";
@@ -285,22 +304,22 @@ const EventCard = memo(function EventCard({
 
         {/* Brand tag */}
         <div style={{
-          position:      "absolute",
-          top:           "0.7rem",
-          left:          "0.7rem",
-          zIndex:        4,
-          background:    "rgba(5,4,2,0.75)",
-          border:        "1px solid rgba(201,168,76,0.2)",
-          backdropFilter:"blur(8px)",
-          padding:       "3px 9px",
+          position: "absolute",
+          top: "0.7rem",
+          left: "0.7rem",
+          zIndex: 4,
+          background: "rgba(5,4,2,0.75)",
+          border: "1px solid rgba(201,168,76,0.2)",
+          backdropFilter: "blur(8px)",
+          padding: "3px 9px",
         }}>
           <span style={{
-            color:         "#C9A84C",
-            fontSize:      "0.55rem",
-            fontWeight:    700,
+            color: "#C9A84C",
+            fontSize: "0.55rem",
+            fontWeight: 700,
             letterSpacing: "0.22em",
             textTransform: "uppercase",
-            fontFamily:    "var(--font-montserrat)",
+            fontFamily: "var(--font-montserrat)",
           }}>
             {evt.tag}
           </span>
@@ -308,18 +327,18 @@ const EventCard = memo(function EventCard({
 
         {/* Year badge */}
         <div style={{
-          position:      "absolute",
-          top:           "0.7rem",
-          right:         "0.7rem",
-          zIndex:        4,
-          background:    "rgba(5,4,2,0.6)",
-          padding:       "3px 8px",
+          position: "absolute",
+          top: "0.7rem",
+          right: "0.7rem",
+          zIndex: 4,
+          background: "rgba(5,4,2,0.6)",
+          padding: "3px 8px",
         }}>
           <span style={{
-            color:         "rgba(255,255,255,0.5)",
-            fontSize:      "0.55rem",
-            fontFamily:    "var(--font-montserrat)",
-            fontWeight:    600,
+            color: "rgba(255,255,255,0.5)",
+            fontSize: "0.55rem",
+            fontFamily: "var(--font-montserrat)",
+            fontWeight: 600,
             letterSpacing: "0.1em",
           }}>
             {evt.year}
@@ -332,23 +351,23 @@ const EventCard = memo(function EventCard({
         {/* Brand + event name */}
         <div>
           <p style={{
-            color:         "#C9A84C",
-            fontSize:      "0.58rem",
-            fontWeight:    700,
+            color: "#C9A84C",
+            fontSize: "0.58rem",
+            fontWeight: 700,
             letterSpacing: "0.22em",
             textTransform: "uppercase",
-            fontFamily:    "var(--font-montserrat)",
-            margin:        "0 0 0.25rem",
-            opacity:       0.8,
+            fontFamily: "var(--font-montserrat)",
+            margin: "0 0 0.25rem",
+            opacity: 0.8,
           }}>
             {evt.brand}
           </p>
           <h3 style={{
-            color:      "#ffffff",
-            fontSize:   "clamp(0.88rem, 1.4vw, 1rem)",
+            color: "#ffffff",
+            fontSize: "clamp(0.88rem, 1.4vw, 1rem)",
             fontWeight: 700,
             fontFamily: "var(--font-montserrat)",
-            margin:     0,
+            margin: 0,
             lineHeight: 1.25,
           }}>
             {evt.event}
@@ -357,40 +376,40 @@ const EventCard = memo(function EventCard({
 
         {/* Description */}
         <p style={{
-          color:      "rgba(255,255,255,0.48)",
-          fontSize:   "0.72rem",
+          color: "rgba(255,255,255,0.48)",
+          fontSize: "0.72rem",
           fontFamily: "var(--font-montserrat)",
           fontWeight: 400,
           lineHeight: 1.65,
-          margin:     0,
-          flexGrow:   1,
+          margin: 0,
+          flexGrow: 1,
         }}>
           {evt.desc}
         </p>
 
         {/* Stat */}
         <div style={{
-          display:    "flex",
+          display: "flex",
           alignItems: "baseline",
-          gap:        "0.5rem",
+          gap: "0.5rem",
           paddingTop: "0.8rem",
-          borderTop:  "1px solid rgba(255,255,255,0.06)",
+          borderTop: "1px solid rgba(255,255,255,0.06)",
         }}>
           <span style={{
-            color:              "#C9A84C",
-            fontSize:           "clamp(1.1rem, 2vw, 1.4rem)",
-            fontWeight:         800,
-            fontFamily:         "var(--font-montserrat)",
-            lineHeight:         1,
+            color: "#C9A84C",
+            fontSize: "clamp(1.1rem, 2vw, 1.4rem)",
+            fontWeight: 800,
+            fontFamily: "var(--font-montserrat)",
+            lineHeight: 1,
             fontVariantNumeric: "tabular-nums",
           }}>
             {evt.stat}
           </span>
           <span style={{
-            color:         "rgba(255,255,255,0.3)",
-            fontSize:      "0.58rem",
-            fontFamily:    "var(--font-montserrat)",
-            fontWeight:    600,
+            color: "rgba(255,255,255,0.3)",
+            fontSize: "0.58rem",
+            fontFamily: "var(--font-montserrat)",
+            fontWeight: 600,
             letterSpacing: "0.1em",
             textTransform: "uppercase",
           }}>
@@ -404,9 +423,9 @@ const EventCard = memo(function EventCard({
 
 // ─── Hero Slideshow ───────────────────────────────────────────────────────────
 function EventsHero() {
-  const [active, setActive]   = useState(0);
+  const [active, setActive] = useState(0);
   const [entered, setEntered] = useState(false);
-  const heroRef  = useRef<HTMLDivElement>(null);
+  const heroRef = useRef<HTMLDivElement>(null);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   // Auto-advance
@@ -420,21 +439,28 @@ function EventsHero() {
   // Entrance animation
   useEffect(() => {
     if (!heroRef.current) return;
-    ScrollTrigger.create({
-      trigger: heroRef.current,
-      start:   "top 80%",
-      once:    true,
-      onEnter: () => {
-        setEntered(true);
-        gsap.fromTo(".evh-cat",   { opacity: 0, y: 20 }, { opacity: 1, y: 0, duration: 0.6, ease: "power2.out" });
-        gsap.fromTo(".evh-head",  { opacity: 0, y: 30 }, { opacity: 1, y: 0, duration: 0.7, ease: "power2.out", delay: 0.15 });
-        gsap.fromTo(".evh-sub",   { opacity: 0, y: 20 }, { opacity: 1, y: 0, duration: 0.6, ease: "power2.out", delay: 0.25 });
-        gsap.fromTo(".evh-stat",  { opacity: 0, y: 16 }, { opacity: 1, y: 0, duration: 0.5, ease: "power2.out", stagger: 0.1, delay: 0.4 });
-        gsap.fromTo(".evh-dots",  { opacity: 0 },        { opacity: 1, duration: 0.5, delay: 0.6 });
-      },
+    let cancelled = false;
+    loadGsap().then(({ gsap, ScrollTrigger }) => {
+      if (cancelled || !heroRef.current) return;
+      ScrollTrigger.create({
+        trigger: heroRef.current,
+        start: "top 80%",
+        once: true,
+        onEnter: () => {
+          setEntered(true);
+          gsap.fromTo(".evh-cat", { opacity: 0, y: 20 }, { opacity: 1, y: 0, duration: 0.6, ease: "power2.out" });
+          gsap.fromTo(".evh-head", { opacity: 0, y: 30 }, { opacity: 1, y: 0, duration: 0.7, ease: "power2.out", delay: 0.15 });
+          gsap.fromTo(".evh-sub", { opacity: 0, y: 20 }, { opacity: 1, y: 0, duration: 0.6, ease: "power2.out", delay: 0.25 });
+          gsap.fromTo(".evh-stat", { opacity: 0, y: 16 }, { opacity: 1, y: 0, duration: 0.5, ease: "power2.out", stagger: 0.1, delay: 0.4 });
+          gsap.fromTo(".evh-dots", { opacity: 0 }, { opacity: 1, duration: 0.5, delay: 0.6 });
+        },
+      });
     });
     return () => {
-      ScrollTrigger.getAll().filter(st => st.vars.trigger === heroRef.current).forEach(st => st.kill());
+      cancelled = true;
+      loadGsap().then(({ ScrollTrigger }) => {
+        ScrollTrigger.getAll().filter(st => st.vars.trigger === heroRef.current).forEach(st => st.kill());
+      });
     };
   }, []);
 
@@ -444,22 +470,22 @@ function EventsHero() {
     <div
       ref={heroRef}
       style={{
-        position:   "relative",
-        width:      "100%",
-        minHeight:  "80vh",
-        overflow:   "hidden",
+        position: "relative",
+        width: "100%",
+        minHeight: "80vh",
+        overflow: "hidden",
         background: "#050402",
-        display:    "flex",
+        display: "flex",
         alignItems: "center",
       }}
     >
       {/* Background slides */}
       {HERO_SLIDES.map((s, i) => (
         <div key={s.src} style={{
-          position:   "absolute",
-          inset:      0,
-          zIndex:     1,
-          opacity:    i === active ? 1 : 0,
+          position: "absolute",
+          inset: 0,
+          zIndex: 1,
+          opacity: i === active ? 1 : 0,
           transition: "opacity 1s ease",
         }}>
           <Image
@@ -471,10 +497,10 @@ function EventsHero() {
             style={{ objectFit: "cover", objectPosition: "center 40%" }}
           />
           <div style={{
-            position:   "absolute",
-            inset:      0,
+            position: "absolute",
+            inset: 0,
             background: s.overlay,
-            zIndex:     2,
+            zIndex: 2,
           }} />
         </div>
       ))}
@@ -486,44 +512,44 @@ function EventsHero() {
       {/* Content */}
       <div style={{
         position: "relative",
-        zIndex:   4,
-        padding:  "5rem clamp(1.5rem, 6vw, 6rem)",
-        width:    "100%",
+        zIndex: 4,
+        padding: "5rem clamp(1.5rem, 6vw, 6rem)",
+        width: "100%",
         maxWidth: "900px",
       }}>
         <p className="evh-cat" style={{
-          color:         "#C9A84C",
-          fontSize:      "0.68rem",
+          color: "#C9A84C",
+          fontSize: "0.68rem",
           letterSpacing: "0.42em",
           textTransform: "uppercase",
-          fontFamily:    "var(--font-montserrat)",
-          fontWeight:    700,
-          margin:        "0 0 1rem",
-          opacity:       entered ? 1 : 0,
+          fontFamily: "var(--font-montserrat)",
+          fontWeight: 700,
+          margin: "0 0 1rem",
+          opacity: entered ? 1 : 0,
         }}>
           Events & Activations · Mall of America
         </p>
 
         <h2 className="evh-head" style={{
-          color:      "#ffffff",
-          fontSize:   "clamp(3rem, 7vw, 6.5rem)",
+          color: "#ffffff",
+          fontSize: "clamp(3rem, 7vw, 6.5rem)",
           fontWeight: 800,
           fontFamily: "var(--font-montserrat)",
-          margin:     0,
+          margin: 0,
           lineHeight: 0.92,
-          opacity:    entered ? 1 : 0,
+          opacity: entered ? 1 : 0,
           fontVariantNumeric: "tabular-nums",
           transition: "color 0.6s ease",
-        //   color:      slide.accent,
+          //   color:      slide.accent,
         }}>
           {slide.headline}
         </h2>
         <h3 style={{
-          color:      "rgba(255,255,255,0.55)",
-          fontSize:   "clamp(1rem, 2.5vw, 1.8rem)",
+          color: "rgba(255,255,255,0.55)",
+          fontSize: "clamp(1rem, 2.5vw, 1.8rem)",
           fontWeight: 700,
           fontFamily: "var(--font-montserrat)",
-          margin:     "0.3rem 0 2.5rem",
+          margin: "0.3rem 0 2.5rem",
           lineHeight: 1.2,
           transition: "opacity 0.6s ease",
         }}
@@ -536,26 +562,26 @@ function EventsHero() {
         <div style={{ display: "flex", gap: "clamp(1rem, 3vw, 3rem)", flexWrap: "wrap" }}>
           {HERO_STATS.map(s => (
             <div key={s.value} className="evh-stat" style={{
-              borderLeft:  "2px solid #C9A84C",
+              borderLeft: "2px solid #C9A84C",
               paddingLeft: "0.9rem",
-              opacity:     entered ? 1 : 0,
+              opacity: entered ? 1 : 0,
             }}>
               <div style={{
-                color:              "#C9A84C",
-                fontSize:           "clamp(1.2rem, 2.5vw, 1.8rem)",
-                fontWeight:         800,
-                fontFamily:         "var(--font-montserrat)",
-                lineHeight:         1,
+                color: "#C9A84C",
+                fontSize: "clamp(1.2rem, 2.5vw, 1.8rem)",
+                fontWeight: 800,
+                fontFamily: "var(--font-montserrat)",
+                lineHeight: 1,
                 fontVariantNumeric: "tabular-nums",
               }}>{s.value}</div>
               <div style={{
-                color:         "rgba(255,255,255,0.35)",
-                fontSize:      "0.58rem",
+                color: "rgba(255,255,255,0.35)",
+                fontSize: "0.58rem",
                 letterSpacing: "0.16em",
                 textTransform: "uppercase",
-                fontFamily:    "var(--font-montserrat)",
-                fontWeight:    600,
-                marginTop:     "0.2rem",
+                fontFamily: "var(--font-montserrat)",
+                fontWeight: 600,
+                marginTop: "0.2rem",
               }}>{s.label}</div>
             </div>
           ))}
@@ -564,25 +590,25 @@ function EventsHero() {
 
       {/* Slide dots */}
       <div className="evh-dots" style={{
-        position:  "absolute",
-        bottom:    "2rem",
-        left:      "clamp(1.5rem, 6vw, 6rem)",
-        display:   "flex",
-        gap:       "6px",
-        zIndex:    5,
-        opacity:   0,
+        position: "absolute",
+        bottom: "2rem",
+        left: "clamp(1.5rem, 6vw, 6rem)",
+        display: "flex",
+        gap: "6px",
+        zIndex: 5,
+        opacity: 0,
       }}>
         {HERO_SLIDES.map((_, i) => (
           <button
             key={i}
             onClick={() => setActive(i)}
             style={{
-              width:      i === active ? "24px" : "6px",
-              height:     "6px",
+              width: i === active ? "24px" : "6px",
+              height: "6px",
               background: i === active ? "#C9A84C" : "rgba(255,255,255,0.3)",
-              border:     "none",
-              cursor:     "pointer",
-              padding:    0,
+              border: "none",
+              cursor: "pointer",
+              padding: 0,
               transition: "all 0.35s ease",
             }}
             aria-label={`Slide ${i + 1}`}
@@ -595,27 +621,34 @@ function EventsHero() {
 
 // ─── Tech events section ──────────────────────────────────────────────────────
 function TechEventsSection() {
-  const secRef    = useRef<HTMLDivElement>(null);
+  const secRef = useRef<HTMLDivElement>(null);
   const triggered = useRef(false);
 
   useEffect(() => {
     if (!secRef.current) return;
-    ScrollTrigger.create({
-      trigger: secRef.current,
-      start:   "top 80%",
-      once:    true,
-      onEnter: () => {
-        if (triggered.current) return;
-        triggered.current = true;
-        gsap.fromTo(".tech-heading", { opacity: 0, y: 24 }, { opacity: 1, y: 0, duration: 0.8, ease: "power2.out" });
-        gsap.to(".tech-card", {
-          opacity: 1, y: 0, duration: 0.7, ease: "power2.out",
-          stagger: 0.14, delay: 0.2,
-        });
-      },
+    let cancelled = false;
+    loadGsap().then(({ gsap, ScrollTrigger }) => {
+      if (cancelled || !secRef.current) return;
+      ScrollTrigger.create({
+        trigger: secRef.current,
+        start: "top 80%",
+        once: true,
+        onEnter: () => {
+          if (triggered.current) return;
+          triggered.current = true;
+          gsap.fromTo(".tech-heading", { opacity: 0, y: 24 }, { opacity: 1, y: 0, duration: 0.8, ease: "power2.out" });
+          gsap.to(".tech-card", {
+            opacity: 1, y: 0, duration: 0.7, ease: "power2.out",
+            stagger: 0.14, delay: 0.2,
+          });
+        },
+      });
     });
     return () => {
-      ScrollTrigger.getAll().filter(st => st.vars.trigger === secRef.current).forEach(st => st.kill());
+      cancelled = true;
+      loadGsap().then(({ ScrollTrigger }) => {
+        ScrollTrigger.getAll().filter(st => st.vars.trigger === secRef.current).forEach(st => st.kill());
+      });
     };
   }, []);
 
@@ -623,9 +656,9 @@ function TechEventsSection() {
     <div
       ref={secRef}
       style={{
-        position:   "relative",
-        overflow:   "hidden",
-        padding:    "5rem 0 4rem",
+        position: "relative",
+        overflow: "hidden",
+        padding: "5rem 0 4rem",
       }}
     >
       {/* Background image */}
@@ -639,10 +672,10 @@ function TechEventsSection() {
           style={{ objectFit: "cover", objectPosition: "center" }}
         />
         <div style={{
-          position:   "absolute",
-          inset:      0,
+          position: "absolute",
+          inset: 0,
           background: "linear-gradient(to bottom, rgba(0,10,20,0.97) 0%, rgba(0,15,30,0.92) 50%, rgba(0,10,20,0.97) 100%)",
-          zIndex:     2,
+          zIndex: 2,
         }} />
       </div>
 
@@ -650,22 +683,22 @@ function TechEventsSection() {
         {/* Section heading */}
         <div className="tech-heading" style={{ marginBottom: "2.5rem", opacity: 0 }}>
           <p style={{
-            color:         "rgba(0,200,240,0.85)",
-            fontSize:      "0.68rem",
+            color: "rgba(0,200,240,0.85)",
+            fontSize: "0.68rem",
             letterSpacing: "0.4em",
             textTransform: "uppercase",
-            fontFamily:    "var(--font-montserrat)",
-            fontWeight:    700,
-            margin:        "0 0 0.6rem",
+            fontFamily: "var(--font-montserrat)",
+            fontWeight: 700,
+            margin: "0 0 0.6rem",
           }}>
             Tech Events
           </p>
           <h3 style={{
-            color:      "#ffffff",
-            fontSize:   "clamp(1.4rem, 3vw, 2.4rem)",
+            color: "#ffffff",
+            fontSize: "clamp(1.4rem, 3vw, 2.4rem)",
             fontWeight: 800,
             fontFamily: "var(--font-montserrat)",
-            margin:     0,
+            margin: 0,
             lineHeight: 1.1,
           }}>
             Where tech brands<br />
@@ -686,27 +719,34 @@ function TechEventsSection() {
 
 // ─── Entertainment + Gaming section ──────────────────────────────────────────
 function EntGamingSection() {
-  const secRef    = useRef<HTMLDivElement>(null);
+  const secRef = useRef<HTMLDivElement>(null);
   const triggered = useRef(false);
 
   useEffect(() => {
     if (!secRef.current) return;
-    ScrollTrigger.create({
-      trigger: secRef.current,
-      start:   "top 80%",
-      once:    true,
-      onEnter: () => {
-        if (triggered.current) return;
-        triggered.current = true;
-        gsap.fromTo(".eg-heading", { opacity: 0, y: 24 }, { opacity: 1, y: 0, duration: 0.8, ease: "power2.out" });
-        gsap.to(".eg-card", {
-          opacity: 1, y: 0, duration: 0.7, ease: "power2.out",
-          stagger: 0.14, delay: 0.2,
-        });
-      },
+    let cancelled = false;
+    loadGsap().then(({ gsap, ScrollTrigger }) => {
+      if (cancelled || !secRef.current) return;
+      ScrollTrigger.create({
+        trigger: secRef.current,
+        start: "top 80%",
+        once: true,
+        onEnter: () => {
+          if (triggered.current) return;
+          triggered.current = true;
+          gsap.fromTo(".eg-heading", { opacity: 0, y: 24 }, { opacity: 1, y: 0, duration: 0.8, ease: "power2.out" });
+          gsap.to(".eg-card", {
+            opacity: 1, y: 0, duration: 0.7, ease: "power2.out",
+            stagger: 0.14, delay: 0.2,
+          });
+        },
+      });
     });
     return () => {
-      ScrollTrigger.getAll().filter(st => st.vars.trigger === secRef.current).forEach(st => st.kill());
+      cancelled = true;
+      loadGsap().then(({ ScrollTrigger }) => {
+        ScrollTrigger.getAll().filter(st => st.vars.trigger === secRef.current).forEach(st => st.kill());
+      });
     };
   }, []);
 
@@ -714,9 +754,9 @@ function EntGamingSection() {
     <div
       ref={secRef}
       style={{
-        position:   "relative",
-        overflow:   "hidden",
-        padding:    "5rem 0 6rem",
+        position: "relative",
+        overflow: "hidden",
+        padding: "5rem 0 6rem",
       }}
     >
       {/* Background */}
@@ -730,10 +770,10 @@ function EntGamingSection() {
           style={{ objectFit: "cover", objectPosition: "center 30%" }}
         />
         <div style={{
-          position:   "absolute",
-          inset:      0,
+          position: "absolute",
+          inset: 0,
           background: "linear-gradient(to bottom, rgba(15,4,0,0.97) 0%, rgba(10,2,0,0.9) 50%, rgba(5,4,2,0.97) 100%)",
-          zIndex:     2,
+          zIndex: 2,
         }} />
       </div>
 
@@ -741,22 +781,22 @@ function EntGamingSection() {
         {/* Section heading */}
         <div className="eg-heading" style={{ marginBottom: "2.5rem", opacity: 0 }}>
           <p style={{
-            color:         "#C9A84C",
-            fontSize:      "0.68rem",
+            color: "#C9A84C",
+            fontSize: "0.68rem",
             letterSpacing: "0.4em",
             textTransform: "uppercase",
-            fontFamily:    "var(--font-montserrat)",
-            fontWeight:    700,
-            margin:        "0 0 0.6rem",
+            fontFamily: "var(--font-montserrat)",
+            fontWeight: 700,
+            margin: "0 0 0.6rem",
           }}>
             Entertainment & Gaming
           </p>
           <h3 style={{
-            color:      "#ffffff",
-            fontSize:   "clamp(1.4rem, 3vw, 2.4rem)",
+            color: "#ffffff",
+            fontSize: "clamp(1.4rem, 3vw, 2.4rem)",
             fontWeight: 800,
             fontFamily: "var(--font-montserrat)",
-            margin:     0,
+            margin: 0,
             lineHeight: 1.1,
           }}>
             Sport, culture & gaming<br />
@@ -774,47 +814,47 @@ function EntGamingSection() {
 
       {/* Bottom CTA */}
       <div style={{
-        position:       "relative",
-        zIndex:         3,
-        textAlign:      "center",
-        padding:        "4rem 1.5rem 0",
-        display:        "flex",
-        flexDirection:  "column",
-        alignItems:     "center",
-        gap:            "1.2rem",
+        position: "relative",
+        zIndex: 3,
+        textAlign: "center",
+        padding: "4rem 1.5rem 0",
+        display: "flex",
+        flexDirection: "column",
+        alignItems: "center",
+        gap: "1.2rem",
       }}>
         <p style={{
-          color:      "rgba(255,255,255,0.28)",
-          fontSize:   "0.78rem",
+          color: "rgba(255,255,255,0.28)",
+          fontSize: "0.78rem",
           fontFamily: "var(--font-montserrat)",
           fontWeight: 400,
-          margin:     0,
-          maxWidth:   "380px",
+          margin: 0,
+          maxWidth: "380px",
           lineHeight: 1.6,
         }}>
           Your brand. Our stage. 40 million witnesses.
         </p>
         <button
           style={{
-            background:    "transparent",
-            border:        "1px solid #C9A84C",
-            color:         "#C9A84C",
-            fontSize:      "0.68rem",
-            fontWeight:    700,
+            background: "transparent",
+            border: "1px solid #C9A84C",
+            color: "#C9A84C",
+            fontSize: "0.68rem",
+            fontWeight: 700,
             letterSpacing: "0.25em",
             textTransform: "uppercase",
-            fontFamily:    "var(--font-montserrat)",
-            padding:       "12px 32px",
-            cursor:        "pointer",
-            transition:    "background 0.22s, color 0.22s",
+            fontFamily: "var(--font-montserrat)",
+            padding: "12px 32px",
+            cursor: "pointer",
+            transition: "background 0.22s, color 0.22s",
           }}
           onMouseEnter={e => {
             e.currentTarget.style.background = "#C9A84C";
-            e.currentTarget.style.color      = "#000";
+            e.currentTarget.style.color = "#000";
           }}
           onMouseLeave={e => {
             e.currentTarget.style.background = "transparent";
-            e.currentTarget.style.color      = "#C9A84C";
+            e.currentTarget.style.color = "#C9A84C";
           }}
           onClick={() => document.querySelector("#cta")?.scrollIntoView({ behavior: "smooth" })}
         >
@@ -831,7 +871,7 @@ export default function EventsPanel() {
     <div id="events-panel" style={{ background: "#050402", overflow: "hidden" }}>
       {/* Separator */}
       <div style={{
-        height:     "1px",
+        height: "1px",
         background: "linear-gradient(to right, transparent, rgba(201,168,76,0.2), transparent)",
       }} />
 
@@ -843,8 +883,8 @@ export default function EventsPanel() {
 
       {/* Divider */}
       <div style={{
-        height:  "1px",
-        margin:  "0 clamp(1.2rem, 4vw, 4rem)",
+        height: "1px",
+        margin: "0 clamp(1.2rem, 4vw, 4rem)",
         background: "linear-gradient(to right, transparent, rgba(201,168,76,0.12), transparent)",
       }} />
 
@@ -853,7 +893,7 @@ export default function EventsPanel() {
 
       {/* Bottom divider */}
       <div style={{
-        height:     "1px",
+        height: "1px",
         background: "linear-gradient(to right, transparent, rgba(201,168,76,0.15), transparent)",
       }} />
 

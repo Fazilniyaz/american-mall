@@ -7,25 +7,30 @@ import {
   memo,
 } from "react";
 import Image from "next/image";
-import gsap from "gsap";
-import { ScrollTrigger } from "gsap/ScrollTrigger";
-import * as d3 from "d3";
 import EventsPanel from "./EventsPanel";
-import {
-  Scene,
-  PerspectiveCamera,
-  WebGLRenderer,
-  BufferGeometry,
-  BufferAttribute,
-  PointsMaterial,
-  Points,
-  Color as ThreeColor,
-} from "three";
-
 import DiningShoppingPanel from "./DiningShoppingPanel";
 
+// ── Lazy GSAP + D3 loaders (same pattern as WhosHereSection / SponsorshipSection)
+type GsapType = typeof import("gsap")["default"];
+type ScrollTriggerType = typeof import("gsap/ScrollTrigger")["ScrollTrigger"];
 
-gsap.registerPlugin(ScrollTrigger);
+let _gsap: GsapType | null = null;
+let _ST: ScrollTriggerType | null = null;
+
+const loadGsap = async () => {
+  if (_gsap && _ST) return { gsap: _gsap, ScrollTrigger: _ST };
+  const [gsapMod, stMod] = await Promise.all([
+    import("gsap"),
+    import("gsap/ScrollTrigger"),
+  ]);
+  _gsap = gsapMod.default;
+  const { ScrollTrigger } = stMod;
+  _ST = ScrollTrigger;
+  _gsap.registerPlugin(_ST);
+  return { gsap: _gsap, ScrollTrigger: _ST };
+};
+
+const loadD3 = async () => import("d3");
 
 // ─── Text-only panels (dining, events) ───────────────────────────────────────
 // Dining only — Events is now EventsPanel component
@@ -81,7 +86,7 @@ const FOOTFALL_DATA = [
   { month: "Dec", retail: 4.9, entertainment: 4.7 },
 ];
 
-// ─── Three.js particle ring ───────────────────────────────────────────────────
+// ─── Three.js particle ring (lazy-loaded) ─────────────────────────────────────
 function PanelParticles({ color }: { color: string }) {
   const mountRef = useRef<HTMLDivElement>(null);
   const rafRef = useRef<number>(0);
@@ -90,52 +95,64 @@ function PanelParticles({ color }: { color: string }) {
   useEffect(() => {
     const el = mountRef.current;
     if (!el) return;
-    const W = el.clientWidth;
-    const H = el.clientHeight;
-    const scene = new Scene();
-    const camera = new PerspectiveCamera(60, W / H, 0.1, 100);
-    camera.position.z = 4;
-    const renderer = new WebGLRenderer({ alpha: true, antialias: false });
-    renderer.setSize(W, H);
-    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.5));
-    renderer.setClearColor(0x000000, 0);
-    el.appendChild(renderer.domElement);
-    const count = 800;
-    const geo = new BufferGeometry();
-    const pos = new Float32Array(count * 3);
-    const cols = new Float32Array(count * 3);
-    const c = new ThreeColor(color);
-    for (let i = 0; i < count; i++) {
-      const angle = (i / count) * Math.PI * 2;
-      const radius = 2.2 + (Math.random() - 0.5) * 1.2;
-      const spread = (Math.random() - 0.5) * 0.6;
-      pos[i * 3] = Math.cos(angle) * radius;
-      pos[i * 3 + 1] = spread;
-      pos[i * 3 + 2] = Math.sin(angle) * radius;
-      cols[i * 3] = c.r + (Math.random() - 0.5) * 0.2;
-      cols[i * 3 + 1] = c.g + (Math.random() - 0.5) * 0.2;
-      cols[i * 3 + 2] = c.b;
-    }
-    geo.setAttribute("position", new BufferAttribute(pos, 3));
-    geo.setAttribute("color", new BufferAttribute(cols, 3));
-    const mat = new PointsMaterial({ size: 0.018, vertexColors: true, transparent: true, opacity: 0.55 });
-    const ring = new Points(geo, mat);
-    scene.add(ring);
-    const obs = new IntersectionObserver(([e]) => { isVis.current = e.isIntersecting; }, { threshold: 0.1 });
-    obs.observe(el);
-    const animate = () => {
-      rafRef.current = requestAnimationFrame(animate);
-      if (!isVis.current) return;
-      ring.rotation.y += 0.0015;
-      ring.rotation.x = 0.3;
-      renderer.render(scene, camera);
-    };
-    animate();
+    let cancelled = false;
+
+    import("three").then((THREE) => {
+      if (cancelled || !el) return;
+      const W = el.clientWidth;
+      const H = el.clientHeight;
+      const scene = new THREE.Scene();
+      const camera = new THREE.PerspectiveCamera(60, W / H, 0.1, 100);
+      camera.position.z = 4;
+      const renderer = new THREE.WebGLRenderer({ alpha: true, antialias: false });
+      renderer.setSize(W, H);
+      renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.5));
+      renderer.setClearColor(0x000000, 0);
+      el.appendChild(renderer.domElement);
+      const count = 800;
+      const geo = new THREE.BufferGeometry();
+      const pos = new Float32Array(count * 3);
+      const cols = new Float32Array(count * 3);
+      const c = new THREE.Color(color);
+      for (let i = 0; i < count; i++) {
+        const angle = (i / count) * Math.PI * 2;
+        const radius = 2.2 + (Math.random() - 0.5) * 1.2;
+        const spread = (Math.random() - 0.5) * 0.6;
+        pos[i * 3] = Math.cos(angle) * radius;
+        pos[i * 3 + 1] = spread;
+        pos[i * 3 + 2] = Math.sin(angle) * radius;
+        cols[i * 3] = c.r + (Math.random() - 0.5) * 0.2;
+        cols[i * 3 + 1] = c.g + (Math.random() - 0.5) * 0.2;
+        cols[i * 3 + 2] = c.b;
+      }
+      geo.setAttribute("position", new THREE.BufferAttribute(pos, 3));
+      geo.setAttribute("color", new THREE.BufferAttribute(cols, 3));
+      const mat = new THREE.PointsMaterial({ size: 0.018, vertexColors: true, transparent: true, opacity: 0.55 });
+      const ring = new THREE.Points(geo, mat);
+      scene.add(ring);
+      const obs = new IntersectionObserver(([e]) => { isVis.current = e.isIntersecting; }, { threshold: 0.1 });
+      obs.observe(el);
+      const animate = () => {
+        rafRef.current = requestAnimationFrame(animate);
+        if (!isVis.current) return;
+        ring.rotation.y += 0.0015;
+        ring.rotation.x = 0.3;
+        renderer.render(scene, camera);
+      };
+      animate();
+
+      // Store cleanup ref on the element for the outer cleanup
+      (el as any).__threeCleanup = () => {
+        cancelAnimationFrame(rafRef.current);
+        obs.disconnect();
+        mat.dispose(); geo.dispose(); renderer.dispose();
+        if (el.contains(renderer.domElement)) el.removeChild(renderer.domElement);
+      };
+    });
+
     return () => {
-      cancelAnimationFrame(rafRef.current);
-      obs.disconnect();
-      mat.dispose(); geo.dispose(); renderer.dispose();
-      if (el.contains(renderer.domElement)) el.removeChild(renderer.domElement);
+      cancelled = true;
+      if ((el as any)?.__threeCleanup) (el as any).__threeCleanup();
     };
   }, [color]);
 
@@ -146,7 +163,7 @@ function PanelParticles({ color }: { color: string }) {
   );
 }
 
-// ─── D3 footfall chart ────────────────────────────────────────────────────────
+// ─── D3 footfall chart (lazy-loaded) ──────────────────────────────────────────
 const FootfallChart = memo(function FootfallChart() {
   const svgRef = useRef<SVGSVGElement>(null);
   const triggered = useRef(false);
@@ -154,65 +171,74 @@ const FootfallChart = memo(function FootfallChart() {
   useEffect(() => {
     if (!svgRef.current) return;
     const el = svgRef.current;
-    const W = el.parentElement?.clientWidth || 600;
-    const H = 220; const mb = 32; const ml = 36; const mr = 16; const mt = 16;
-    const iW = W - ml - mr; const iH = H - mt - mb;
-    const svg = d3.select(el).attr("width", W).attr("height", H).attr("viewBox", `0 0 ${W} ${H}`);
-    const x = d3.scalePoint().domain(FOOTFALL_DATA.map(d => d.month)).range([0, iW]).padding(0.3);
-    const y = d3.scaleLinear().domain([0, 6]).range([iH, 0]);
-    const g = svg.append("g").attr("transform", `translate(${ml},${mt})`);
-    y.ticks(4).forEach(tick => {
-      g.append("line").attr("x1", 0).attr("x2", iW).attr("y1", y(tick)).attr("y2", y(tick))
-        .attr("stroke", "rgba(255,255,255,0.06)").attr("stroke-width", 1);
+    let cancelled = false;
+
+    Promise.all([loadD3(), loadGsap()]).then(([d3, { gsap, ScrollTrigger }]) => {
+      if (cancelled || !el) return;
+      const W = el.parentElement?.clientWidth || 600;
+      const H = 220; const mb = 32; const ml = 36; const mr = 16; const mt = 16;
+      const iW = W - ml - mr; const iH = H - mt - mb;
+      const svg = d3.select(el).attr("width", W).attr("height", H).attr("viewBox", `0 0 ${W} ${H}`);
+      const x = d3.scalePoint().domain(FOOTFALL_DATA.map(d => d.month)).range([0, iW]).padding(0.3);
+      const y = d3.scaleLinear().domain([0, 6]).range([iH, 0]);
+      const g = svg.append("g").attr("transform", `translate(${ml},${mt})`);
+      y.ticks(4).forEach(tick => {
+        g.append("line").attr("x1", 0).attr("x2", iW).attr("y1", y(tick)).attr("y2", y(tick))
+          .attr("stroke", "rgba(255,255,255,0.06)").attr("stroke-width", 1);
+      });
+      FOOTFALL_DATA.forEach(d => {
+        g.append("text").attr("x", x(d.month) ?? 0).attr("y", iH + 18)
+          .attr("text-anchor", "middle").attr("font-size", "9px")
+          .attr("font-family", "var(--font-montserrat)").attr("font-weight", "600")
+          .attr("fill", "rgba(255,255,255,0.28)").attr("letter-spacing", "0.06em")
+          .text(d.month.toUpperCase());
+      });
+      y.ticks(4).forEach(tick => {
+        g.append("text").attr("x", -8).attr("y", y(tick) + 4)
+          .attr("text-anchor", "end").attr("font-size", "9px")
+          .attr("font-family", "var(--font-montserrat)").attr("fill", "rgba(255,255,255,0.22)")
+          .text(tick + "M");
+      });
+      const areaGen = d3.area<typeof FOOTFALL_DATA[0]>().x(d => x(d.month) ?? 0).y0(iH).y1(d => y(d.retail)).curve(d3.curveCatmullRom);
+      const lineGen = d3.line<typeof FOOTFALL_DATA[0]>().x(d => x(d.month) ?? 0).y(d => y(d.retail)).curve(d3.curveCatmullRom);
+      const lineGen2 = d3.line<typeof FOOTFALL_DATA[0]>().x(d => x(d.month) ?? 0).y(d => y(d.entertainment)).curve(d3.curveCatmullRom);
+      const defs = svg.append("defs");
+      const grad = defs.append("linearGradient").attr("id", "ent-area-grad3")
+        .attr("x1", "0%").attr("y1", "0%").attr("x2", "0%").attr("y2", "100%");
+      grad.append("stop").attr("offset", "0%").attr("stop-color", "#C9A84C").attr("stop-opacity", "0.18");
+      grad.append("stop").attr("offset", "100%").attr("stop-color", "#C9A84C").attr("stop-opacity", "0.0");
+      g.append("path").datum(FOOTFALL_DATA).attr("d", areaGen).attr("fill", "url(#ent-area-grad3)");
+      const rPath = g.append("path").datum(FOOTFALL_DATA).attr("d", lineGen)
+        .attr("fill", "none").attr("stroke", "#C9A84C").attr("stroke-width", "2").attr("stroke-linecap", "round");
+      const ePath = g.append("path").datum(FOOTFALL_DATA).attr("d", lineGen2)
+        .attr("fill", "none").attr("stroke", "rgba(201,168,76,0.4)")
+        .attr("stroke-width", "1.5").attr("stroke-dasharray", "4 3").attr("stroke-linecap", "round");
+      const setDash = (p: d3.Selection<SVGPathElement, unknown, null, undefined>) => {
+        const len = (p.node() as SVGPathElement).getTotalLength();
+        p.attr("stroke-dasharray", `${len} ${len}`).attr("stroke-dashoffset", len);
+      };
+      setDash(rPath as d3.Selection<SVGPathElement, unknown, null, undefined>);
+      setDash(ePath as d3.Selection<SVGPathElement, unknown, null, undefined>);
+      const dots = g.selectAll(".fcd").data(FOOTFALL_DATA).enter()
+        .append("circle").attr("cx", d => x(d.month) ?? 0).attr("cy", d => y(d.retail))
+        .attr("r", 3).attr("fill", "#C9A84C").attr("opacity", 0);
+      ScrollTrigger.create({
+        trigger: el, start: "top 85%", once: true,
+        onEnter: () => {
+          if (triggered.current) return;
+          triggered.current = true;
+          gsap.to(rPath.node(), { strokeDashoffset: 0, duration: 1.6, ease: "power2.out" });
+          gsap.to(ePath.node(), { strokeDashoffset: 0, duration: 1.8, ease: "power2.out", delay: 0.2 });
+          dots.each(function (_, i) { gsap.to(this, { opacity: 1, duration: 0.3, delay: 0.8 + i * 0.06 }); });
+        },
+      });
     });
-    FOOTFALL_DATA.forEach(d => {
-      g.append("text").attr("x", x(d.month) ?? 0).attr("y", iH + 18)
-        .attr("text-anchor", "middle").attr("font-size", "9px")
-        .attr("font-family", "var(--font-montserrat)").attr("font-weight", "600")
-        .attr("fill", "rgba(255,255,255,0.28)").attr("letter-spacing", "0.06em")
-        .text(d.month.toUpperCase());
-    });
-    y.ticks(4).forEach(tick => {
-      g.append("text").attr("x", -8).attr("y", y(tick) + 4)
-        .attr("text-anchor", "end").attr("font-size", "9px")
-        .attr("font-family", "var(--font-montserrat)").attr("fill", "rgba(255,255,255,0.22)")
-        .text(tick + "M");
-    });
-    const areaGen = d3.area<typeof FOOTFALL_DATA[0]>().x(d => x(d.month) ?? 0).y0(iH).y1(d => y(d.retail)).curve(d3.curveCatmullRom);
-    const lineGen = d3.line<typeof FOOTFALL_DATA[0]>().x(d => x(d.month) ?? 0).y(d => y(d.retail)).curve(d3.curveCatmullRom);
-    const lineGen2 = d3.line<typeof FOOTFALL_DATA[0]>().x(d => x(d.month) ?? 0).y(d => y(d.entertainment)).curve(d3.curveCatmullRom);
-    const defs = svg.append("defs");
-    const grad = defs.append("linearGradient").attr("id", "ent-area-grad3")
-      .attr("x1", "0%").attr("y1", "0%").attr("x2", "0%").attr("y2", "100%");
-    grad.append("stop").attr("offset", "0%").attr("stop-color", "#C9A84C").attr("stop-opacity", "0.18");
-    grad.append("stop").attr("offset", "100%").attr("stop-color", "#C9A84C").attr("stop-opacity", "0.0");
-    g.append("path").datum(FOOTFALL_DATA).attr("d", areaGen).attr("fill", "url(#ent-area-grad3)");
-    const rPath = g.append("path").datum(FOOTFALL_DATA).attr("d", lineGen)
-      .attr("fill", "none").attr("stroke", "#C9A84C").attr("stroke-width", "2").attr("stroke-linecap", "round");
-    const ePath = g.append("path").datum(FOOTFALL_DATA).attr("d", lineGen2)
-      .attr("fill", "none").attr("stroke", "rgba(201,168,76,0.4)")
-      .attr("stroke-width", "1.5").attr("stroke-dasharray", "4 3").attr("stroke-linecap", "round");
-    const setDash = (p: d3.Selection<SVGPathElement, unknown, null, undefined>) => {
-      const len = (p.node() as SVGPathElement).getTotalLength();
-      p.attr("stroke-dasharray", `${len} ${len}`).attr("stroke-dashoffset", len);
-    };
-    setDash(rPath as d3.Selection<SVGPathElement, unknown, null, undefined>);
-    setDash(ePath as d3.Selection<SVGPathElement, unknown, null, undefined>);
-    const dots = g.selectAll(".fcd").data(FOOTFALL_DATA).enter()
-      .append("circle").attr("cx", d => x(d.month) ?? 0).attr("cy", d => y(d.retail))
-      .attr("r", 3).attr("fill", "#C9A84C").attr("opacity", 0);
-    ScrollTrigger.create({
-      trigger: el, start: "top 85%", once: true,
-      onEnter: () => {
-        if (triggered.current) return;
-        triggered.current = true;
-        gsap.to(rPath.node(), { strokeDashoffset: 0, duration: 1.6, ease: "power2.out" });
-        gsap.to(ePath.node(), { strokeDashoffset: 0, duration: 1.8, ease: "power2.out", delay: 0.2 });
-        dots.each(function (_, i) { gsap.to(this, { opacity: 1, duration: 0.3, delay: 0.8 + i * 0.06 }); });
-      },
-    });
+
     return () => {
-      ScrollTrigger.getAll().filter(st => st.vars.trigger === el).forEach(st => st.kill());
+      cancelled = true;
+      loadGsap().then(({ ScrollTrigger }) => {
+        ScrollTrigger.getAll().filter(st => st.vars.trigger === el).forEach(st => st.kill());
+      });
     };
   }, []);
 
@@ -231,20 +257,28 @@ function TextPanel({ panel, index }: { panel: typeof TEXT_PANELS[0]; index: numb
 
   useEffect(() => {
     if (!panelRef.current) return;
-    ScrollTrigger.create({
-      trigger: panelRef.current, start: "top 72%", once: true,
-      onEnter: () => {
-        if (triggered.current) return;
-        triggered.current = true;
-        gsap.timeline()
-          .to(`.tp-cat-${index}`, { opacity: 1, y: 0, duration: 0.55, ease: "power2.out" })
-          .to(`.tp-headline-${index}`, { opacity: 1, y: 0, duration: 0.65, ease: "power2.out" }, "-=0.25")
-          .to(`.tp-sub-${index}`, { opacity: 1, y: 0, duration: 0.6, ease: "power2.out" }, "-=0.35")
-          .to(`.tp-body-${index}`, { opacity: 1, y: 0, duration: 0.6, ease: "power2.out" }, "-=0.25");
-      },
+    let cancelled = false;
+    const el = panelRef.current;
+    loadGsap().then(({ gsap, ScrollTrigger }) => {
+      if (cancelled || !el) return;
+      ScrollTrigger.create({
+        trigger: el, start: "top 72%", once: true,
+        onEnter: () => {
+          if (triggered.current) return;
+          triggered.current = true;
+          gsap.timeline()
+            .to(`.tp-cat-${index}`, { opacity: 1, y: 0, duration: 0.55, ease: "power2.out" })
+            .to(`.tp-headline-${index}`, { opacity: 1, y: 0, duration: 0.65, ease: "power2.out" }, "-=0.25")
+            .to(`.tp-sub-${index}`, { opacity: 1, y: 0, duration: 0.6, ease: "power2.out" }, "-=0.35")
+            .to(`.tp-body-${index}`, { opacity: 1, y: 0, duration: 0.6, ease: "power2.out" }, "-=0.25");
+        },
+      });
     });
     return () => {
-      ScrollTrigger.getAll().filter(st => st.vars.trigger === panelRef.current).forEach(st => st.kill());
+      cancelled = true;
+      loadGsap().then(({ ScrollTrigger }) => {
+        ScrollTrigger.getAll().filter(st => st.vars.trigger === el).forEach(st => st.kill());
+      });
     };
   }, [index]);
 
@@ -322,23 +356,33 @@ function AquariumPanel() {
 
   useEffect(() => {
     if (!panelRef.current) return;
-    ScrollTrigger.create({
-      trigger: panelRef.current, start: "top 72%", once: true,
-      onEnter: () => {
-        if (triggered.current) return;
-        triggered.current = true;
-        gsap.timeline()
-          .to(".aqua-cat", { opacity: 1, y: 0, duration: 0.55, ease: "power2.out" })
-          .to(".aqua-headline", { opacity: 1, y: 0, duration: 0.65, ease: "power2.out" }, "-=0.25")
-          .to(".aqua-sub", { opacity: 1, y: 0, duration: 0.6, ease: "power2.out" }, "-=0.35")
-          .to(".aqua-divider", { scaleX: 1, duration: 0.4, ease: "power2.out" }, "-=0.2")
-          .to(".aqua-body", { opacity: 1, y: 0, duration: 0.6, ease: "power2.out" }, "-=0.2")
-          .to(".aqua-stat", { opacity: 1, y: 0, duration: 0.5, ease: "power2.out", stagger: 0.09 }, "-=0.2")
-          .to(".aqua-thumb", { opacity: 1, x: 0, duration: 0.65, ease: "power2.out" }, "-=0.3");
-      },
+    let cancelled = false;
+    const el = panelRef.current;
+
+    loadGsap().then(({ gsap, ScrollTrigger }) => {
+      if (cancelled || !el) return;
+      ScrollTrigger.create({
+        trigger: el, start: "top 72%", once: true,
+        onEnter: () => {
+          if (triggered.current) return;
+          triggered.current = true;
+          gsap.timeline()
+            .to(".aqua-cat", { opacity: 1, y: 0, duration: 0.55, ease: "power2.out" })
+            .to(".aqua-headline", { opacity: 1, y: 0, duration: 0.65, ease: "power2.out" }, "-=0.25")
+            .to(".aqua-sub", { opacity: 1, y: 0, duration: 0.6, ease: "power2.out" }, "-=0.35")
+            .to(".aqua-divider", { scaleX: 1, duration: 0.4, ease: "power2.out" }, "-=0.2")
+            .to(".aqua-body", { opacity: 1, y: 0, duration: 0.6, ease: "power2.out" }, "-=0.2")
+            .to(".aqua-stat", { opacity: 1, y: 0, duration: 0.5, ease: "power2.out", stagger: 0.09 }, "-=0.2")
+            .to(".aqua-thumb", { opacity: 1, x: 0, duration: 0.65, ease: "power2.out" }, "-=0.3");
+        },
+      });
     });
+
     return () => {
-      ScrollTrigger.getAll().filter(st => st.vars.trigger === panelRef.current).forEach(st => st.kill());
+      cancelled = true;
+      loadGsap().then(({ ScrollTrigger }) => {
+        ScrollTrigger.getAll().filter(st => st.vars.trigger === el).forEach(st => st.kill());
+      });
     };
   }, []);
 
@@ -587,23 +631,33 @@ function NickelodeonPanel() {
 
   useEffect(() => {
     if (!panelRef.current) return;
-    ScrollTrigger.create({
-      trigger: panelRef.current, start: "top 72%", once: true,
-      onEnter: () => {
-        if (triggered.current) return;
-        triggered.current = true;
-        gsap.timeline()
-          .to(".nick-cat", { opacity: 1, y: 0, duration: 0.55, ease: "power2.out" })
-          .to(".nick-headline", { opacity: 1, y: 0, duration: 0.65, ease: "power2.out" }, "-=0.25")
-          .to(".nick-sub", { opacity: 1, y: 0, duration: 0.6, ease: "power2.out" }, "-=0.35")
-          .to(".nick-divider", { scaleX: 1, duration: 0.4, ease: "power2.out" }, "-=0.2")
-          .to(".nick-body", { opacity: 1, y: 0, duration: 0.6, ease: "power2.out" }, "-=0.2")
-          .to(".nick-stat", { opacity: 1, y: 0, duration: 0.5, ease: "power2.out", stagger: 0.09 }, "-=0.2")
-          .to(".nick-thumb", { opacity: 1, x: 0, duration: 0.6, ease: "power2.out", stagger: 0.14 }, "-=0.4");
-      },
+    let cancelled = false;
+    const el = panelRef.current;
+
+    loadGsap().then(({ gsap, ScrollTrigger }) => {
+      if (cancelled || !el) return;
+      ScrollTrigger.create({
+        trigger: el, start: "top 72%", once: true,
+        onEnter: () => {
+          if (triggered.current) return;
+          triggered.current = true;
+          gsap.timeline()
+            .to(".nick-cat", { opacity: 1, y: 0, duration: 0.55, ease: "power2.out" })
+            .to(".nick-headline", { opacity: 1, y: 0, duration: 0.65, ease: "power2.out" }, "-=0.25")
+            .to(".nick-sub", { opacity: 1, y: 0, duration: 0.6, ease: "power2.out" }, "-=0.35")
+            .to(".nick-divider", { scaleX: 1, duration: 0.4, ease: "power2.out" }, "-=0.2")
+            .to(".nick-body", { opacity: 1, y: 0, duration: 0.6, ease: "power2.out" }, "-=0.2")
+            .to(".nick-stat", { opacity: 1, y: 0, duration: 0.5, ease: "power2.out", stagger: 0.09 }, "-=0.2")
+            .to(".nick-thumb", { opacity: 1, x: 0, duration: 0.6, ease: "power2.out", stagger: 0.14 }, "-=0.4");
+        },
+      });
     });
+
     return () => {
-      ScrollTrigger.getAll().filter(st => st.vars.trigger === panelRef.current).forEach(st => st.kill());
+      cancelled = true;
+      loadGsap().then(({ ScrollTrigger }) => {
+        ScrollTrigger.getAll().filter(st => st.vars.trigger === el).forEach(st => st.kill());
+      });
     };
   }, []);
 
@@ -791,23 +845,33 @@ export default function EntertainmentSection() {
 
   useEffect(() => {
     setIsMobile(window.innerWidth < 768);
-    const ctx = gsap.context(() => {
-      gsap.fromTo(".ent-heading",
-        { opacity: 0, y: 28 },
-        {
-          opacity: 1, y: 0, duration: 0.9, ease: "power2.out",
-          scrollTrigger: { trigger: ".ent-heading", start: "top 85%" }
-        }
-      );
-      gsap.fromTo(".ent-chart-head",
-        { opacity: 0, y: 24 },
-        {
-          opacity: 1, y: 0, duration: 0.8, ease: "power2.out",
-          scrollTrigger: { trigger: ".ent-chart-head", start: "top 85%" }
-        }
-      );
-    }, sectionRef);
-    return () => ctx.revert();
+    let ctx: { revert: () => void } | null = null;
+    let cancelled = false;
+
+    loadGsap().then(({ gsap, ScrollTrigger }) => {
+      if (cancelled || !sectionRef.current) return;
+      ctx = gsap.context(() => {
+        gsap.fromTo(".ent-heading",
+          { opacity: 0, y: 28 },
+          {
+            opacity: 1, y: 0, duration: 0.9, ease: "power2.out",
+            scrollTrigger: { trigger: ".ent-heading", start: "top 85%" }
+          }
+        );
+        gsap.fromTo(".ent-chart-head",
+          { opacity: 0, y: 24 },
+          {
+            opacity: 1, y: 0, duration: 0.8, ease: "power2.out",
+            scrollTrigger: { trigger: ".ent-chart-head", start: "top 85%" }
+          }
+        );
+      }, sectionRef);
+    });
+
+    return () => {
+      cancelled = true;
+      ctx?.revert();
+    };
   }, []);
 
   return (

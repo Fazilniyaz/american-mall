@@ -1,47 +1,56 @@
 "use client";
 
 import { useEffect, useRef } from "react";
-import gsap from "gsap";
 
 export default function MallLogo() {
   const wrapRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    const ctx = gsap.context(() => {
-      // Logo mark — entrance animation (kept)
-      gsap.fromTo(
-        ".logo-mark",
-        { opacity: 0, scale: 0.7, rotate: -15 },
-        { opacity: 1, scale: 1, rotate: 0, duration: 1.1, ease: "expo.out", delay: 0.4 }
-      );
+    let ctx: { revert: () => void } | null = null;
+    let cancelled = false;
 
-      // Wordmark — animate ONLY translate, NOT opacity
-      // The wordmark contains the LCP text ("Bloomington · Minnesota"),
-      // so it MUST be visible from the first paint. We keep a subtle
-      // slide-in for polish.
-      gsap.fromTo(
-        ".logo-wordmark-group",
-        { x: -12 },
-        { x: 0, duration: 0.9, ease: "power3.out", delay: 0.85 }
-      );
+    import("gsap").then((gsapMod) => {
+      if (cancelled || !wrapRef.current) return;
+      const gsap = gsapMod.default;
+      ctx = gsap.context(() => {
+        // Logo mark — entrance animation (kept)
+        gsap.fromTo(
+          ".logo-mark",
+          { opacity: 0, scale: 0.7, rotate: -15 },
+          { opacity: 1, scale: 1, rotate: 0, duration: 1.1, ease: "expo.out", delay: 0.4 }
+        );
 
-      gsap.fromTo(
-        ".logo-divider",
-        { scaleY: 0 },
-        { scaleY: 1, duration: 0.5, ease: "power2.out", delay: 0.75, transformOrigin: "top" }
-      );
+        // Wordmark — animate ONLY translate, NOT opacity
+        // The wordmark contains the LCP text ("Bloomington · Minnesota"),
+        // so it MUST be visible from the first paint. We keep a subtle
+        // slide-in for polish.
+        gsap.fromTo(
+          ".logo-wordmark-group",
+          { x: -12 },
+          { x: 0, duration: 0.9, ease: "power3.out", delay: 0.85 }
+        );
 
-      // Only 1 infinite tween — cheap GPU rotation
-      gsap.to(".logo-diamond-spin", {
-        rotation: 360,
-        duration: 18,
-        ease: "none",
-        repeat: -1,
-        transformOrigin: "22px 22px",
-      });
-    }, wrapRef);
+        gsap.fromTo(
+          ".logo-divider",
+          { scaleY: 0 },
+          { scaleY: 1, duration: 0.5, ease: "power2.out", delay: 0.75, transformOrigin: "top" }
+        );
 
-    return () => ctx.revert();
+        // Only 1 infinite tween — cheap GPU rotation
+        gsap.to(".logo-diamond-spin", {
+          rotation: 360,
+          duration: 18,
+          ease: "none",
+          repeat: -1,
+          transformOrigin: "22px 22px",
+        });
+      }, wrapRef);
+    });
+
+    return () => {
+      cancelled = true;
+      ctx?.revert();
+    };
   }, []);
 
   return (
