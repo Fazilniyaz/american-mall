@@ -1,229 +1,337 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, useCallback } from "react";
+import gsap from "gsap";
 
-const NAV_LINKS = [
-  { label: "Intro", href: "#hero" },
-  { label: "Scale", href: "#numbers" },
-  { label: "Who's Here", href: "#whos-here" },
-  { label: "Mall", href: "#mall-map" },
-  { label: "Entertainment", href: "#entertainment" },
-  { label: "Events", href: "#events" },
-  { label: "Sponsorship", href: "#sponsorship" },
-  { label: "Close", href: "#cta" },
+// ─── Section definitions ──────────────────────────────────────────────────────
+const SECTIONS = [
+  { id: "hero",          label: "Intro",         chapter: "01" },
+  { id: "numbers",       label: "Scale",          chapter: "02" },
+  { id: "whos-here",     label: "Who's Here",     chapter: "03" },
+  { id: "mall-map",      label: "Explore",        chapter: "04" },
+  { id: "entertainment", label: "Entertainment",  chapter: "05" },
+  { id: "events",        label: "Events",         chapter: "06" },
+  { id: "sponsorship",   label: "Sponsorship",    chapter: "07" },
+  { id: "cta",           label: "Get Started",    chapter: "08" },
 ];
 
 export default function Navbar() {
-  const [activeId, setActiveId] = useState("hero");
-  const ratiosRef = useRef<Record<string, number>>({});
+  const [activeId,   setActiveId]   = useState("hero");
+  const [hoveredId,  setHoveredId]  = useState<string | null>(null);
+  const [visible,    setVisible]    = useState(false);
+  const ratiosRef    = useRef<Record<string, number>>({});
+  const navRef       = useRef<HTMLElement>(null);
+  const prevActiveRef = useRef("hero");
 
+  // ── Entrance animation ────────────────────────────────────────────────────
   useEffect(() => {
-    const targets = NAV_LINKS
-      .map(link => document.querySelector(link.href))
-      .filter((element): element is Element => Boolean(element));
+    const timer = setTimeout(() => {
+      setVisible(true);
+      if (navRef.current) {
+        gsap.fromTo(navRef.current,
+          { opacity: 0, x: 20 },
+          { opacity: 1, x: 0, duration: 0.8, ease: "power2.out", delay: 1.2 }
+        );
+      }
+    }, 100);
+    return () => clearTimeout(timer);
+  }, []);
+
+  // ── IntersectionObserver — tracks which section is most visible ───────────
+  useEffect(() => {
+    const targets = SECTIONS
+      .map(s => document.getElementById(s.id))
+      .filter((el): el is HTMLElement => Boolean(el));
 
     if (!targets.length) return;
 
-    // Keep visibility ratios for every section so active state does not get stuck
-    // when IntersectionObserver reports only a subset of entries.
     const observer = new IntersectionObserver(
       entries => {
         entries.forEach(entry => {
-          ratiosRef.current[entry.target.id] = entry.isIntersecting ? entry.intersectionRatio : 0;
+          ratiosRef.current[entry.target.id] = entry.isIntersecting
+            ? entry.intersectionRatio
+            : 0;
         });
 
-        let nextId = "hero";
+        let nextId    = prevActiveRef.current;
         let bestRatio = 0;
-
         for (const [id, ratio] of Object.entries(ratiosRef.current)) {
-          if (ratio > bestRatio) {
-            bestRatio = ratio;
-            nextId = id;
-          }
+          if (ratio > bestRatio) { bestRatio = ratio; nextId = id; }
         }
 
-        setActiveId(prev => (prev === nextId ? prev : nextId));
+        if (nextId !== prevActiveRef.current) {
+          prevActiveRef.current = nextId;
+          setActiveId(nextId);
+        }
       },
       {
-        rootMargin: "-40% 0px -40% 0px",
-        threshold: [0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7],
+        rootMargin: "-35% 0px -35% 0px",
+        threshold:  [0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7],
       }
     );
 
-    targets.forEach(target => observer.observe(target));
+    targets.forEach(t => observer.observe(t));
     return () => observer.disconnect();
   }, []);
 
-  const handleClick = (href: string) => {
-    const target = document.querySelector(href);
-    if (!target) return;
-    (target as HTMLElement).scrollIntoView({ behavior: "smooth", block: "start" });
-  };
+  // ── Smooth scroll to section ──────────────────────────────────────────────
+  const scrollTo = useCallback((id: string) => {
+    const el = document.getElementById(id);
+    if (!el) return;
+    el.scrollIntoView({ behavior: "smooth", block: "start" });
+  }, []);
 
-  const railButtonStyle = (isActive: boolean): React.CSSProperties => ({
-    width: "var(--deck-dot-size)",
-    height: "var(--deck-dot-size)",
-    borderRadius: "999px",
-    border: `1px solid ${isActive ? "#C9A84C" : "rgba(201,168,76,0.26)"}`,
-    background: isActive ? "#C9A84C" : "transparent",
-    boxShadow: isActive ? "0 0 0 var(--deck-dot-ring) rgba(201,168,76,0.12)" : "none",
-    cursor: "pointer",
-    display: "block",
-    padding: 0,
-    transition: "transform 0.18s ease, background 0.18s ease, border-color 0.18s ease, box-shadow 0.18s ease",
-  });
+  const activeIndex = SECTIONS.findIndex(s => s.id === activeId);
 
   return (
-    <nav
-      className="deck-nav-root"
-      aria-label="Deck sections"
-      style={{
-        position: "fixed",
-        right: "clamp(0.8rem, 2vw, 1.4rem)",
-        top: "50%",
-        transform: "translateY(-50%)",
-        zIndex: 100,
-        pointerEvents: "none",
-      }}
-    >
-      <div
-        className="deck-nav-desktop"
+    <>
+      <nav
+        ref={navRef}
+        aria-label="Deck navigation"
         style={{
-          pointerEvents: "auto",
-          display: "flex",
+          position:      "fixed",
+          right:         "clamp(1rem, 2.2vw, 1.8rem)",
+          top:           "50%",
+          transform:     "translateY(-50%)",
+          zIndex:        100,
+          opacity:       0,
+          display:       "flex",
           flexDirection: "column",
-          gap: "var(--deck-dot-gap)",
-          alignItems: "flex-end",
+          alignItems:    "flex-end",
+          gap:           0,
         }}
+        className="deck-nav"
       >
-        {NAV_LINKS.map(link => {
-          const id = link.href.slice(1);
-          const isActive = activeId === id;
+        {/* Chapter counter — top */}
+        <div className="deck-nav-counter" style={{
+          display:       "flex",
+          flexDirection: "column",
+          alignItems:    "flex-end",
+          marginBottom:  "1.2rem",
+          gap:           "2px",
+        }}>
+          <span style={{
+            color:         "#C9A84C",
+            fontSize:      "0.55rem",
+            fontWeight:    800,
+            letterSpacing: "0.3em",
+            textTransform: "uppercase",
+            fontFamily:    "var(--font-montserrat)",
+            lineHeight:    1,
+          }}>
+            {SECTIONS[activeIndex]?.chapter}
+          </span>
+          <span style={{
+            color:         "rgba(255,255,255,0.18)",
+            fontSize:      "0.5rem",
+            fontWeight:    600,
+            letterSpacing: "0.22em",
+            textTransform: "uppercase",
+            fontFamily:    "var(--font-montserrat)",
+            lineHeight:    1,
+          }}>
+            / {String(SECTIONS.length).padStart(2, "0")}
+          </span>
+        </div>
 
-          return (
-            <button
-              key={link.href}
-              onClick={() => handleClick(link.href)}
-              aria-label={link.label}
-              title={link.label}
-              style={{
-                display: "flex",
-                alignItems: "center",
-                gap: "0.55rem",
-                background: "none",
-                border: "none",
-                padding: 0,
-                color: "#fff",
-                cursor: "pointer",
-              }}
-            >
-              <span
-                className="deck-nav-label"
+        {/* Rail container */}
+        <div style={{
+          position:      "relative",
+          display:       "flex",
+          flexDirection: "column",
+          alignItems:    "flex-end",
+          gap:           "0",
+        }}>
+          {/* Vertical connector line — behind the dots */}
+          <div style={{
+            position:   "absolute",
+            right:      "6px",
+            top:        "6px",
+            bottom:     "6px",
+            width:      "1px",
+            background: "rgba(201,168,76,0.12)",
+            zIndex:     0,
+          }} />
+
+          {/* Active progress fill */}
+          <div style={{
+            position:   "absolute",
+            right:      "6px",
+            top:        "6px",
+            width:      "1px",
+            height:     `${(activeIndex / (SECTIONS.length - 1)) * 100}%`,
+            background: "linear-gradient(to bottom, #C9A84C, rgba(201,168,76,0.4))",
+            zIndex:     0,
+            transition: "height 0.5s cubic-bezier(0.4, 0, 0.2, 1)",
+          }} />
+
+          {/* Dots */}
+          {SECTIONS.map((section, i) => {
+            const isActive  = activeId   === section.id;
+            const isHovered = hoveredId  === section.id;
+            const isPast    = i < activeIndex;
+
+            return (
+              <button
+                key={section.id}
+                onClick={() => scrollTo(section.id)}
+                onMouseEnter={() => setHoveredId(section.id)}
+                onMouseLeave={() => setHoveredId(null)}
+                aria-label={`Go to ${section.label}`}
+                title={section.label}
                 style={{
-                  color: isActive ? "#C9A84C" : "rgba(255,255,255,0.35)",
-                  fontFamily: "var(--font-montserrat)",
-                  fontSize: "var(--deck-label-size)",
-                  fontWeight: 700,
-                  letterSpacing: "0.16em",
-                  textTransform: "uppercase",
-                  opacity: 0,
-                  transform: "translateX(8px)",
-                  transition: "opacity 0.18s ease, transform 0.18s ease",
-                  pointerEvents: "none",
+                  position:       "relative",
+                  zIndex:         1,
+                  display:        "flex",
+                  alignItems:     "center",
+                  gap:            "0.6rem",
+                  background:     "none",
+                  border:         "none",
+                  cursor:         "pointer",
+                  padding:        "0.42rem 0",
+                  paddingRight:   "0",
                 }}
               >
-                {link.label}
-              </span>
-              <span style={railButtonStyle(isActive)} className="deck-nav-dot" />
-            </button>
-          );
-        })}
-      </div>
+                {/* Label — slides in on hover */}
+                <span
+                  className="deck-nav-label"
+                  style={{
+                    color:         isActive ? "#C9A84C" : "rgba(255,255,255,0.45)",
+                    fontFamily:    "var(--font-montserrat)",
+                    fontSize:      "0.55rem",
+                    fontWeight:    isActive ? 700 : 500,
+                    letterSpacing: "0.18em",
+                    textTransform: "uppercase",
+                    opacity:       isHovered || isActive ? 1 : 0,
+                    transform:     isHovered || isActive ? "translateX(0)" : "translateX(6px)",
+                    transition:    "opacity 0.2s ease, transform 0.2s ease, color 0.2s ease",
+                    whiteSpace:    "nowrap",
+                    pointerEvents: "none",
+                  }}
+                >
+                  {section.label}
+                </span>
 
-      <div className="deck-nav-mobile" style={{ pointerEvents: "auto", display: "none" }}>
-        {NAV_LINKS.map(link => {
-          const id = link.href.slice(1);
-          const isActive = activeId === id;
+                {/* Dot */}
+                <span style={{
+                  flexShrink:    0,
+                  width:         isActive ? "13px" : isHovered ? "10px" : isPast ? "6px" : "6px",
+                  height:        isActive ? "13px" : isHovered ? "10px" : "6px",
+                  borderRadius:  "999px",
+                  border:        `1px solid ${
+                    isActive  ? "#C9A84C" :
+                    isHovered ? "rgba(201,168,76,0.7)" :
+                    isPast    ? "rgba(201,168,76,0.35)" :
+                                "rgba(201,168,76,0.2)"
+                  }`,
+                  background:    isActive
+                    ? "#C9A84C"
+                    : isPast
+                    ? "rgba(201,168,76,0.25)"
+                    : "transparent",
+                  boxShadow:     isActive
+                    ? "0 0 0 3px rgba(201,168,76,0.12), 0 0 12px rgba(201,168,76,0.3)"
+                    : "none",
+                  transition:    "all 0.25s cubic-bezier(0.4, 0, 0.2, 1)",
+                  display:       "block",
+                }} />
+              </button>
+            );
+          })}
+        </div>
 
+        {/* Section label — bottom */}
+        <div className="deck-nav-section-label" style={{
+          marginTop:     "1.2rem",
+          textAlign:     "right",
+        }}>
+          <span style={{
+            color:         "rgba(201,168,76,0.5)",
+            fontSize:      "0.5rem",
+            fontWeight:    600,
+            letterSpacing: "0.2em",
+            textTransform: "uppercase",
+            fontFamily:    "var(--font-montserrat)",
+            lineHeight:    1,
+            transition:    "color 0.3s ease",
+          }}>
+            {SECTIONS[activeIndex]?.label}
+          </span>
+        </div>
+      </nav>
+
+      {/* Mobile bottom pill nav */}
+      <nav
+        aria-label="Deck navigation mobile"
+        className="deck-nav-mobile-pill"
+        style={{
+          position:       "fixed",
+          bottom:         "1.2rem",
+          left:           "50%",
+          transform:      "translateX(-50%)",
+          zIndex:         100,
+          display:        "none",
+          alignItems:     "center",
+          gap:            "0.5rem",
+          padding:        "0.55rem 1rem",
+          background:     "rgba(5,4,2,0.82)",
+          border:         "1px solid rgba(201,168,76,0.15)",
+          borderRadius:   "999px",
+          backdropFilter: "blur(16px)",
+          WebkitBackdropFilter: "blur(16px)",
+        }}
+      >
+        {SECTIONS.map((section, i) => {
+          const isActive = activeId === section.id;
+          const isPast   = i < activeIndex;
           return (
             <button
-              key={link.href}
-              onClick={() => handleClick(link.href)}
-              aria-label={link.label}
-              title={link.label}
-              style={railButtonStyle(isActive)}
+              key={section.id}
+              onClick={() => scrollTo(section.id)}
+              aria-label={section.label}
+              style={{
+                width:      isActive ? "18px" : "6px",
+                height:     "6px",
+                borderRadius: "999px",
+                border:     `1px solid ${isActive ? "#C9A84C" : isPast ? "rgba(201,168,76,0.4)" : "rgba(201,168,76,0.2)"}`,
+                background: isActive ? "#C9A84C" : isPast ? "rgba(201,168,76,0.2)" : "transparent",
+                cursor:     "pointer",
+                padding:    0,
+                transition: "all 0.25s ease",
+                flexShrink: 0,
+              }}
             />
           );
         })}
-      </div>
+      </nav>
 
       <style>{`
-        .deck-nav-root {
-          --deck-dot-size: 14px;
-          --deck-dot-ring: 3px;
-          --deck-dot-gap: 0.7rem;
-          --deck-label-size: 0.56rem;
+        /* ── Hide browser scrollbar ── */
+        html { scrollbar-width: none; }
+        html::-webkit-scrollbar { display: none; }
+
+        /* ── Desktop nav visible, mobile pill hidden ── */
+        .deck-nav { display: flex !important; }
+        .deck-nav-mobile-pill { display: none !important; }
+
+        /* ── Tablet: hide labels ── */
+        @media (max-width: 1024px) {
+          .deck-nav-label { display: none !important; }
+          .deck-nav-counter { display: none !important; }
+          .deck-nav-section-label { display: none !important; }
         }
 
-        .deck-nav-desktop button:hover .deck-nav-label,
-        .deck-nav-desktop button:focus-visible .deck-nav-label {
-          opacity: 1;
-          transform: translateX(0);
-        }
-
-        .deck-nav-desktop button:hover .deck-nav-dot,
-        .deck-nav-desktop button:focus-visible .deck-nav-dot {
-          transform: scale(1.12);
-        }
-
-        @media (max-width: 1200px) {
-          .deck-nav-root {
-            --deck-dot-size: 12px;
-            --deck-dot-ring: 2px;
-            --deck-dot-gap: 0.58rem;
-            --deck-label-size: 0.52rem;
-          }
-        }
-
-        @media (max-width: 980px), (max-height: 760px) {
-          .deck-nav-root {
-            --deck-dot-size: 11px;
-            --deck-dot-ring: 2px;
-            --deck-dot-gap: 0.5rem;
-          }
-
-          .deck-nav-label {
-            display: none !important;
-          }
-        }
-
+        /* ── Mobile: hide desktop rail, show pill ── */
         @media (max-width: 767px) {
-          .deck-nav-root {
-            right: auto !important;
-            left: 50% !important;
-            top: auto !important;
-            bottom: 1rem !important;
-            transform: translateX(-50%) !important;
-            --deck-dot-size: 10px;
-            --deck-dot-gap: 0.55rem;
-            --deck-dot-ring: 2px;
-          }
+          .deck-nav { display: none !important; }
+          .deck-nav-mobile-pill { display: flex !important; }
+        }
 
-          .deck-nav-desktop { display: none !important; }
-          .deck-nav-mobile {
-            display: flex !important;
-            gap: var(--deck-dot-gap);
-            align-items: center;
-            justify-content: center;
-            padding: 0.55rem 0.75rem;
-            border: 1px solid rgba(201,168,76,0.14);
-            border-radius: 999px;
-            background: rgba(5,4,2,0.72);
-            backdrop-filter: blur(12px);
-            -webkit-backdrop-filter: blur(12px);
-          }
+        /* ── Short screens: compress gap ── */
+        @media (max-height: 700px) {
+          .deck-nav button { padding-top: 0.28rem !important; padding-bottom: 0.28rem !important; }
         }
       `}</style>
-    </nav>
+    </>
   );
 }
