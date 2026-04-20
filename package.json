@@ -34,10 +34,10 @@
     "typescript": "^5"
   },
   "browserslist": [
-    "Chrome >= 109",
-    "Firefox >= 109",
-    "Safari >= 16",
-    "Edge >= 109",
+    "Chrome >= 111",
+    "Firefox >= 115",
+    "Safari >= 16.4",
+    "Edge >= 111",
     "not dead"
   ]
 }

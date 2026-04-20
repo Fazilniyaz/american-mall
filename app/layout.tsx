@@ -43,24 +43,6 @@ export default function RootLayout({
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
 
-        {/* Preload critical LCP image for mobile */}
-        <link
-          rel="preload"
-          as="image"
-          href="/photos/hero-poster.jpg"
-          type="image/jpeg"
-          {...({ fetchPriority: "high" } as Record<string, string>)}
-        />
-
-        {/* Preload only the subset of fonts used in hero */}
-        <link
-          rel="preload"
-          as="font"
-          href="https://fonts.gstatic.com/s/montserrat/v26/JTUHjIg1_i6t8kCHKm46-q555NSi.woff2"
-          type="font/woff2"
-          crossOrigin="anonymous"
-        />
-
         {/*
           Async font loader — creates a <link rel="stylesheet">
           for Google Fonts with font-display=swap.

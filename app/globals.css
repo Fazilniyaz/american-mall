@@ -54,3 +54,12 @@ main > div[id] {
     scroll-snap-type: none;
   }
 }
+
+/* ── Skip layout/paint for below-fold sections ─────────────────────────
+   content-visibility: auto tells the browser to defer rendering of
+   off-screen sections, dramatically reducing initial paint work.
+   contain-intrinsic-size prevents CLS when they become visible. ──── */
+main > div[id] {
+  content-visibility: auto;
+  contain-intrinsic-size: auto 100vh;
+}

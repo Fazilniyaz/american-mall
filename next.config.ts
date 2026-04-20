@@ -3,8 +3,9 @@ import type { NextConfig } from "next";
 const nextConfig: NextConfig = {
   reactStrictMode: true,
 
-  // Tree-shake heavy sub-packages
+  // Tree-shake heavy sub-packages + inline CSS
   experimental: {
+    inlineCss: true,
     optimizePackageImports: [
       "d3-selection",
       "d3-shape",

@@ -1,7 +1,20 @@
 "use client";
 
 import { useEffect, useRef, useState, useCallback } from "react";
-import gsap from "gsap";
+
+// ── Lazy GSAP loader ────────────────────────────────────────────────────
+// GSAP was previously imported at the TOP LEVEL, pulling ~30 KB into the
+// initial bundle. Since Navbar is NOT inside a LazySection (it renders
+// immediately on every page), this was the single biggest blocker for
+// mobile FCP / LCP. Now it's loaded lazily — same pattern as HeroStats.
+let _gsap: typeof import("gsap")["default"] | null = null;
+const loadGsap = () =>
+  _gsap
+    ? Promise.resolve(_gsap)
+    : import("gsap").then((m) => {
+        _gsap = m.default;
+        return _gsap;
+      });
 
 // ─── Section definitions ──────────────────────────────────────────────────────
 const SECTIONS = [
@@ -29,10 +42,13 @@ export default function Navbar() {
     const timer = setTimeout(() => {
       setVisible(true);
       if (navRef.current) {
-        gsap.fromTo(navRef.current,
-          { opacity: 0, x: 20 },
-          { opacity: 1, x: 0, duration: 0.8, ease: "power2.out", delay: 1.5 }
-        );
+        loadGsap().then((gsap) => {
+          if (!navRef.current) return;
+          gsap.fromTo(navRef.current,
+            { opacity: 0, x: 20 },
+            { opacity: 1, x: 0, duration: 0.8, ease: "power2.out", delay: 1.5 }
+          );
+        });
       }
     }, 200);
     return () => clearTimeout(timer);
