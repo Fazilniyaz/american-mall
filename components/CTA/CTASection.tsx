@@ -99,6 +99,7 @@ function DeckActionButton({
     padding: "1.2rem 1.15rem",
     color: "#fff",
     textAlign: "left",
+    textDecoration: "none",
     cursor: "pointer",
     transition: "transform 0.18s ease, border-color 0.18s ease, background 0.18s ease",
   };

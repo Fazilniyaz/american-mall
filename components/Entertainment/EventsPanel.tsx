@@ -58,7 +58,10 @@ const HERO_STATS = [
   { value: "20K", label: "Max Capacity" },
 ];
 
-// ─── Tech events data ─────────────────────────────────────────────────────────
+// ─── ONLY THE 3 CHANGED DATA ARRAYS ──────────────────────────────────────────
+// Replace these arrays in your EventsPanel.tsx — everything else stays identical
+
+// 1. TECH_EVENTS — samsung-vr card: video prepended
 const TECH_EVENTS = [
   {
     id: "apple-vr",
@@ -100,6 +103,8 @@ const TECH_EVENTS = [
     statLabel: "VR sessions",
     desc: "Immersive Galaxy VR gaming zones activated across the property. Full-scale demo pods, headsets, and live competitions.",
     images: [
+      // ✅ VIDEO FIRST — then the 2 existing images
+      { src: "/videos/samsung_vr.mp4", alt: "Samsung VR experience zone live footage", type: "video" as const },
       { src: "/photos/samsung-vr-1.avif", alt: "Samsung VR experience" },
       { src: "/photos/samsung-vr-2.jpg", alt: "Samsung VR gaming zone" },
     ],
@@ -108,7 +113,7 @@ const TECH_EVENTS = [
   },
 ];
 
-// ─── Entertainment + Gaming events ───────────────────────────────────────────
+// 2. ENT_EVENTS — nike and adidas: video prepended to each
 const ENT_EVENTS = [
   {
     id: "nike",
@@ -119,6 +124,8 @@ const ENT_EVENTS = [
     statLabel: "Attendees per event",
     desc: "Exclusive sneaker drops and athlete meet-and-greets. Nike transforms Mall of America's atrium into a full-scale brand experience.",
     images: [
+      // ✅ VIDEO FIRST — then the 2 existing images
+      { src: "/videos/nike.mp4", alt: "Nike sneaker launch event footage", type: "video" as const },
       { src: "/photos/nike-1.jpg", alt: "Nike sneaker launch event" },
       { src: "/photos/nike-2.jpg", alt: "Nike fan engagement" },
     ],
@@ -134,6 +141,8 @@ const ENT_EVENTS = [
     statLabel: "Fan engagements",
     desc: "Premium Adidas brand activations with exclusive merchandise drops, athlete appearances, and immersive product showcases.",
     images: [
+      // ✅ VIDEO FIRST — then the 2 existing images
+      { src: "/videos/adidas.mp4", alt: "Adidas fan engagement event footage", type: "video" as const },
       { src: "/photos/adidas-1.jpg", alt: "Adidas fan event" },
       { src: "/photos/adidas-2.webp", alt: "Adidas Palace event space" },
     ],
@@ -198,7 +207,7 @@ function LazyVideoSlide({
         video.load();
         srcLoaded.current = true;
       }
-      video.play().catch(() => {});
+      video.play().catch(() => { });
     } else {
       video.pause();
     }
