@@ -627,34 +627,17 @@ export default function WhosHereSection() {
         }}>
           Join 520+ brands already thriving at Mall of America
         </p>
-        <button
-          style={{
-            background: "transparent",
-            border: "1px solid #C9A84C",
-            color: "#C9A84C",
-            fontSize: "0.68rem",
-            fontWeight: 700,
-            letterSpacing: "0.25em",
-            textTransform: "uppercase",
-            fontFamily: "var(--font-montserrat)",
-            padding: "12px 32px",
-            cursor: "pointer",
-            transition: "background 0.22s ease, color 0.22s ease",
-          }}
-          onMouseEnter={e => {
-            (e.currentTarget).style.background = "#C9A84C";
-            (e.currentTarget).style.color = "#000";
-          }}
-          onMouseLeave={e => {
-            (e.currentTarget).style.background = "transparent";
-            (e.currentTarget).style.color = "#C9A84C";
-          }}
-          onClick={() =>
-            document.querySelector("#cta")?.scrollIntoView({ behavior: "smooth" })
-          }
-        >
-          Inquire About Leasing
-        </button>
+        <p style={{
+          color: "rgba(201,168,76,0.55)",
+          fontSize: "0.65rem",
+          fontFamily: "var(--font-montserrat)",
+          fontWeight: 600,
+          margin: 0,
+          letterSpacing: "0.22em",
+          textTransform: "uppercase",
+        }}>
+          Final actions appear on the closing slide
+        </p>
       </div>
 
       {/* ── Bottom divider ── */}

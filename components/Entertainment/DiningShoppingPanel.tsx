@@ -596,36 +596,18 @@ function ShoppingPanel() {
                         ))}
                     </div>
 
-                    {/* Leasing CTA */}
                     <div style={{ marginTop: "0.5rem" }}>
-                        <button
-                            style={{
-                                background: "transparent",
-                                border: "1px solid #C9A84C",
-                                color: "#C9A84C",
-                                fontSize: "0.65rem",
-                                fontWeight: 700,
-                                letterSpacing: "0.22em",
-                                textTransform: "uppercase",
-                                fontFamily: "var(--font-montserrat)",
-                                padding: "10px 24px",
-                                cursor: "pointer",
-                                transition: "background 0.22s, color 0.22s",
-                            }}
-                            onMouseEnter={e => {
-                                e.currentTarget.style.background = "#C9A84C";
-                                e.currentTarget.style.color = "#000";
-                            }}
-                            onMouseLeave={e => {
-                                e.currentTarget.style.background = "transparent";
-                                e.currentTarget.style.color = "#C9A84C";
-                            }}
-                            onClick={() =>
-                                document.querySelector("#cta")?.scrollIntoView({ behavior: "smooth" })
-                            }
-                        >
-                            Inquire About Leasing →
-                        </button>
+                        <p style={{
+                            color: "rgba(201,168,76,0.55)",
+                            fontSize: "0.63rem",
+                            fontFamily: "var(--font-montserrat)",
+                            fontWeight: 600,
+                            letterSpacing: "0.2em",
+                            textTransform: "uppercase",
+                            margin: 0,
+                        }}>
+                            Leasing options continue in the closing slide
+                        </p>
                     </div>
                 </div>
             </div>

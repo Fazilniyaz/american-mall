@@ -271,27 +271,6 @@ export default function HeroStats() {
           ))}
         </div>
 
-        {/* Scroll indicator */}
-        <div style={{
-          position: "absolute",
-          bottom: "1.5rem",
-          display: "flex",
-          flexDirection: "column",
-          alignItems: "center",
-          gap: "0.4rem",
-          color: "rgba(255,255,255,0.38)",
-          letterSpacing: "0.25em",
-          textTransform: "uppercase",
-          fontFamily: "var(--font-montserrat)",
-          fontWeight: 500,
-        }}>
-          <span className="scroll-text">Scroll</span>
-          <div style={{
-            width: "1px",
-            height: "32px",
-            background: "linear-gradient(to bottom, rgba(255,255,255,0.4), transparent)",
-          }} />
-        </div>
       </div>
 
       {/* ── All responsive CSS in one place ──────────────────────── */}

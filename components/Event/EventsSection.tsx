@@ -664,36 +664,18 @@ function EventReel() {
                     becomes part of a global conversation.
                 </p>
 
-                <button
-                    className="reel-sub"
-                    style={{
-                        background: "transparent",
-                        border: "1px solid #C9A84C",
-                        color: "#C9A84C",
-                        fontSize: "0.68rem",
-                        fontWeight: 700,
-                        letterSpacing: "0.25em",
-                        textTransform: "uppercase",
-                        fontFamily: "var(--font-montserrat)",
-                        padding: "13px 36px",
-                        cursor: "pointer",
-                        transition: "background 0.22s, color 0.22s",
-                        opacity: 0,
-                    }}
-                    onMouseEnter={e => {
-                        e.currentTarget.style.background = "#C9A84C";
-                        e.currentTarget.style.color = "#000000";
-                    }}
-                    onMouseLeave={e => {
-                        e.currentTarget.style.background = "transparent";
-                        e.currentTarget.style.color = "#C9A84C";
-                    }}
-                    onClick={() =>
-                        document.querySelector("#cta")?.scrollIntoView({ behavior: "smooth" })
-                    }
-                >
-                    Book Your Event
-                </button>
+                <p style={{
+                    color: "rgba(201,168,76,0.55)",
+                    fontSize: "0.68rem",
+                    fontFamily: "var(--font-montserrat)",
+                    fontWeight: 600,
+                    letterSpacing: "0.22em",
+                    textTransform: "uppercase",
+                    margin: 0,
+                    opacity: 0.8,
+                }}>
+                    Booking options are collected in the closing slide
+                </p>
             </div>
         </div>
     );
@@ -884,34 +866,17 @@ export default function EventsSection() {
                 }}>
                     Ready to make your brand moment at the most visited mall in America?
                 </p>
-                <button
-                    style={{
-                        background: "transparent",
-                        border: "1px solid #C9A84C",
-                        color: "#C9A84C",
-                        fontSize: "0.68rem",
-                        fontWeight: 700,
-                        letterSpacing: "0.25em",
-                        textTransform: "uppercase",
-                        fontFamily: "var(--font-montserrat)",
-                        padding: "12px 32px",
-                        cursor: "pointer",
-                        transition: "background 0.22s, color 0.22s",
-                    }}
-                    onMouseEnter={e => {
-                        e.currentTarget.style.background = "#C9A84C";
-                        e.currentTarget.style.color = "#000000";
-                    }}
-                    onMouseLeave={e => {
-                        e.currentTarget.style.background = "transparent";
-                        e.currentTarget.style.color = "#C9A84C";
-                    }}
-                    onClick={() =>
-                        document.querySelector("#cta")?.scrollIntoView({ behavior: "smooth" })
-                    }
-                >
-                    Plan Your Activation
-                </button>
+                <p style={{
+                    color: "rgba(201,168,76,0.55)",
+                    fontSize: "0.65rem",
+                    fontFamily: "var(--font-montserrat)",
+                    fontWeight: 600,
+                    letterSpacing: "0.22em",
+                    textTransform: "uppercase",
+                    margin: 0,
+                }}>
+                    Activation booking appears in the closing slide
+                </p>
             </div>
 
             {/* Bottom divider */}

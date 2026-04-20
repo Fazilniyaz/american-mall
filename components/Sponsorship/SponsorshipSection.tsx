@@ -521,30 +521,16 @@ function TierCard({ tier, index }: { tier: typeof TIERS[0]; index: number }) {
             per year
           </div>
         </div>
-        <button
-          onClick={() => document.querySelector("#cta")?.scrollIntoView({ behavior:"smooth" })}
-          onMouseEnter={e => { e.currentTarget.style.background="#C9A84C"; e.currentTarget.style.color="#000000"; }}
-          onMouseLeave={e => {
-            e.currentTarget.style.background = tier.featured ? "#C9A84C" : "transparent";
-            e.currentTarget.style.color      = tier.featured ? "#000000" : "#C9A84C";
-          }}
-          style={{
-            background:    tier.featured ? "#C9A84C" : "transparent",
-            border:        "1px solid #C9A84C",
-            color:         tier.featured ? "#000000" : "#C9A84C",
-            fontSize:      "0.6rem",
-            fontWeight:    700,
-            letterSpacing: "0.2em",
-            textTransform: "uppercase",
-            fontFamily:    "var(--font-montserrat)",
-            padding:       "8px 16px",
-            cursor:        "pointer",
-            transition:    "background 0.22s, color 0.22s",
-            whiteSpace:    "nowrap",
-          }}
-        >
-          Enquire
-        </button>
+        <span style={{
+          color: "rgba(201,168,76,0.58)",
+          fontSize: "0.58rem",
+          fontFamily: "var(--font-montserrat)",
+          letterSpacing: "0.16em",
+          textTransform: "uppercase",
+          fontWeight: 600,
+        }}>
+          Details in closing slide
+        </span>
       </div>
     </div>
   );

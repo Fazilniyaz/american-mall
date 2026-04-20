@@ -834,32 +834,17 @@ function EntGamingSection() {
         }}>
           Your brand. Our stage. 40 million witnesses.
         </p>
-        <button
-          style={{
-            background: "transparent",
-            border: "1px solid #C9A84C",
-            color: "#C9A84C",
-            fontSize: "0.68rem",
-            fontWeight: 700,
-            letterSpacing: "0.25em",
-            textTransform: "uppercase",
-            fontFamily: "var(--font-montserrat)",
-            padding: "12px 32px",
-            cursor: "pointer",
-            transition: "background 0.22s, color 0.22s",
-          }}
-          onMouseEnter={e => {
-            e.currentTarget.style.background = "#C9A84C";
-            e.currentTarget.style.color = "#000";
-          }}
-          onMouseLeave={e => {
-            e.currentTarget.style.background = "transparent";
-            e.currentTarget.style.color = "#C9A84C";
-          }}
-          onClick={() => document.querySelector("#cta")?.scrollIntoView({ behavior: "smooth" })}
-        >
-          Book Your Event →
-        </button>
+        <p style={{
+          color: "rgba(201,168,76,0.55)",
+          fontSize: "0.65rem",
+          fontFamily: "var(--font-montserrat)",
+          fontWeight: 600,
+          margin: 0,
+          letterSpacing: "0.22em",
+          textTransform: "uppercase",
+        }}>
+          Booking details continue in the closing slide
+        </p>
       </div>
     </div>
   );

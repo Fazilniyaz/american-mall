@@ -37,7 +37,11 @@ export default function LazySection({
   }, [isVisible, rootMargin]);
 
   return (
-    <div ref={wrapperRef} id={id}>
+    <div
+      ref={wrapperRef}
+      id={id}
+      style={{ scrollSnapAlign: "start", scrollSnapStop: "always" }}
+    >
       {isVisible ? children : <div style={{ minHeight: placeholderHeight }} aria-hidden="true" />}
     </div>
   );
