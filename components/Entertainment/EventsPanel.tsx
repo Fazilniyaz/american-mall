@@ -85,6 +85,7 @@ const TECH_EVENTS = [
     statLabel: "Opening day visitors",
     desc: "Samsung's first Midwest Experience Store launched at Mall of America. Crowds lined up before dawn for Galaxy S25 hands-on demos.",
     images: [
+      { src: "/videos/samsung_event.mp4", alt: "Samsung Galaxy store opening event", type: "video" as const },
       { src: "/photos/samsung-store-1.webp", alt: "Samsung Galaxy store opening" },
     ],
     accent: "#1428A0",
@@ -156,12 +157,80 @@ const ENT_EVENTS = [
   },
 ];
 
-// ─── Image carousel (shared by all event cards) ───────────────────────────────
+// ─── Lazy video slide — only loads/plays when active + visible ─────────────────
+// preload="none" ensures ZERO bytes downloaded until the slide is visible.
+// IntersectionObserver pauses the video when off-screen to save CPU/GPU.
+function LazyVideoSlide({
+  src,
+  alt,
+  isActive,
+}: {
+  src: string;
+  alt: string;
+  isActive: boolean;
+}) {
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const wrapRef = useRef<HTMLDivElement>(null);
+  const isVisibleRef = useRef(false);
+  const srcLoaded = useRef(false);
+
+  // Track visibility via IntersectionObserver
+  useEffect(() => {
+    const el = wrapRef.current;
+    if (!el) return;
+    const obs = new IntersectionObserver(
+      ([entry]) => { isVisibleRef.current = entry.isIntersecting; },
+      { threshold: 0.1 }
+    );
+    obs.observe(el);
+    return () => obs.disconnect();
+  }, []);
+
+  // Load src on first activation + play/pause based on active + visible state
+  useEffect(() => {
+    const video = videoRef.current;
+    if (!video) return;
+
+    if (isActive && isVisibleRef.current) {
+      // Lazy-set src only on first activation — zero upfront cost
+      if (!srcLoaded.current) {
+        video.src = src;
+        video.load();
+        srcLoaded.current = true;
+      }
+      video.play().catch(() => {});
+    } else {
+      video.pause();
+    }
+  }, [isActive, src]);
+
+  return (
+    <div ref={wrapRef} style={{ position: "absolute", inset: 0 }}>
+      <video
+        ref={videoRef}
+        muted
+        loop
+        playsInline
+        preload="none"
+        aria-label={alt}
+        style={{
+          width: "100%",
+          height: "100%",
+          objectFit: "cover",
+          objectPosition: "center",
+          display: "block",
+        }}
+      />
+    </div>
+  );
+}
+
+// ─── Media carousel (images + videos) shared by all event cards ───────────────
 function ImageCarousel({
   images,
   accent,
 }: {
-  images: { src: string; alt: string }[];
+  images: { src: string; alt: string; type?: "video" }[];
   accent: string;
 }) {
   const [active, setActive] = useState(0);
@@ -171,14 +240,17 @@ function ImageCarousel({
     setActive(idx);
   }, []);
 
-  // Auto-advance only when more than 1 image
+  // Auto-advance only when more than 1 item
+  // Video slides get longer display time (6s) vs images (3.8s)
   useEffect(() => {
     if (images.length <= 1) return;
-    timerRef.current = setInterval(() => {
+    const currentItem = images[active];
+    const delay = currentItem?.type === "video" ? 6000 : 3800;
+    timerRef.current = setTimeout(() => {
       setActive(p => (p + 1) % images.length);
-    }, 3800);
-    return () => { if (timerRef.current) clearInterval(timerRef.current); };
-  }, [images.length]);
+    }, delay);
+    return () => { if (timerRef.current) clearTimeout(timerRef.current); };
+  }, [images, active]);
 
   return (
     <div style={{ position: "relative", width: "100%", height: "100%", overflow: "hidden" }}>
@@ -190,16 +262,26 @@ function ImageCarousel({
             inset: 0,
             opacity: i === active ? 1 : 0,
             transition: "opacity 0.75s ease",
+            // Prevent hidden slides from consuming GPU resources
+            visibility: i === active ? "visible" : "hidden",
           }}
         >
-          <Image
-            src={img.src}
-            alt={img.alt}
-            fill
-            loading="lazy"
-            sizes="(max-width:768px) 100vw, 33vw"
-            style={{ objectFit: "cover", objectPosition: "center" }}
-          />
+          {img.type === "video" ? (
+            <LazyVideoSlide
+              src={img.src}
+              alt={img.alt}
+              isActive={i === active}
+            />
+          ) : (
+            <Image
+              src={img.src}
+              alt={img.alt}
+              fill
+              loading="lazy"
+              sizes="(max-width:768px) 100vw, 33vw"
+              style={{ objectFit: "cover", objectPosition: "center" }}
+            />
+          )}
         </div>
       ))}
 
@@ -235,7 +317,7 @@ function ImageCarousel({
                 padding: 0,
                 transition: "all 0.3s ease",
               }}
-              aria-label={`View image ${i + 1}`}
+              aria-label={`View slide ${i + 1}`}
             />
           ))}
         </div>
