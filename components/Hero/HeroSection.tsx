@@ -65,6 +65,7 @@ export default function HeroSection() {
         ── MOBILE: poster image — ALWAYS RENDERED (SSR + hydration) ──────────
         Uses Next.js <Image> for automatic WebP/AVIF conversion + responsive sizing.
         CSS class hides on desktop. The fill + priority props ensure it's the LCP element.
+        sizes uses vw measurements that match the actual viewport-constrained rendering.
       */}
       <div className="hero-poster-mobile" style={{ position: "absolute", inset: 0, zIndex: 1 }}>
         <Image
@@ -72,7 +73,7 @@ export default function HeroSection() {
           alt="Mall of America interior"
           fill
           priority
-          sizes="100vw"
+          sizes="(max-width: 768px) 100vw, 100vw"
           quality={75}
           style={{
             objectFit: "cover",

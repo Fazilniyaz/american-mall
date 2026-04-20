@@ -22,6 +22,7 @@ export default function Navbar() {
   const ratiosRef    = useRef<Record<string, number>>({});
   const navRef       = useRef<HTMLElement>(null);
   const prevActiveRef = useRef("hero");
+  const rafRef       = useRef<number | null>(null);
 
   // ── Entrance animation ────────────────────────────────────────────────────
   useEffect(() => {
@@ -30,20 +31,34 @@ export default function Navbar() {
       if (navRef.current) {
         gsap.fromTo(navRef.current,
           { opacity: 0, x: 20 },
-          { opacity: 1, x: 0, duration: 0.8, ease: "power2.out", delay: 1.2 }
+          { opacity: 1, x: 0, duration: 0.8, ease: "power2.out", delay: 1.5 }
         );
       }
-    }, 100);
+    }, 200);
     return () => clearTimeout(timer);
   }, []);
 
   // ── IntersectionObserver — tracks which section is most visible ───────────
+  // ── Batches updates with RAF to avoid forced reflows ────────────────────
   useEffect(() => {
     const targets = SECTIONS
       .map(s => document.getElementById(s.id))
       .filter((el): el is HTMLElement => Boolean(el));
 
     if (!targets.length) return;
+
+    const processUpdate = () => {
+      let nextId    = prevActiveRef.current;
+      let bestRatio = 0;
+      for (const [id, ratio] of Object.entries(ratiosRef.current)) {
+        if (ratio > bestRatio) { bestRatio = ratio; nextId = id; }
+      }
+
+      if (nextId !== prevActiveRef.current) {
+        prevActiveRef.current = nextId;
+        setActiveId(nextId);
+      }
+    };
 
     const observer = new IntersectionObserver(
       entries => {
@@ -53,16 +68,9 @@ export default function Navbar() {
             : 0;
         });
 
-        let nextId    = prevActiveRef.current;
-        let bestRatio = 0;
-        for (const [id, ratio] of Object.entries(ratiosRef.current)) {
-          if (ratio > bestRatio) { bestRatio = ratio; nextId = id; }
-        }
-
-        if (nextId !== prevActiveRef.current) {
-          prevActiveRef.current = nextId;
-          setActiveId(nextId);
-        }
+        // Batch updates with RAF to avoid layout thrashing
+        if (rafRef.current) cancelAnimationFrame(rafRef.current);
+        rafRef.current = requestAnimationFrame(processUpdate);
       },
       {
         rootMargin: "-35% 0px -35% 0px",
@@ -71,7 +79,10 @@ export default function Navbar() {
     );
 
     targets.forEach(t => observer.observe(t));
-    return () => observer.disconnect();
+    return () => {
+      observer.disconnect();
+      if (rafRef.current) cancelAnimationFrame(rafRef.current);
+    };
   }, []);
 
   // ── Smooth scroll to section ──────────────────────────────────────────────

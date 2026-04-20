@@ -50,24 +50,41 @@ export default function RootLayout({
           href="/photos/hero-poster.jpg"
           type="image/jpeg"
           {...({ fetchPriority: "high" } as Record<string, string>)}
-          media="(max-width: 768px)"
+        />
+
+        {/* Preload only the subset of fonts used in hero */}
+        <link
+          rel="preload"
+          as="font"
+          href="https://fonts.gstatic.com/s/montserrat/v26/JTUHjIg1_i6t8kCHKm46-q555NSi.woff2"
+          type="font/woff2"
+          crossOrigin="anonymous"
         />
 
         {/*
-          Async font loader — dynamically creates a <link rel="stylesheet">
-          for Google Fonts. Dynamically-created stylesheets are NOT render-
-          blocking. Text renders instantly with system font fallbacks,
-          then font-display:swap swaps in Montserrat when loaded.
-
-          This tiny inline script (~150 bytes) executes in <0.1ms —
-          it does NOT cause TBT (no heavy computation, just DOM API call).
+          Async font loader — creates a <link rel="stylesheet">
+          for Google Fonts with font-display=swap.
+          Deferred as a fetch with fallback fonts to avoid render blocking.
         */}
         <script dangerouslySetInnerHTML={{
           __html:
+            "if(document.fonts){" +
+            "var links=['https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800&display=swap'];" +
+            "links.forEach(function(url){" +
+            "var l=document.createElement('link');" +
+            "l.rel='stylesheet';" +
+            "l.href=url;" +
+            "l.media='print';" +
+            "l.onload=function(){this.media='all'};" +
+            "document.head.appendChild(l)" +
+            "}" +
+            ")}" +
+            "else{" +
             "var l=document.createElement('link');" +
             "l.rel='stylesheet';" +
             "l.href='https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800&display=swap';" +
-            "document.head.appendChild(l);"
+            "document.head.appendChild(l)" +
+            "}"
         }} />
       </head>
       <body style={{ minHeight: "100%", display: "flex", flexDirection: "column" }}>

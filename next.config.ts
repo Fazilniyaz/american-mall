@@ -8,8 +8,11 @@ const nextConfig: NextConfig = {
     optimizePackageImports: [
       "d3-selection",
       "d3-shape",
+      "d3-scale",
+      "d3-axis",
       "three",
       "gsap",
+      "lodash",
     ],
   },
 
