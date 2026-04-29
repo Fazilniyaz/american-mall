@@ -5,6 +5,7 @@ import {
   useRef,
   memo,
 } from "react";
+import { useScroller } from "@/components/ScrollerContext";
 
 // ── Lazy GSAP + D3 loaders ─────────────────────────────────────────────────
 type GsapType = typeof import("gsap")["default"];
@@ -103,7 +104,7 @@ const PLACEMENTS = [
 // Root cause of the bug: one ScrollTrigger per bar + shared `triggered` flag
 // means only the FIRST bar's onEnter runs. Fixed by: single ScrollTrigger
 // that fires all bar animations together, staggered by delay.
-const ImpressionChart = memo(function ImpressionChart() {
+const ImpressionChart = memo(function ImpressionChart({ scrollerEl }: { scrollerEl: HTMLElement | null }) {
   const svgRef     = useRef<SVGSVGElement>(null);
   const triggered  = useRef(false);
 
@@ -223,6 +224,7 @@ const ImpressionChart = memo(function ImpressionChart() {
         trigger: el,
         start:   "top 80%",
         once:    true,
+        ...(scrollerEl ? { scroller: scrollerEl } : {}),
         onEnter: () => {
           if (triggered.current) return;
           triggered.current = true;
@@ -269,7 +271,7 @@ const ImpressionChart = memo(function ImpressionChart() {
           .forEach(st => st.kill());
       });
     };
-  }, []);
+  }, [scrollerEl]);
 
   return (
     <svg
@@ -281,7 +283,7 @@ const ImpressionChart = memo(function ImpressionChart() {
 });
 
 // ─── Placement treemap ────────────────────────────────────────────────────────
-const PlacementTreemap = memo(function PlacementTreemap() {
+const PlacementTreemap = memo(function PlacementTreemap({ scrollerEl }: { scrollerEl: HTMLElement | null }) {
   const containerRef = useRef<HTMLDivElement>(null);
   const triggered    = useRef(false);
 
@@ -357,6 +359,7 @@ const PlacementTreemap = memo(function PlacementTreemap() {
         trigger: el,
         start:   "top 82%",
         once:    true,
+        ...(scrollerEl ? { scroller: scrollerEl } : {}),
         onEnter: () => {
           if (triggered.current) return;
           triggered.current = true;
@@ -379,7 +382,7 @@ const PlacementTreemap = memo(function PlacementTreemap() {
         d3.select(el).select("svg").remove();
       });
     };
-  }, []);
+  }, [scrollerEl]);
 
   return (
     <div ref={containerRef} style={{ width:"100%", height:"280px" }}
@@ -539,6 +542,7 @@ function TierCard({ tier, index }: { tier: typeof TIERS[0]; index: number }) {
 // ─── Main section ─────────────────────────────────────────────────────────────
 export default function SponsorshipSection() {
   const sectionRef = useRef<HTMLElement>(null);
+  const scrollerEl = useScroller();
 
   useEffect(() => {
     let cancelled = false;
@@ -548,28 +552,28 @@ export default function SponsorshipSection() {
         gsap.fromTo(".spon-heading",
           { opacity:0, y:28 },
           { opacity:1, y:0, duration:0.9, ease:"power2.out",
-            scrollTrigger:{ trigger:".spon-heading", start:"top 85%" } }
+            scrollTrigger:{ trigger:".spon-heading", start:"top 85%", ...(scrollerEl ? { scroller: scrollerEl } : {}) } }
         );
         gsap.fromTo(".spon-hook-text",
           { opacity:0, y:36 },
           { opacity:1, y:0, duration:1, ease:"power2.out",
-            scrollTrigger:{ trigger:".spon-hook-text", start:"top 80%" } }
+            scrollTrigger:{ trigger:".spon-hook-text", start:"top 80%", ...(scrollerEl ? { scroller: scrollerEl } : {}) } }
         );
         gsap.fromTo(".spon-tier-card",
           { opacity:0, y:44 },
           { opacity:1, y:0, duration:0.75, ease:"power2.out", stagger:0.13,
-            scrollTrigger:{ trigger:".spon-tiers-grid", start:"top 82%" } }
+            scrollTrigger:{ trigger:".spon-tiers-grid", start:"top 82%", ...(scrollerEl ? { scroller: scrollerEl } : {}) } }
         );
         gsap.fromTo(".spon-tree-heading",
           { opacity:0, y:24 },
           { opacity:1, y:0, duration:0.8, ease:"power2.out",
-            scrollTrigger:{ trigger:".spon-tree-heading", start:"top 85%" } }
+            scrollTrigger:{ trigger:".spon-tree-heading", start:"top 85%", ...(scrollerEl ? { scroller: scrollerEl } : {}) } }
         );
       }, sectionRef);
       return () => ctx.revert();
     });
     return () => { cancelled = true; };
-  }, []);
+  }, [scrollerEl]);
 
   return (
     <section id="sponsorship" ref={sectionRef} style={{ background:"#050402", overflow:"hidden" }}>
@@ -627,7 +631,7 @@ export default function SponsorshipSection() {
           ))}
         </div>
 
-        <ImpressionChart />
+        <ImpressionChart scrollerEl={scrollerEl} />
 
         {/* Annotation below chart */}
         <div style={{ marginTop:"1.4rem", paddingLeft:"172px" }}>
@@ -667,7 +671,7 @@ export default function SponsorshipSection() {
           </p>
         </div>
         <div style={{ border:"1px solid rgba(201,168,76,0.1)", padding:"1px", background:"rgba(201,168,76,0.03)" }}>
-          <PlacementTreemap />
+          <PlacementTreemap scrollerEl={scrollerEl} />
         </div>
       </div>
 

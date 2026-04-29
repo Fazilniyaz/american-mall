@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef } from "react";
+import { useScroller } from "@/components/ScrollerContext";
 
 // D3 modules loaded lazily inside useEffect (no top-level import)
 type D3Select = typeof import("d3-selection");
@@ -245,10 +246,11 @@ function ArcCounter({ stat, index }: { stat: typeof STATS[0]; index: number }) {
 
 export default function NumbersSection() {
   const sectionRef = useRef<HTMLElement>(null);
+  const scrollerEl = useScroller();
 
   useEffect(() => {
     const el = sectionRef.current;
-    if (!el) return;
+    if (!el || !scrollerEl) return;
 
     // ── Heading animation — lazy GSAP ─────────────────────────────────────
     // GSAP + ScrollTrigger were previously imported at the MODULE TOP LEVEL.
@@ -273,7 +275,7 @@ export default function NumbersSection() {
               { opacity: 0, y: 30 },
               {
                 opacity: 1, y: 0, duration: 0.9, ease: "power2.out",
-                scrollTrigger: { trigger: ".numbers-heading", start: "top 85%" }
+                scrollTrigger: { trigger: ".numbers-heading", start: "top 85%", ...(scrollerEl ? { scroller: scrollerEl } : {}) }
               }
             );
           }, sectionRef);
@@ -285,7 +287,7 @@ export default function NumbersSection() {
     );
     observer.observe(el);
     return () => observer.disconnect();
-  }, []);
+  }, [scrollerEl]);
 
   return (
     <section

@@ -5,6 +5,7 @@ import {
     useRef,
     memo,
 } from "react";
+import { useScroller } from "@/components/ScrollerContext";
 
 // ── Lazy GSAP loader ──────────────────────────────────────────────────────
 type GsapType = typeof import("gsap")["default"];
@@ -523,7 +524,7 @@ function BrandCarousel() {
 }
 
 // ─── Video reel hero ──────────────────────────────────────────────────────────
-function EventReel() {
+function EventReel({ scrollerEl }: { scrollerEl: HTMLElement | null }) {
     const reelRef = useRef<HTMLDivElement>(null);
 
     useEffect(() => {
@@ -535,27 +536,27 @@ function EventReel() {
                     { opacity: 0, y: 20 },
                     {
                         opacity: 1, y: 0, duration: 0.8, ease: "power2.out",
-                        scrollTrigger: { trigger: ".reel-tagline", start: "top 80%" },
+                        scrollTrigger: { trigger: ".reel-tagline", start: "top 80%", ...(scrollerEl ? { scroller: scrollerEl } : {}) },
                     }
                 );
                 gsap.fromTo(".reel-headline",
                     { opacity: 0, y: 32 },
                     {
                         opacity: 1, y: 0, duration: 1, ease: "power2.out", delay: 0.15,
-                        scrollTrigger: { trigger: ".reel-headline", start: "top 80%" },
+                        scrollTrigger: { trigger: ".reel-headline", start: "top 80%", ...(scrollerEl ? { scroller: scrollerEl } : {}) },
                     }
                 );
                 gsap.fromTo(".reel-sub",
                     { opacity: 0, y: 20 },
                     {
                         opacity: 1, y: 0, duration: 0.8, ease: "power2.out", delay: 0.3,
-                        scrollTrigger: { trigger: ".reel-sub", start: "top 80%" },
+                        scrollTrigger: { trigger: ".reel-sub", start: "top 80%", ...(scrollerEl ? { scroller: scrollerEl } : {}) },
                     }
                 );
             }, reelRef);
         });
         return () => { cancelled = true; };
-    }, []);
+    }, [scrollerEl]);
 
     return (
         <div
@@ -684,6 +685,7 @@ function EventReel() {
 // ─── Main section ─────────────────────────────────────────────────────────────
 export default function EventsSection() {
     const sectionRef = useRef<HTMLElement>(null);
+    const scrollerEl = useScroller();
 
     useEffect(() => {
         let cancelled = false;
@@ -694,7 +696,7 @@ export default function EventsSection() {
                     { opacity: 0, y: 28 },
                     {
                         opacity: 1, y: 0, duration: 0.9, ease: "power2.out",
-                        scrollTrigger: { trigger: ".events-heading", start: "top 85%" },
+                        scrollTrigger: { trigger: ".events-heading", start: "top 85%", ...(scrollerEl ? { scroller: scrollerEl } : {}) },
                     }
                 );
                 gsap.fromTo(".evt-type-card",
@@ -702,20 +704,20 @@ export default function EventsSection() {
                     {
                         opacity: 1, y: 0,
                         duration: 0.75, ease: "power2.out", stagger: 0.13,
-                        scrollTrigger: { trigger: ".evt-types-grid", start: "top 82%" },
+                        scrollTrigger: { trigger: ".evt-types-grid", start: "top 82%", ...(scrollerEl ? { scroller: scrollerEl } : {}) },
                     }
                 );
                 gsap.fromTo(".carousel-heading",
                     { opacity: 0, y: 24 },
                     {
                         opacity: 1, y: 0, duration: 0.8, ease: "power2.out",
-                        scrollTrigger: { trigger: ".carousel-heading", start: "top 85%" },
+                        scrollTrigger: { trigger: ".carousel-heading", start: "top 85%", ...(scrollerEl ? { scroller: scrollerEl } : {}) },
                     }
                 );
             }, sectionRef);
         });
         return () => { cancelled = true; };
-    }, []);
+    }, [scrollerEl]);
 
     return (
         <section
@@ -783,7 +785,7 @@ export default function EventsSection() {
             </div>
 
             {/* ── Video reel hero ── */}
-            <EventReel />
+            <EventReel scrollerEl={scrollerEl} />
 
             {/* ── Past brand carousel ── */}
             <div style={{ paddingTop: "5rem", paddingBottom: "2rem" }}>

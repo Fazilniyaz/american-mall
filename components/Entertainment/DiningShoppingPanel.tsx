@@ -174,18 +174,18 @@ function ThumbStack({
 }
 
 // ─── Restaurant Panel ─────────────────────────────────────────────────────────
-function RestaurantPanel() {
+function RestaurantPanel({ scrollerEl }: { scrollerEl: HTMLElement | null }) {
     const panelRef = useRef<HTMLDivElement>(null);
     const triggered = useRef(false);
 
     useEffect(() => {
-        if (!panelRef.current) return;
+        if (!panelRef.current || !scrollerEl) return;
         let cancelled = false;
         const el = panelRef.current;
         loadGsap().then(({ gsap, ScrollTrigger }) => {
             if (cancelled || !el) return;
             ScrollTrigger.create({
-                trigger: el, start: "top 72%", once: true,
+                trigger: el, start: "top 72%", once: true, ...(scrollerEl ? { scroller: scrollerEl } : {}),
                 onEnter: () => {
                     if (triggered.current) return;
                     triggered.current = true;
@@ -208,7 +208,7 @@ function RestaurantPanel() {
                     .forEach(st => st.kill());
             });
         };
-    }, []);
+    }, [scrollerEl]);
 
     return (
         <div
@@ -405,18 +405,18 @@ function RestaurantPanel() {
 }
 
 // ─── Shopping Panel ───────────────────────────────────────────────────────────
-function ShoppingPanel() {
+function ShoppingPanel({ scrollerEl }: { scrollerEl: HTMLElement | null }) {
     const panelRef = useRef<HTMLDivElement>(null);
     const triggered = useRef(false);
 
     useEffect(() => {
-        if (!panelRef.current) return;
+        if (!panelRef.current || !scrollerEl) return;
         let cancelled = false;
         const el = panelRef.current;
         loadGsap().then(({ gsap, ScrollTrigger }) => {
             if (cancelled || !el) return;
             ScrollTrigger.create({
-                trigger: el, start: "top 72%", once: true,
+                trigger: el, start: "top 72%", once: true, ...(scrollerEl ? { scroller: scrollerEl } : {}),
                 onEnter: () => {
                     if (triggered.current) return;
                     triggered.current = true;
@@ -439,7 +439,7 @@ function ShoppingPanel() {
                     .forEach(st => st.kill());
             });
         };
-    }, []);
+    }, [scrollerEl]);
 
     return (
         <div
@@ -644,7 +644,7 @@ function ShoppingPanel() {
 }
 
 // ─── Main export — both panels combined ──────────────────────────────────────
-export default function DiningShoppingPanel() {
+export default function DiningShoppingPanel({ scrollerEl }: { scrollerEl: HTMLElement | null }) {
     return (
         <>
             {/* Thin separator */}
@@ -653,7 +653,7 @@ export default function DiningShoppingPanel() {
                 background: "linear-gradient(to right, transparent, rgba(201,168,76,0.15), transparent)",
             }} />
 
-            <RestaurantPanel />
+            <RestaurantPanel scrollerEl={scrollerEl} />
 
             {/* Separator between panels */}
             <div style={{
@@ -661,7 +661,7 @@ export default function DiningShoppingPanel() {
                 background: "linear-gradient(to right, transparent, rgba(201,168,76,0.1), transparent)",
             }} />
 
-            <ShoppingPanel />
+            <ShoppingPanel scrollerEl={scrollerEl} />
 
             <div style={{
                 height: "1px",

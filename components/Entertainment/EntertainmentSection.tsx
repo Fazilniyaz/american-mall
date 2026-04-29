@@ -9,6 +9,7 @@ import {
 import Image from "next/image";
 import EventsPanel from "./EventsPanel";
 import DiningShoppingPanel from "./DiningShoppingPanel";
+import { useScroller } from "@/components/ScrollerContext";
 
 // ── Lazy GSAP + D3 loaders (same pattern as WhosHereSection / SponsorshipSection)
 type GsapType = typeof import("gsap")["default"];
@@ -164,12 +165,12 @@ function PanelParticles({ color }: { color: string }) {
 }
 
 // ─── D3 footfall chart (lazy-loaded) ──────────────────────────────────────────
-const FootfallChart = memo(function FootfallChart() {
+const FootfallChart = memo(function FootfallChart({ scrollerEl }: { scrollerEl: HTMLElement | null }) {
   const svgRef = useRef<SVGSVGElement>(null);
   const triggered = useRef(false);
 
   useEffect(() => {
-    if (!svgRef.current) return;
+    if (!svgRef.current || !scrollerEl) return;
     const el = svgRef.current;
     let cancelled = false;
 
@@ -223,7 +224,7 @@ const FootfallChart = memo(function FootfallChart() {
         .append("circle").attr("cx", d => x(d.month) ?? 0).attr("cy", d => y(d.retail))
         .attr("r", 3).attr("fill", "#C9A84C").attr("opacity", 0);
       ScrollTrigger.create({
-        trigger: el, start: "top 85%", once: true,
+        trigger: el, start: "top 85%", once: true, ...(scrollerEl ? { scroller: scrollerEl } : {}),
         onEnter: () => {
           if (triggered.current) return;
           triggered.current = true;
@@ -240,7 +241,7 @@ const FootfallChart = memo(function FootfallChart() {
         ScrollTrigger.getAll().filter(st => st.vars.trigger === el).forEach(st => st.kill());
       });
     };
-  }, []);
+  }, [scrollerEl]);
 
   return (
     <svg ref={svgRef}
@@ -251,18 +252,18 @@ const FootfallChart = memo(function FootfallChart() {
 });
 
 // ─── Text panel (panels 2,3,4) ────────────────────────────────────────────────
-function TextPanel({ panel, index }: { panel: typeof TEXT_PANELS[0]; index: number }) {
+function TextPanel({ panel, index, scrollerEl }: { panel: typeof TEXT_PANELS[0]; index: number; scrollerEl: HTMLElement | null }) {
   const panelRef = useRef<HTMLDivElement>(null);
   const triggered = useRef(false);
 
   useEffect(() => {
-    if (!panelRef.current) return;
+    if (!panelRef.current || !scrollerEl) return;
     let cancelled = false;
     const el = panelRef.current;
     loadGsap().then(({ gsap, ScrollTrigger }) => {
       if (cancelled || !el) return;
       ScrollTrigger.create({
-        trigger: el, start: "top 72%", once: true,
+        trigger: el, start: "top 72%", once: true, ...(scrollerEl ? { scroller: scrollerEl } : {}),
         onEnter: () => {
           if (triggered.current) return;
           triggered.current = true;
@@ -280,7 +281,7 @@ function TextPanel({ panel, index }: { panel: typeof TEXT_PANELS[0]; index: numb
         ScrollTrigger.getAll().filter(st => st.vars.trigger === el).forEach(st => st.kill());
       });
     };
-  }, [index]);
+  }, [index, scrollerEl]);
 
   return (
     <div ref={panelRef} style={{
@@ -350,19 +351,19 @@ function TextPanel({ panel, index }: { panel: typeof TEXT_PANELS[0]; index: numb
 }
 
 // ─── Aquarium Panel ───────────────────────────────────────────────────────────
-function AquariumPanel() {
+function AquariumPanel({ scrollerEl }: { scrollerEl: HTMLElement | null }) {
   const panelRef = useRef<HTMLDivElement>(null);
   const triggered = useRef(false);
 
   useEffect(() => {
-    if (!panelRef.current) return;
+    if (!panelRef.current || !scrollerEl) return;
     let cancelled = false;
     const el = panelRef.current;
 
     loadGsap().then(({ gsap, ScrollTrigger }) => {
       if (cancelled || !el) return;
       ScrollTrigger.create({
-        trigger: el, start: "top 72%", once: true,
+        trigger: el, start: "top 72%", once: true, ...(scrollerEl ? { scroller: scrollerEl } : {}),
         onEnter: () => {
           if (triggered.current) return;
           triggered.current = true;
@@ -384,7 +385,7 @@ function AquariumPanel() {
         ScrollTrigger.getAll().filter(st => st.vars.trigger === el).forEach(st => st.kill());
       });
     };
-  }, []);
+  }, [scrollerEl]);
 
   return (
     <div ref={panelRef} style={{
@@ -625,19 +626,19 @@ function AquariumPanel() {
 }
 
 // ─── Nickelodeon Panel ────────────────────────────────────────────────────────
-function NickelodeonPanel() {
+function NickelodeonPanel({ scrollerEl }: { scrollerEl: HTMLElement | null }) {
   const panelRef = useRef<HTMLDivElement>(null);
   const triggered = useRef(false);
 
   useEffect(() => {
-    if (!panelRef.current) return;
+    if (!panelRef.current || !scrollerEl) return;
     let cancelled = false;
     const el = panelRef.current;
 
     loadGsap().then(({ gsap, ScrollTrigger }) => {
       if (cancelled || !el) return;
       ScrollTrigger.create({
-        trigger: el, start: "top 72%", once: true,
+        trigger: el, start: "top 72%", once: true, ...(scrollerEl ? { scroller: scrollerEl } : {}),
         onEnter: () => {
           if (triggered.current) return;
           triggered.current = true;
@@ -659,7 +660,7 @@ function NickelodeonPanel() {
         ScrollTrigger.getAll().filter(st => st.vars.trigger === el).forEach(st => st.kill());
       });
     };
-  }, []);
+  }, [scrollerEl]);
 
   return (
     <div ref={panelRef} style={{
@@ -842,9 +843,11 @@ function NickelodeonPanel() {
 export default function EntertainmentSection() {
   const sectionRef = useRef<HTMLElement>(null);
   const [, setIsMobile] = useState(false);
+  const scrollerEl = useScroller();
 
   useEffect(() => {
     setIsMobile(window.innerWidth < 768);
+    if (!scrollerEl) return;
     let ctx: { revert: () => void } | null = null;
     let cancelled = false;
 
@@ -855,14 +858,14 @@ export default function EntertainmentSection() {
           { opacity: 0, y: 28 },
           {
             opacity: 1, y: 0, duration: 0.9, ease: "power2.out",
-            scrollTrigger: { trigger: ".ent-heading", start: "top 85%" }
+            scrollTrigger: { trigger: ".ent-heading", start: "top 85%", ...(scrollerEl ? { scroller: scrollerEl } : {}) }
           }
         );
         gsap.fromTo(".ent-chart-head",
           { opacity: 0, y: 24 },
           {
             opacity: 1, y: 0, duration: 0.8, ease: "power2.out",
-            scrollTrigger: { trigger: ".ent-chart-head", start: "top 85%" }
+            scrollTrigger: { trigger: ".ent-chart-head", start: "top 85%", ...(scrollerEl ? { scroller: scrollerEl } : {}) }
           }
         );
       }, sectionRef);
@@ -872,7 +875,7 @@ export default function EntertainmentSection() {
       cancelled = true;
       ctx?.revert();
     };
-  }, []);
+  }, [scrollerEl]);
 
   return (
     <section id="entertainment" ref={sectionRef}
@@ -909,16 +912,16 @@ export default function EntertainmentSection() {
 
       {/* All 4 panels */}
       <div style={{ display: "flex", flexDirection: "column" }}>
-        <NickelodeonPanel />
-        <AquariumPanel />
-        <DiningShoppingPanel />
+        <NickelodeonPanel scrollerEl={scrollerEl} />
+        <AquariumPanel scrollerEl={scrollerEl} />
+        <DiningShoppingPanel scrollerEl={scrollerEl} />
         {/* {TEXT_PANELS.map((panel, i) => (
           <TextPanel key={panel.id} panel={panel} index={i} />
         ))} */}
       </div>
 
       {/* Events panel — full image-driven component */}
-      <EventsPanel />
+      <EventsPanel scrollerEl={scrollerEl} />
 
       {/* Footfall chart */}
       <div style={{ padding: "6rem clamp(1.5rem,6vw,6rem)", maxWidth: "900px", margin: "0 auto" }}>
@@ -941,7 +944,7 @@ export default function EntertainmentSection() {
             fontFamily: "var(--font-montserrat)", margin: 0, lineHeight: 1.6,
           }}>Monthly visitor data (millions) — retail vs entertainment correlation</p>
         </div>
-        <FootfallChart />
+        <FootfallChart scrollerEl={scrollerEl} />
         <div style={{ display: "flex", gap: "2rem", marginTop: "1.2rem", flexWrap: "wrap" }}>
           {[
             { color: "#C9A84C", dash: false, label: "Retail footfall" },

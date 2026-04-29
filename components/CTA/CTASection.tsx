@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef } from "react";
+import { useScroller } from "@/components/ScrollerContext";
 
 // ── Lazy GSAP loader ─────────────────────────────────────────────────────────────
 type GsapType = typeof import("gsap")["default"];
@@ -182,6 +183,7 @@ function DeckActionButton({
 
 export default function CTASection() {
   const sectionRef = useRef<HTMLElement>(null);
+  const scrollerEl = useScroller();
 
   const handleDownloadDeck = useCallback(() => {
     const summary = [
@@ -228,7 +230,7 @@ export default function CTASection() {
             y: 0,
             duration: 0.9,
             ease: "power2.out",
-            scrollTrigger: { trigger: ".cta-heading", start: "top 85%" },
+            scrollTrigger: { trigger: ".cta-heading", start: "top 85%", ...(scrollerEl ? { scroller: scrollerEl } : {}) },
           }
         );
         gsap.fromTo(
@@ -240,7 +242,7 @@ export default function CTASection() {
             duration: 0.75,
             ease: "power2.out",
             stagger: 0.14,
-            scrollTrigger: { trigger: ".cta-paths-grid", start: "top 82%" },
+            scrollTrigger: { trigger: ".cta-paths-grid", start: "top 82%", ...(scrollerEl ? { scroller: scrollerEl } : {}) },
           }
         );
         gsap.fromTo(
@@ -252,7 +254,7 @@ export default function CTASection() {
             duration: 0.8,
             ease: "power2.out",
             stagger: 0.12,
-            scrollTrigger: { trigger: ".cta-actions-grid", start: "top 82%" },
+            scrollTrigger: { trigger: ".cta-actions-grid", start: "top 82%", ...(scrollerEl ? { scroller: scrollerEl } : {}) },
           }
         );
         gsap.fromTo(
@@ -262,7 +264,7 @@ export default function CTASection() {
             opacity: 1,
             duration: 1.4,
             ease: "power2.out",
-            scrollTrigger: { trigger: ".cta-watermark", start: "top 90%" },
+            scrollTrigger: { trigger: ".cta-watermark", start: "top 90%", ...(scrollerEl ? { scroller: scrollerEl } : {}) },
           }
         );
       }, sectionRef);
@@ -272,7 +274,7 @@ export default function CTASection() {
       cancelled = true;
       ctx?.revert();
     };
-  }, []);
+  }, [scrollerEl]);
 
   return (
     <section

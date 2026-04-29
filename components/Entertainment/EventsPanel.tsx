@@ -513,7 +513,7 @@ const EventCard = memo(function EventCard({
 });
 
 // ─── Hero Slideshow ───────────────────────────────────────────────────────────
-function EventsHero() {
+function EventsHero({ scrollerEl }: { scrollerEl: HTMLElement | null }) {
   const [active, setActive] = useState(0);
   const [entered, setEntered] = useState(false);
   const heroRef = useRef<HTMLDivElement>(null);
@@ -529,7 +529,7 @@ function EventsHero() {
 
   // Entrance animation
   useEffect(() => {
-    if (!heroRef.current) return;
+    if (!heroRef.current || !scrollerEl) return;
     let cancelled = false;
     loadGsap().then(({ gsap, ScrollTrigger }) => {
       if (cancelled || !heroRef.current) return;
@@ -537,6 +537,7 @@ function EventsHero() {
         trigger: heroRef.current,
         start: "top 80%",
         once: true,
+        ...(scrollerEl ? { scroller: scrollerEl } : {}),
         onEnter: () => {
           setEntered(true);
           gsap.fromTo(".evh-cat", { opacity: 0, y: 20 }, { opacity: 1, y: 0, duration: 0.6, ease: "power2.out" });
@@ -553,7 +554,7 @@ function EventsHero() {
         ScrollTrigger.getAll().filter(st => st.vars.trigger === heroRef.current).forEach(st => st.kill());
       });
     };
-  }, []);
+  }, [scrollerEl]);
 
   const slide = HERO_SLIDES[active];
 
@@ -711,12 +712,12 @@ function EventsHero() {
 }
 
 // ─── Tech events section ──────────────────────────────────────────────────────
-function TechEventsSection() {
+function TechEventsSection({ scrollerEl }: { scrollerEl: HTMLElement | null }) {
   const secRef = useRef<HTMLDivElement>(null);
   const triggered = useRef(false);
 
   useEffect(() => {
-    if (!secRef.current) return;
+    if (!secRef.current || !scrollerEl) return;
     let cancelled = false;
     loadGsap().then(({ gsap, ScrollTrigger }) => {
       if (cancelled || !secRef.current) return;
@@ -724,6 +725,7 @@ function TechEventsSection() {
         trigger: secRef.current,
         start: "top 80%",
         once: true,
+        ...(scrollerEl ? { scroller: scrollerEl } : {}),
         onEnter: () => {
           if (triggered.current) return;
           triggered.current = true;
@@ -741,7 +743,7 @@ function TechEventsSection() {
         ScrollTrigger.getAll().filter(st => st.vars.trigger === secRef.current).forEach(st => st.kill());
       });
     };
-  }, []);
+  }, [scrollerEl]);
 
   return (
     <div
@@ -809,12 +811,12 @@ function TechEventsSection() {
 }
 
 // ─── Entertainment + Gaming section ──────────────────────────────────────────
-function EntGamingSection() {
+function EntGamingSection({ scrollerEl }: { scrollerEl: HTMLElement | null }) {
   const secRef = useRef<HTMLDivElement>(null);
   const triggered = useRef(false);
 
   useEffect(() => {
-    if (!secRef.current) return;
+    if (!secRef.current || !scrollerEl) return;
     let cancelled = false;
     loadGsap().then(({ gsap, ScrollTrigger }) => {
       if (cancelled || !secRef.current) return;
@@ -822,6 +824,7 @@ function EntGamingSection() {
         trigger: secRef.current,
         start: "top 80%",
         once: true,
+        ...(scrollerEl ? { scroller: scrollerEl } : {}),
         onEnter: () => {
           if (triggered.current) return;
           triggered.current = true;
@@ -839,7 +842,7 @@ function EntGamingSection() {
         ScrollTrigger.getAll().filter(st => st.vars.trigger === secRef.current).forEach(st => st.kill());
       });
     };
-  }, []);
+  }, [scrollerEl]);
 
   return (
     <div
@@ -942,7 +945,7 @@ function EntGamingSection() {
 }
 
 // ─── Main export ──────────────────────────────────────────────────────────────
-export default function EventsPanel() {
+export default function EventsPanel({ scrollerEl }: { scrollerEl: HTMLElement | null }) {
   return (
     <div id="events-panel" style={{ background: "#050402", overflow: "hidden" }}>
       {/* Separator */}
@@ -952,10 +955,10 @@ export default function EventsPanel() {
       }} />
 
       {/* 1 — Hero slideshow */}
-      <EventsHero />
+      <EventsHero scrollerEl={scrollerEl} />
 
       {/* 2 — Tech events */}
-      <TechEventsSection />
+      <TechEventsSection scrollerEl={scrollerEl} />
 
       {/* Divider */}
       <div style={{
@@ -965,7 +968,7 @@ export default function EventsPanel() {
       }} />
 
       {/* 3 — Entertainment & Gaming */}
-      <EntGamingSection />
+      <EntGamingSection scrollerEl={scrollerEl} />
 
       {/* Bottom divider */}
       <div style={{

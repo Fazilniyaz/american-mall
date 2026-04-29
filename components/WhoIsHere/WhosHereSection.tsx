@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { useScroller } from "@/components/ScrollerContext";
 
 // ─── Brand ticker data ────────────────────────────────────────────────────────
 const TICKER_ROW_1 = [
@@ -433,10 +434,11 @@ export default function WhosHereSection() {
   // GSAP + ScrollTrigger are ~30 KB and run setup code on import.
   const sectionRef = useRef<HTMLElement>(null);
   const [inView, setInView] = useState(false);
+  const scrollerEl = useScroller();
 
   useEffect(() => {
     const el = sectionRef.current;
-    if (!el) return;
+    if (!el || !scrollerEl) return;
 
     const observer = new IntersectionObserver(
       ([entry]) => {
@@ -478,7 +480,7 @@ export default function WhosHereSection() {
             y: 0,
             duration: 0.9,
             ease: "power2.out",
-            scrollTrigger: { trigger: ".whos-heading", start: "top 85%" },
+            scrollTrigger: { trigger: ".whos-heading", start: "top 85%", ...(scrollerEl ? { scroller: scrollerEl } : {}) },
           }
         );
 
@@ -491,7 +493,7 @@ export default function WhosHereSection() {
             duration: 0.75,
             ease: "power2.out",
             stagger: 0.12,
-            scrollTrigger: { trigger: ".brand-cards-grid", start: "top 82%" },
+            scrollTrigger: { trigger: ".brand-cards-grid", start: "top 82%", ...(scrollerEl ? { scroller: scrollerEl } : {}) },
           }
         );
 
@@ -503,7 +505,7 @@ export default function WhosHereSection() {
             y: 0,
             duration: 0.7,
             ease: "power2.out",
-            scrollTrigger: { trigger: ".whos-cta", start: "top 90%" },
+            scrollTrigger: { trigger: ".whos-cta", start: "top 90%", ...(scrollerEl ? { scroller: scrollerEl } : {}) },
           }
         );
       }, sectionRef);
@@ -512,7 +514,7 @@ export default function WhosHereSection() {
     return () => {
       ctx?.revert();
     };
-  }, [inView]);
+  }, [inView, scrollerEl]);
 
   return (
     <section

@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState, useCallback } from "react";
 import dynamic from "next/dynamic";
+import { ScrollerContext } from "@/components/ScrollerContext";
 import Image from "next/image";
 
 // ── All existing components — unchanged ──────────────────────────────────
@@ -46,6 +47,7 @@ export default function DeckShell() {
   const [hoveredDot, setHoveredDot]   = useState<number | null>(null);
   const [soundOn, setSoundOn]         = useState(false);
   const [splashIndex, setSplashIndex] = useState(0);
+  const [scrollerEl, setScrollerEl] = useState<HTMLElement | null>(null);
 
   const videoRef = useRef<HTMLVideoElement>(null);
   const animTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -674,8 +676,13 @@ if (phase === "splash") {
             zIndex: 2,
           }}
         >
-          <div style={{ width: "100%", height: "100%", overflow: "auto" }}>
-            {renderSlide(current)}
+          <div
+            ref={(el) => { if (el && el !== scrollerEl) setScrollerEl(el); }}
+            style={{ width: "100%", height: "100%", overflow: "auto" }}
+          >
+            <ScrollerContext.Provider value={scrollerEl}>
+              {renderSlide(current)}
+            </ScrollerContext.Provider>
           </div>
         </div>
       </div>
