@@ -3,21 +3,23 @@
 import { useEffect, useRef, useState, useCallback } from "react";
 import dynamic from "next/dynamic";
 import { ScrollerContext } from "@/components/ScrollerContext";
-import HeroSection from "@/components/Hero/HeroSection";
 
-// ── Phase components ─────────────────────────────────────────────────
-import SplashPhase    from "./SplashPhase";
-import IntroVideoPhase from "./IntroVideoPhase";
-import HubPhase       from "./HubPhase";
+// ── Phase components — dynamic + ssr:false ────────────────────────────
+// Previously statically imported, these ran JS during initial page parse
+// contributing ~150ms to TBT. Now code-split and client-only.
+const SplashPhase      = dynamic(() => import("./SplashPhase"),     { ssr: false });
+const IntroVideoPhase  = dynamic(() => import("./IntroVideoPhase"), { ssr: false });
+const HubPhase         = dynamic(() => import("./HubPhase"),        { ssr: false });
+const HeroSection      = dynamic(() => import("@/components/Hero/HeroSection"), { ssr: false });
 
-// ── Deck slides — lazy loaded ────────────────────────────────────────
-const NumbersSection       = dynamic(() => import("@/components/Numbers/NumbersSection"));
-const WhosHereSection      = dynamic(() => import("@/components/WhoIsHere/WhosHereSection"));
-const MallMapSection       = dynamic(() => import("@/components/MallMap/MallMapSection"));
-const EntertainmentSection = dynamic(() => import("@/components/Entertainment/EntertainmentSection"));
-const EventsSection        = dynamic(() => import("@/components/Event/EventsSection"));
-const SponsorshipSection   = dynamic(() => import("@/components/Sponsorship/SponsorshipSection"));
-const CTASection           = dynamic(() => import("@/components/CTA/CTASection"));
+// ── Deck slides — lazy loaded + ssr:false ─────────────────────────────
+const NumbersSection       = dynamic(() => import("@/components/Numbers/NumbersSection"),       { ssr: false });
+const WhosHereSection      = dynamic(() => import("@/components/WhoIsHere/WhosHereSection"),    { ssr: false });
+const MallMapSection       = dynamic(() => import("@/components/MallMap/MallMapSection"),       { ssr: false });
+const EntertainmentSection = dynamic(() => import("@/components/Entertainment/EntertainmentSection"), { ssr: false });
+const EventsSection        = dynamic(() => import("@/components/Event/EventsSection"),          { ssr: false });
+const SponsorshipSection   = dynamic(() => import("@/components/Sponsorship/SponsorshipSection"), { ssr: false });
+const CTASection           = dynamic(() => import("@/components/CTA/CTASection"),               { ssr: false });
 
 const SLIDES = [
   { id: "intro",         label: "Intro",        chapter: "01" },

@@ -96,6 +96,10 @@ function PanelParticles({ color }: { color: string }) {
   useEffect(() => {
     const el = mountRef.current;
     if (!el) return;
+    // Skip Three.js initialization on mobile — particles are already
+    // hidden via CSS (.ent-particles-wrap display:none on <768px).
+    // This saves ~100ms of main-thread work from Three.js parsing.
+    if (window.innerWidth < 768) return;
     let cancelled = false;
 
     import("three").then((THREE) => {
@@ -677,7 +681,7 @@ function NickelodeonPanel({ scrollerEl }: { scrollerEl: HTMLElement | null }) {
           <img
             src="/photos/nickelodeon-park.jpg"
             alt="Nickelodeon Universe — pirate ship atrium at Mall of America"
-            loading="eager"
+            loading="lazy"
             decoding="async"
             style={{
               width: "100%",

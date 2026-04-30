@@ -24,7 +24,7 @@ export default function HubPhase({ onEnterDeck }: Props) {
     }}>
 
       {/* Background video */}
-      <video autoPlay muted loop playsInline
+      <video autoPlay muted loop playsInline preload="none"
         src="/videos/videoplayback.mp4"
         style={{
           position: "absolute", inset: 0,

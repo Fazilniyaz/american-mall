@@ -90,7 +90,7 @@ export default function IntroVideoPhase({ onSkip }: Props) {
         <video
           ref={videoRef}
           autoPlay muted={!soundOn}
-          loop={false} playsInline controls
+          loop={false} playsInline controls preload="none"
           src="/videos/videoplayback.mp4"
           onEnded={onSkip}
           style={{

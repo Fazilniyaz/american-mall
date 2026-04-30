@@ -73,8 +73,8 @@ export default function HeroSection() {
           alt="Mall of America interior"
           fill
           priority
-          sizes="(max-width: 640px) 100vw, (max-width: 768px) 100vw, 100vw"
-          quality={60}
+          sizes="100vw"
+          quality={55}
           style={{
             objectFit: "cover",
           }}

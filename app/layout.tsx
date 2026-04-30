@@ -44,30 +44,27 @@ export default function RootLayout({
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
 
         {/*
-          Async font loader — creates a <link rel="stylesheet">
-          for Google Fonts with font-display=swap.
-          Deferred as a fetch with fallback fonts to avoid render blocking.
+          Non-blocking font loader — uses a deferred inline script.
+          The `defer` attribute makes this non-parser-blocking (unlike the
+          original which had no defer and blocked HTML parsing).
+          The script creates a <link> with media="print" + onload swap,
+          the standard Google-recommended non-blocking font pattern.
         */}
-        <script dangerouslySetInnerHTML={{
-          __html:
-            "if(document.fonts){" +
-            "var links=['https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800&display=swap'];" +
-            "links.forEach(function(url){" +
-            "var l=document.createElement('link');" +
-            "l.rel='stylesheet';" +
-            "l.href=url;" +
-            "l.media='print';" +
-            "l.onload=function(){this.media='all'};" +
-            "document.head.appendChild(l)" +
-            "}" +
-            ")}" +
-            "else{" +
-            "var l=document.createElement('link');" +
-            "l.rel='stylesheet';" +
-            "l.href='https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800&display=swap';" +
-            "document.head.appendChild(l)" +
-            "}"
-        }} />
+        <script
+          defer
+          dangerouslySetInnerHTML={{
+            __html:
+              "var l=document.createElement('link');" +
+              "l.rel='stylesheet';" +
+              "l.href='https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800&display=swap';" +
+              "l.media='print';" +
+              "l.onload=function(){this.media='all'};" +
+              "document.head.appendChild(l)"
+          }}
+        />
+        <noscript>
+          <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800&display=swap" />
+        </noscript>
       </head>
       <body style={{ minHeight: "100%", display: "flex", flexDirection: "column" }}>
         {children}

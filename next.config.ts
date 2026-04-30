@@ -7,13 +7,9 @@ const nextConfig: NextConfig = {
   experimental: {
     inlineCss: true,
     optimizePackageImports: [
-      "d3-selection",
-      "d3-shape",
-      "d3-scale",
-      "d3-axis",
+      "d3",
       "three",
       "gsap",
-      "lodash",
     ],
   },
 

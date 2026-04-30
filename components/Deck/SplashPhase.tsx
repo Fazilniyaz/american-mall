@@ -3,6 +3,17 @@
 import { useEffect, useState } from "react";
 import Image from "next/image";
 
+// Pre-computed tick mark coordinates — avoids recalculating
+// Math.cos/sin during render (moved from IIFE to module scope)
+const TICK_MARKS = Array.from({ length: 12 }).map((_, i) => {
+  const angle = (i / 12) * Math.PI * 2 - Math.PI / 2;
+  return {
+    x1: (100 + Math.cos(angle) * 82).toFixed(2),
+    y1: (100 + Math.sin(angle) * 82).toFixed(2),
+    x2: (100 + Math.cos(angle) * 74).toFixed(2),
+    y2: (100 + Math.sin(angle) * 74).toFixed(2),
+  };
+});
 const SPLASH_IMAGES = [
   "/photos/splash-7.webp",
   // "/photos/splash-4.webp",
@@ -48,7 +59,7 @@ export default function SplashPhase({ onEnter }: Props) {
         }}>
           <Image
             src={src} alt="" fill priority={i === 0}
-            sizes="100vw" quality={75}
+            sizes="100vw" quality={65}
             style={{ objectFit: "cover", objectPosition: "center" }}
           />
         </div>
@@ -119,25 +130,17 @@ export default function SplashPhase({ onEnter }: Props) {
               fill="url(#sp-gold)" opacity="0.85"
             />
             <circle cx="100" cy="100" r="14" fill="#050402" opacity="0.75" />
-              {(() => {
-                const format = (value: number) => value.toFixed(2);
-
-                return Array.from({ length: 12 }).map((_, i) => {
-                  const angle = (i / 12) * Math.PI * 2 - Math.PI / 2;
-
-                  return (
+              {TICK_MARKS.map((t, i) => (
                     <line
                       key={i}
-                      x1={format(100 + Math.cos(angle) * 82)}
-                      y1={format(100 + Math.sin(angle) * 82)}
-                      x2={format(100 + Math.cos(angle) * 74)}
-                      y2={format(100 + Math.sin(angle) * 74)}
+                      x1={t.x1}
+                      y1={t.y1}
+                      x2={t.x2}
+                      y2={t.y2}
                       stroke="rgba(201,168,76,0.25)"
                       strokeWidth="1"
                     />
-                  );
-                });
-              })()}
+                  ))}
           </svg>
 
           {/* Glow */}
@@ -179,7 +182,7 @@ export default function SplashPhase({ onEnter }: Props) {
             letterSpacing: "0.38em",
             textTransform: "uppercase",
             fontFamily: "var(--font-montserrat)",
-            fontWeight: 500, margin: 0,
+            fontWeight: 700, margin: 0,
           }}>
             Bloomington · Minnesota
           </p>
