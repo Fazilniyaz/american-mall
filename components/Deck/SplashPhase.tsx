@@ -4,11 +4,12 @@ import { useEffect, useState } from "react";
 import Image from "next/image";
 
 const SPLASH_IMAGES = [
-  "/photos/splash-4.webp",
-  "/photos/splash-5.webp",
-  "/photos/splash-6.webp",
-  "/photos/splash-2.webp",
-  "/photos/splash-3.webp",
+  "/photos/splash-7.webp",
+  // "/photos/splash-4.webp",
+  // "/photos/splash-5.webp",
+  // "/photos/splash-6.webp",
+  // "/photos/splash-2.webp",
+  // "/photos/splash-3.webp",
 ];
 
 interface Props {
