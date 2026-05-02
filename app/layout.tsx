@@ -39,6 +39,9 @@ export default function RootLayout({
           ].join("")
         }} />
 
+        {/* Preload LCP image — ensures fastest possible paint */}
+        <link rel="preload" href="/photos/splash-7.webp" as="image" type="image/webp" fetchPriority="high" />
+
         {/* Preconnect to Google Fonts CDN — NOW actually used */}
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />

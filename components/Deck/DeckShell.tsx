@@ -5,8 +5,120 @@ import { useRouter, usePathname } from "next/navigation";
 import dynamic from "next/dynamic";
 import { ScrollerContext } from "@/components/ScrollerContext";
 
+// ── Server-rendered splash fallback ───────────────────────────────────
+// This is what the server sends as HTML — it gives Lighthouse an LCP
+// element (the background image + visible h1). When the SplashPhase JS
+// chunk loads on the client, it seamlessly replaces this static version.
+function SplashFallback() {
+  return (
+    <div style={{
+      position: "fixed", inset: 0, background: "#050402",
+      display: "flex", flexDirection: "column",
+      alignItems: "center", justifyContent: "center",
+      zIndex: 1000, overflow: "hidden",
+    }}>
+      {/* LCP image — server-rendered, high priority */}
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img
+        src="/photos/splash-7.webp"
+        alt=""
+        fetchPriority="high"
+        decoding="sync"
+        style={{
+          position: "absolute", inset: 0,
+          width: "100%", height: "100%",
+          objectFit: "cover", objectPosition: "center",
+          zIndex: 0,
+        }}
+      />
+      {/* Dark overlay */}
+      <div style={{ position: "absolute", inset: 0, background: "rgba(5,4,2,0.62)", zIndex: 1 }} />
+      {/* Vignette */}
+      <div style={{ position: "absolute", inset: 0, boxShadow: "inset 0 0 200px rgba(0,0,0,0.85)", zIndex: 1, pointerEvents: "none" }} />
+      {/* Center content — fully visible (no animation gates) */}
+      <div style={{
+        position: "relative", zIndex: 2,
+        display: "flex", flexDirection: "column",
+        alignItems: "center",
+        gap: "clamp(1rem, 2.5vh, 1.8rem)",
+        padding: "0 1rem",
+      }}>
+        {/* Logo SVG */}
+        <div style={{ position: "relative" }}>
+          <svg viewBox="0 0 200 200" width="clamp(90px, 14vw, 150px)" height="clamp(90px, 14vw, 150px)" style={{ display: "block" }}>
+            <defs>
+              <linearGradient id="sp-gold-fb" x1="0%" y1="0%" x2="100%" y2="100%">
+                <stop offset="0%" stopColor="#F0D988" />
+                <stop offset="50%" stopColor="#C9A84C" />
+                <stop offset="100%" stopColor="#8A6820" />
+              </linearGradient>
+            </defs>
+            <circle cx="100" cy="100" r="78" fill="none" stroke="url(#sp-gold-fb)" strokeWidth="1.5" opacity="0.7" />
+            <circle cx="100" cy="100" r="72" fill="rgba(201,168,76,0.04)" />
+            <polygon points="100,36 164,100 100,164 36,100" fill="none" stroke="url(#sp-gold-fb)" strokeWidth="1.8" opacity="0.9" />
+            <polygon points="100,58 142,100 100,142 58,100" fill="url(#sp-gold-fb)" opacity="0.85" />
+            <circle cx="100" cy="100" r="14" fill="#050402" opacity="0.75" />
+          </svg>
+          <div style={{
+            position: "absolute", top: "50%", left: "50%",
+            transform: "translate(-50%, -50%)",
+            width: "130%", height: "130%", borderRadius: "50%",
+            background: "radial-gradient(circle, rgba(201,168,76,0.1) 0%, transparent 65%)",
+            pointerEvents: "none", zIndex: -1,
+          }} />
+        </div>
+        {/* Brand text — VISIBLE for LCP */}
+        <div style={{ textAlign: "center" }}>
+          <p style={{
+            color: "rgba(201,168,76,0.65)",
+            fontSize: "clamp(0.5rem, 1.2vw, 0.65rem)",
+            letterSpacing: "0.5em", textTransform: "uppercase",
+            fontFamily: "var(--font-montserrat)", fontWeight: 600,
+            margin: "0 0 0.4rem",
+          }}>
+            America&apos;s Most Iconic
+          </p>
+          <h1 style={{
+            color: "#ffffff",
+            fontSize: "clamp(1.2rem, 3.5vw, 2rem)",
+            fontWeight: 800, letterSpacing: "0.18em",
+            textTransform: "uppercase",
+            fontFamily: "var(--font-montserrat)",
+            margin: "0 0 0.25rem",
+            textShadow: "0 0 40px rgba(201,168,76,0.2)",
+          }}>
+            Mall of America
+          </h1>
+          <p style={{
+            color: "rgba(201,168,76,0.4)",
+            fontSize: "clamp(0.45rem, 1vw, 0.58rem)",
+            letterSpacing: "0.38em", textTransform: "uppercase",
+            fontFamily: "var(--font-montserrat)", fontWeight: 700, margin: 0,
+          }}>
+            Bloomington · Minnesota
+          </p>
+        </div>
+        {/* Enter button placeholder */}
+        <div style={{
+          background: "#C9A84C", color: "#000",
+          padding: "clamp(0.6rem, 1.5vh, 0.85rem) clamp(2rem, 5vw, 3.5rem)",
+          fontSize: "clamp(0.6rem, 1.2vw, 0.72rem)",
+          fontWeight: 800, letterSpacing: "0.35em", textTransform: "uppercase",
+          fontFamily: "var(--font-montserrat)",
+          clipPath: "polygon(10px 0%, 100% 0%, calc(100% - 10px) 100%, 0% 100%)",
+        }}>
+          Enter
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ── Phase components ──────────────────────────────────────────────────
-const SplashPhase = dynamic(() => import("./SplashPhase"), { ssr: false });
+const SplashPhase = dynamic(() => import("./SplashPhase"), {
+  ssr: false,
+  loading: () => <SplashFallback />,
+});
 const IntroVideoPhase = dynamic(() => import("./IntroVideoPhase"), { ssr: false });
 const HubPhase = dynamic(() => import("./HubPhase"), { ssr: false });
 
