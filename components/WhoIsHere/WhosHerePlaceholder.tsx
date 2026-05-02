@@ -1,13 +1,6 @@
 "use client";
-
-import { useEffect, useRef, useState, useCallback } from "react";
+import { useRef, useState, useCallback, useEffect } from "react";
 import { useRouter } from "next/navigation";
-
-let _gsap: typeof import("gsap")["default"] | null = null;
-const loadGsap = () =>
-  _gsap
-    ? Promise.resolve(_gsap)
-    : import("gsap").then(m => { _gsap = m.default; return _gsap!; });
 
 export default function WhosHerePage() {
   const router = useRouter();
@@ -15,36 +8,14 @@ export default function WhosHerePage() {
   const [soundOn, setSoundOn] = useState(false);
   const [videoReady, setVideoReady] = useState(false);
 
-  // ── Entrance animation ──────────────────────────────────────────────
+  // CSS animations are applied directly via style tags to avoid GSAP main-thread blocking when the 4MB video decodes.
   useEffect(() => {
+    // Delay video src injection slightly so initial render/CSS animations start smoothly
     const t = setTimeout(() => {
-      loadGsap().then(gsap => {
-        gsap.fromTo(".wh-tag",
-          { opacity: 0, y: 16 },
-          { opacity: 1, y: 0, duration: 0.6, ease: "power2.out" }
-        );
-        gsap.fromTo(".wh-heading",
-          { opacity: 0, y: 24 },
-          { opacity: 1, y: 0, duration: 0.7, ease: "power2.out", delay: 0.15 }
-        );
-        gsap.fromTo(".wh-sub",
-          { opacity: 0, y: 16 },
-          { opacity: 1, y: 0, duration: 0.6, ease: "power2.out", delay: 0.28 }
-        );
-        gsap.fromTo(".wh-divider",
-          { scaleX: 0 },
-          { scaleX: 1, duration: 0.5, ease: "power2.out", delay: 0.4, transformOrigin: "left" }
-        );
-        gsap.fromTo(".wh-brands",
-          { opacity: 0, y: 12 },
-          { opacity: 1, y: 0, duration: 0.6, ease: "power2.out", delay: 0.5 }
-        );
-        gsap.fromTo(".wh-stat",
-          { opacity: 0, y: 12 },
-          { opacity: 1, y: 0, duration: 0.6, ease: "power2.out", delay: 0.65 }
-        );
-      });
-    }, 300);
+      if (videoRef.current) {
+        videoRef.current.src = "/videos/WhosHere.mp4";
+      }
+    }, 400);
     return () => clearTimeout(t);
   }, []);
 
@@ -64,6 +35,10 @@ export default function WhosHerePage() {
         @keyframes fadeUp {
           from { opacity: 0; transform: translateY(12px); }
           to   { opacity: 1; transform: translateY(0); }
+        }
+        @keyframes scaleIn {
+          from { transform: scaleX(0); }
+          to   { transform: scaleX(1); }
         }
 
         .wh-root {
@@ -274,6 +249,7 @@ export default function WhosHerePage() {
             fontWeight: 700,
             margin: 0,
             opacity: 0,
+            animation: "fadeUp 0.6s ease-out forwards",
           }}>
             The World&apos;s Most Iconic Brands
           </p>
@@ -287,6 +263,7 @@ export default function WhosHerePage() {
             lineHeight: 1.05,
             margin: 0,
             opacity: 0,
+            animation: "fadeUp 0.7s ease-out 0.15s forwards",
           }}>
             They chose<br />
             <span style={{ color: "#C9A84C" }}>here.</span>
@@ -302,6 +279,7 @@ export default function WhosHerePage() {
             margin: 0,
             maxWidth: "320px",
             opacity: 0,
+            animation: "fadeUp 0.6s ease-out 0.28s forwards",
           }}>
             520+ brands. Every tier. Every category.
             The most visited mall in America is where
@@ -313,6 +291,8 @@ export default function WhosHerePage() {
             width: "48px", height: "2px",
             background: "linear-gradient(to right, #C9A84C, rgba(201,168,76,0.2))",
             transformOrigin: "left",
+            transform: "scaleX(0)",
+            animation: "scaleIn 0.5s ease-out 0.4s forwards",
           }} />
 
           {/* Brand pills */}
@@ -321,6 +301,7 @@ export default function WhosHerePage() {
             flexWrap: "wrap",
             gap: "0.4rem",
             opacity: 0,
+            animation: "fadeUp 0.6s ease-out 0.5s forwards",
           }}>
             {["Samsung", "Apple", "Nike", "Lego", "H&M", "Zara"].map(brand => (
               <span key={brand} style={{
@@ -354,6 +335,7 @@ export default function WhosHerePage() {
             borderLeft: "2px solid rgba(201,168,76,0.4)",
             paddingLeft: "1rem",
             opacity: 0,
+            animation: "fadeUp 0.6s ease-out 0.65s forwards",
           }}>
             <div style={{
               color: "#C9A84C",
@@ -386,10 +368,9 @@ export default function WhosHerePage() {
             muted
             loop
             playsInline
-            preload="auto"
-            src="/videos/WhosHere.mp4"
-            onCanPlay={() => setVideoReady(true)}
+            preload="none"
             style={{ opacity: videoReady ? 1 : 0 }}
+            onCanPlay={() => setVideoReady(true)}
           />
           {/* Vignette overlay */}
           <div className="wh-vignette" />
