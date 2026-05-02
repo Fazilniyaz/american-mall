@@ -13,12 +13,12 @@ const SLIDES = [
 ];
 
 const SLIDE_IMAGES: Record<string, string> = {
-  "intro": "/photos/intro&stats.webp",
-  "whos-here": "/photos/main_hub_whosHere.webp",
-  "explore": "/photos/main_hub_explore.webp",
-  "entertainment": "/photos/main_hub_entertainment.webp",
-  "events": "/photos/main_hub_events.webp",
-  "take-action": "/photos/main_hub_action.webp",
+  "intro": "/photos/intro&stats-opt.webp",
+  "whos-here": "/photos/main_hub_whosHere-opt.webp",
+  "explore": "/photos/main_hub_explore-opt.webp",
+  "entertainment": "/photos/main_hub_entertainment-opt.webp",
+  "events": "/photos/main_hub_events-opt.webp",
+  "take-action": "/photos/main_hub_action-opt.webp",
 };
 
 const SUB_ITEMS: Record<string, { label: string; slideIndex: number; indent?: boolean }[]> = {
@@ -331,6 +331,7 @@ export default function HubPhase({ onEnterDeck }: Props) {
           }}>
             <Image
               src={bgImage} alt="" fill sizes="70vw" quality={80}
+              priority={true}
               style={{ objectFit: "cover", objectPosition: "center" }}
             />
           </div>
@@ -410,6 +411,7 @@ export default function HubPhase({ onEnterDeck }: Props) {
           }}>
             <Image
               src={bgImage} alt="" fill sizes="100vw" quality={70}
+              priority={true}
               style={{ objectFit: "cover", objectPosition: "center" }}
             />
           </div>

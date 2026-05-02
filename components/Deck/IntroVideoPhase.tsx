@@ -36,46 +36,20 @@ export default function IntroVideoPhase({ onSkip }: Props) {
   };
 
   return (
-    <div style={{
-      position: "fixed", inset: 0,
-      background: "#000", zIndex: 1000,
-      display: "flex", alignItems: "stretch",
-    }}>
+    <div className="intro-container">
 
       {/* LEFT PANEL — Logo */}
-      <div style={{
-        width: "clamp(60px, 9vw, 130px)",
-        flexShrink: 0, background: "#000",
-        display: "flex", flexDirection: "column",
-        alignItems: "center", paddingTop: "1.2rem",
-        zIndex: 10,
-      }}>
-        <div style={{
-          width: "clamp(36px, 4.5vw, 52px)",
-          height: "clamp(36px, 4.5vw, 52px)",
-          borderRadius: "50%",
-          border: "1.5px solid rgba(201,168,76,0.6)",
-          display: "flex", alignItems: "center",
-          justifyContent: "center",
-          background: "rgba(201,168,76,0.06)",
-        }}>
-          <svg viewBox="0 0 44 44"
-            width="clamp(24px, 3vw, 36px)"
-            height="clamp(24px, 3vw, 36px)"
-          >
+      <div className="intro-left-panel">
+        <div className="intro-logo">
+          <svg viewBox="0 0 44 44" width="100%" height="100%">
             <defs>
               <linearGradient id="iv-g" x1="0%" y1="0%" x2="100%" y2="100%">
                 <stop offset="0%" stopColor="#F0D988" />
                 <stop offset="100%" stopColor="#C9A84C" />
               </linearGradient>
             </defs>
-            <circle cx="22" cy="22" r="14"
-              fill="none" stroke="url(#iv-g)"
-              strokeWidth="1.2" opacity="0.9"
-            />
-            <polygon points="22,14 30,22 22,30 14,22"
-              fill="none" stroke="url(#iv-g)" strokeWidth="1.5"
-            />
+            <circle cx="22" cy="22" r="14" fill="none" stroke="url(#iv-g)" strokeWidth="1.2" opacity="0.9" />
+            <polygon points="22,14 30,22 22,30 14,22" fill="none" stroke="url(#iv-g)" strokeWidth="1.5" />
             <polygon points="22,17 27,22 22,27 17,22" fill="url(#iv-g)" />
             <circle cx="22" cy="22" r="1.8" fill="#000" opacity="0.6" />
           </svg>
@@ -83,34 +57,18 @@ export default function IntroVideoPhase({ onSkip }: Props) {
       </div>
 
       {/* CENTER — Video */}
-      <div style={{
-        flex: 1, position: "relative",
-        overflow: "hidden", background: "#000",
-      }}>
+      <div className="intro-video-wrapper">
         <video
           ref={videoRef}
           autoPlay muted={!soundOn}
           loop={false} playsInline controls preload="none"
           src="/videos/videoplayback.mp4"
           onEnded={onSkip}
-          style={{
-            width: "100%", height: "100%",
-            objectFit: "cover", display: "block",
-          }}
         />
       </div>
 
       {/* RIGHT PANEL — Buttons at bottom */}
-      <div style={{
-        width: "clamp(60px, 9vw, 130px)",
-        flexShrink: 0, background: "#000",
-        display: "flex", flexDirection: "column",
-        alignItems: "center",
-        justifyContent: "flex-end",   /* ← bottom aligned — reference style */
-        paddingBottom: "clamp(3rem, 8vh, 5rem)",
-        gap: "0.5rem", zIndex: 10,
-      }}>
-
+      <div className="intro-right-panel">
         <button
           onClick={toggleSound}
           style={btnStyle}
@@ -142,10 +100,116 @@ export default function IntroVideoPhase({ onSkip }: Props) {
         </button>
       </div>
 
-      {/* Mobile adjustments */}
       <style>{`
-        @media (max-width: 600px) {
-          video { object-fit: contain !important; }
+        .intro-container {
+          position: fixed;
+          inset: 0;
+          background: #000;
+          z-index: 1000;
+          display: flex;
+          align-items: stretch;
+        }
+        
+        .intro-left-panel {
+          width: clamp(60px, 9vw, 130px);
+          flex-shrink: 0;
+          background: #000;
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          padding-top: 1.2rem;
+          z-index: 10;
+        }
+        
+        .intro-logo {
+          width: clamp(36px, 4.5vw, 52px);
+          height: clamp(36px, 4.5vw, 52px);
+          border-radius: 50%;
+          border: 1.5px solid rgba(201,168,76,0.6);
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          background: rgba(201,168,76,0.06);
+          padding: 6px;
+        }
+        
+        .intro-video-wrapper {
+          flex: 1;
+          position: relative;
+          overflow: hidden;
+          background: #000;
+        }
+        
+        .intro-video-wrapper video {
+          width: 100%;
+          height: 100%;
+          object-fit: cover;
+          display: block;
+        }
+        
+        .intro-right-panel {
+          width: clamp(60px, 9vw, 130px);
+          flex-shrink: 0;
+          background: #000;
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          justify-content: flex-end;
+          padding-bottom: clamp(3rem, 8vh, 5rem);
+          gap: 0.5rem;
+          z-index: 10;
+        }
+
+        /* Mobile adjustments */
+        @media (max-width: 767px) {
+          .intro-container {
+            flex-direction: column;
+          }
+          
+          .intro-video-wrapper {
+            position: absolute;
+            inset: 0;
+            z-index: 1;
+          }
+          
+          .intro-video-wrapper video {
+            object-fit: contain;
+          }
+          
+          .intro-left-panel {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            width: 100%;
+            height: 80px;
+            background: transparent;
+            padding-top: 1rem;
+            z-index: 10;
+            align-items: flex-start;
+            padding-left: 1rem;
+            pointer-events: none;
+          }
+          
+          .intro-right-panel {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            width: 100%;
+            height: auto;
+            flex-direction: row;
+            justify-content: center;
+            background: transparent;
+            padding-bottom: 2rem;
+            z-index: 10;
+            background: linear-gradient(to top, rgba(0,0,0,0.8), transparent);
+            padding-top: 2rem;
+          }
+          
+          .intro-right-panel button {
+            pointer-events: auto;
+          }
         }
       `}</style>
     </div>
