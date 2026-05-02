@@ -1,20 +1,19 @@
 import type { Metadata } from "next";
 
 // ────────────────────────────────────────────────────────────────────────────
-// NO next/font/google — it generates a render-blocking CSS chunk for
-// @font-face declarations (~1.6 KiB, 300ms blocking time on mobile).
-//
-// Instead, we:
-// 1. Define CSS custom properties with system font fallbacks (inline, instant)
-// 2. Load Google Fonts CSS asynchronously via a tiny inline <script>
-// 3. fonts.googleapis.com serves @font-face with font-display:swap,
-//    so text is visible immediately with system fonts, then swaps
+// Font strategy: system fonts render instantly, Google Fonts load in
+// background with display=optional (zero render-blocking, zero CLS).
 // ────────────────────────────────────────────────────────────────────────────
 
 export const metadata: Metadata = {
   title: "Mall of America | America's Most Iconic Retail Destination",
   description: "Explore Mall of America — 520+ stores, 40M+ annual visitors, and world-class entertainment in Bloomington, Minnesota.",
 };
+
+// Google Fonts URL — trimmed to only used weights, display=optional
+// ensures browser NEVER blocks rendering waiting for the font.
+const FONT_URL =
+  "https://fonts.googleapis.com/css2?family=Montserrat:wght@600;700;800&display=optional";
 
 export default function RootLayout({
   children,
@@ -25,8 +24,8 @@ export default function RootLayout({
     <html lang="en" style={{ height: "100%" }}>
       <head>
         {/*
-          Inline critical CSS — this is NOT render-blocking because it's
-          part of the HTML document itself (no external fetch needed).
+          Inline critical CSS — part of the HTML document (no external
+          fetch needed). System font stack renders text instantly.
         */}
         <style suppressHydrationWarning dangerouslySetInnerHTML={{
           __html: [
@@ -39,34 +38,30 @@ export default function RootLayout({
           ].join("")
         }} />
 
-        {/* Preload LCP image — ensures fastest possible paint */}
-        <link rel="preload" href="/photos/splash-7.webp" as="image" type="image/webp" fetchPriority="high" />
+        {/* Preload LCP image — responsive: mobile gets 30KB, desktop 82KB */}
+        <link rel="preload" href="/photos/splash-mobile.webp" as="image" type="image/webp" media="(max-width: 767px)" fetchPriority="high" />
+        <link rel="preload" href="/photos/splash-desktop.webp" as="image" type="image/webp" media="(min-width: 768px)" fetchPriority="high" />
 
-        {/* Preconnect to Google Fonts CDN — NOW actually used */}
+        {/* DNS + TCP + TLS handshake ahead of time for font CDN */}
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
 
         {/*
-          Non-blocking font loader — uses a deferred inline script.
-          The `defer` attribute makes this non-parser-blocking (unlike the
-          original which had no defer and blocked HTML parsing).
-          The script creates a <link> with media="print" + onload swap,
-          the standard Google-recommended non-blocking font pattern.
+          Non-blocking font — tiny sync inline script appends a <link>
+          with media=print then swaps to media=all on load.
+          Sync (not defer) so it runs before first paint but does NOT
+          block rendering (appending a link is async network I/O).
         */}
-        <script
-          defer
-          dangerouslySetInnerHTML={{
-            __html:
-              "var l=document.createElement('link');" +
-              "l.rel='stylesheet';" +
-              "l.href='https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800&display=swap';" +
-              "l.media='print';" +
-              "l.onload=function(){this.media='all'};" +
-              "document.head.appendChild(l)"
-          }}
-        />
+        <script dangerouslySetInnerHTML={{
+          __html:
+            `(function(){var l=document.createElement('link');` +
+            `l.rel='stylesheet';l.media='print';` +
+            `l.href='${FONT_URL}';` +
+            `l.onload=function(){l.media='all'};` +
+            `document.head.appendChild(l);})()`
+        }} />
         <noscript>
-          <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800&display=swap" />
+          <link rel="stylesheet" href={FONT_URL} />
         </noscript>
       </head>
       <body style={{ minHeight: "100%", display: "flex", flexDirection: "column" }}>
@@ -75,3 +70,4 @@ export default function RootLayout({
     </html>
   );
 }
+

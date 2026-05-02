@@ -17,10 +17,12 @@ function SplashFallback() {
       alignItems: "center", justifyContent: "center",
       zIndex: 1000, overflow: "hidden",
     }}>
-      {/* LCP image — server-rendered, high priority */}
+      {/* LCP image — server-rendered, high priority, responsive */}
       {/* eslint-disable-next-line @next/next/no-img-element */}
       <img
-        src="/photos/splash-7.webp"
+        src="/photos/splash-desktop.webp"
+        srcSet="/photos/splash-mobile.webp 828w, /photos/splash-desktop.webp 1376w"
+        sizes="100vw"
         alt=""
         fetchPriority="high"
         decoding="sync"

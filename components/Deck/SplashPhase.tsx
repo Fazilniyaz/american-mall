@@ -14,7 +14,7 @@ const TICK_MARKS = Array.from({ length: 12 }).map((_, i) => {
   };
 });
 
-const SPLASH_IMAGES = ["/photos/splash-7.webp"];
+const SPLASH_IMAGES = ["/photos/splash-mobile.webp"];
 const REVEAL_DELAY_MS = 4000; // When to show logo/text/button over the video
 const SAFETY_TIMEOUT_MS = 6000; // Fallback if video stalls
 
