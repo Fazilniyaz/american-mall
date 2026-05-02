@@ -96,26 +96,26 @@ const ZoneChart = memo(function ZoneChart({
       const svg = select(el);
       svg.selectAll("*").remove();
       const W = el.clientWidth || 260;
-      const rowH = 36;
+      const rowH = 28;
       const H = zones.length * rowH;
-      const barMaxW = W - 110;
+      const barMaxW = W - 90;
       svg.attr("width", W).attr("height", H).attr("viewBox", `0 0 ${W} ${H}`);
       const g = svg.append("g");
 
       zones.forEach((z, i) => {
         const y = i * rowH + rowH / 2;
-        g.append("text").attr("x", 0).attr("y", y + 4)
-          .attr("font-size", "9.5px").attr("font-weight", "500")
+        g.append("text").attr("x", 0).attr("y", y + 3)
+          .attr("font-size", "7px").attr("font-weight", "500")
           .attr("font-family", "var(--font-montserrat)")
           .attr("fill", "rgba(255,255,255,0.48)").attr("letter-spacing", "0.05em")
           .text(z.label.toUpperCase());
-        g.append("rect").attr("x", 100).attr("y", y - 3)
-          .attr("width", barMaxW).attr("height", 5).attr("rx", 2.5)
+        g.append("rect").attr("x", 72).attr("y", y - 2)
+          .attr("width", barMaxW).attr("height", 4).attr("rx", 2)
           .attr("fill", "rgba(255,255,255,0.05)");
-        const bar = g.append("rect").attr("x", 100).attr("y", y - 3)
-          .attr("width", 0).attr("height", 5).attr("rx", 2.5).attr("fill", "#C9A84C");
-        const pctText = g.append("text").attr("x", W).attr("y", y + 4)
-          .attr("text-anchor", "end").attr("font-size", "9.5px").attr("font-weight", "700")
+        const bar = g.append("rect").attr("x", 72).attr("y", y - 2)
+          .attr("width", 0).attr("height", 4).attr("rx", 2).attr("fill", "#C9A84C");
+        const pctText = g.append("text").attr("x", W).attr("y", y + 3)
+          .attr("text-anchor", "end").attr("font-size", "7px").attr("font-weight", "700")
           .attr("font-family", "var(--font-montserrat)").attr("fill", "#C9A84C").text("0%");
         const targetW = barMaxW * (z.pct / 100);
         gsap.to({ w: 0, p: 0 }, {
@@ -160,52 +160,52 @@ const SidePanel = memo(function SidePanel({
         alignItems: "center", justifyContent: "center",
         height: "100%", gap: "0.8rem", opacity: 0.3,
       }}>
-        <div style={{ width: "1px", height: "40px", background: "linear-gradient(to bottom,transparent,#C9A84C,transparent)" }} />
+        <div style={{ width: "1px", height: "28px", background: "linear-gradient(to bottom,transparent,#C9A84C,transparent)" }} />
         <p style={{
-          color: "#C9A84C", fontSize: "0.6rem", letterSpacing: "0.3em", textTransform: "uppercase",
+          color: "#C9A84C", fontSize: "0.5rem", letterSpacing: "0.3em", textTransform: "uppercase",
           fontFamily: "var(--font-montserrat)", fontWeight: 600, textAlign: "center", margin: 0
         }}>
           Select a floor<br />to explore
         </p>
-        <div style={{ width: "1px", height: "40px", background: "linear-gradient(to bottom,#C9A84C,transparent)" }} />
+        <div style={{ width: "1px", height: "28px", background: "linear-gradient(to bottom,#C9A84C,transparent)" }} />
       </div>
     );
   }
 
   return (
-    <div ref={panelRef} style={{ padding: "0.5rem 0" }}>
+    <div ref={panelRef} style={{ padding: "0.3rem 0" }}>
       <div style={{
-        color: "#C9A84C", fontSize: "0.6rem", letterSpacing: "0.35em",
-        textTransform: "uppercase", fontFamily: "var(--font-montserrat)", fontWeight: 700, marginBottom: "0.4rem"
+        color: "#C9A84C", fontSize: "0.45rem", letterSpacing: "0.3em",
+        textTransform: "uppercase", fontFamily: "var(--font-montserrat)", fontWeight: 700, marginBottom: "0.15rem"
       }}>
         {floor.label}
       </div>
       <h3 style={{
-        color: "#ffffff", fontSize: "clamp(1rem,2vw,1.25rem)", fontWeight: 800,
-        fontFamily: "var(--font-montserrat)", margin: "0 0 0.25rem", lineHeight: 1.1
+        color: "#ffffff", fontSize: "clamp(0.78rem,1.4vw,0.95rem)", fontWeight: 800,
+        fontFamily: "var(--font-montserrat)", margin: "0 0 0.1rem", lineHeight: 1.1
       }}>
         {floor.name}
       </h3>
       <p style={{
-        color: "rgba(201,168,76,0.7)", fontSize: "0.7rem", fontFamily: "var(--font-montserrat)",
-        fontWeight: 600, margin: "0 0 1.4rem", letterSpacing: "0.05em"
+        color: "rgba(201,168,76,0.7)", fontSize: "0.52rem", fontFamily: "var(--font-montserrat)",
+        fontWeight: 600, margin: "0 0 0.6rem", letterSpacing: "0.05em"
       }}>
         {floor.stat}
       </p>
       <ZoneChart zones={floor.zones} visible={visible} gsapRef={gsapRef} />
-      <div style={{ marginTop: "1.4rem" }}>
+      <div style={{ marginTop: "0.6rem" }}>
         <p style={{
-          color: "rgba(255,255,255,0.25)", fontSize: "0.56rem", letterSpacing: "0.3em",
-          textTransform: "uppercase", fontFamily: "var(--font-montserrat)", fontWeight: 600, margin: "0 0 0.7rem"
+          color: "rgba(255,255,255,0.25)", fontSize: "0.42rem", letterSpacing: "0.25em",
+          textTransform: "uppercase", fontFamily: "var(--font-montserrat)", fontWeight: 600, margin: "0 0 0.3rem"
         }}>
           Key tenants
         </p>
-        <div style={{ display: "flex", flexWrap: "wrap", gap: "0.45rem" }}>
+        <div style={{ display: "flex", flexWrap: "wrap", gap: "0.25rem" }}>
           {floor.tenants.map(t => (
             <span key={t} style={{
               background: "rgba(201,168,76,0.07)", border: "1px solid rgba(201,168,76,0.18)",
-              color: "rgba(255,255,255,0.6)", fontSize: "0.6rem", fontFamily: "var(--font-montserrat)",
-              fontWeight: 500, letterSpacing: "0.07em", padding: "3px 9px"
+              color: "rgba(255,255,255,0.6)", fontSize: "0.44rem", fontFamily: "var(--font-montserrat)",
+              fontWeight: 500, letterSpacing: "0.05em", padding: "2px 5px"
             }}>
               {t}
             </span>
@@ -707,7 +707,7 @@ const FloorButtons = memo(function FloorButtons({
   selected, onSelect,
 }: { selected: number | null; onSelect: (id: number | null) => void }) {
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: "0.45rem" }}>
+    <div style={{ display: "flex", flexDirection: "column", gap: "0.3rem" }}>
       {FLOORS.map(f => (
         <button key={f.id}
           onClick={() => onSelect(selected === f.id ? null : f.id)}
@@ -715,22 +715,21 @@ const FloorButtons = memo(function FloorButtons({
             background: selected === f.id ? "rgba(201,168,76,0.1)" : "transparent",
             border: `1px solid ${selected === f.id ? "#C9A84C" : "rgba(201,168,76,0.15)"}`,
             color: selected === f.id ? "#C9A84C" : "rgba(255,255,255,0.42)",
-            fontSize: "0.6rem",
+            fontSize: "0.5rem",
             fontWeight: 700,
-            letterSpacing: "0.18em",
+            letterSpacing: "0.16em",
             textTransform: "uppercase",
             fontFamily: "var(--font-montserrat)",
-            padding: "8px 12px",
+            padding: "5px 8px",
             cursor: "pointer",
             textAlign: "left",
             transition: "all 0.2s ease",
             display: "flex",
             alignItems: "center",
-            gap: "0.55rem",
-            marginRight: "0.5rem",
+            gap: "0.4rem",
           }}>
           <span style={{
-            width: "5px", height: "5px", flexShrink: 0,
+            width: "4px", height: "4px", flexShrink: 0,
             background: selected === f.id ? "#C9A84C" : "rgba(201,168,76,0.28)",
             transition: "background 0.2s ease",
           }} />
@@ -813,50 +812,48 @@ export default function MallMapSection() {
     <section
       id="mall-map"
       ref={sectionRef}
-      style={{ background: "#050402", padding: "0 0 7rem", overflow: "hidden", position: "relative" }}
+      style={{ background: "#050402", width: "100%", height: "100vh", overflow: "hidden", position: "relative", display: "flex", flexDirection: "column" }}
     >
-      {/* Top separator */}
-      <div style={{ height: "1px", background: "linear-gradient(to right,transparent,rgba(201,168,76,0.18),transparent)", marginBottom: "5rem" }} />
-
-      {/* Heading */}
-      <div className="map-heading" style={{ textAlign: "center", marginBottom: "3.5rem", padding: "0 1.5rem" }}>
+      {/* Heading — ultra-compact */}
+      <div className="map-heading" style={{ textAlign: "center", padding: "clamp(1.2rem, 2vh, 1.8rem) 1rem clamp(0.6rem, 1.2vh, 1rem)", flexShrink: 0 }}>
         <p style={{
-          color: "#C9A84C", fontSize: "0.68rem", letterSpacing: "0.4em", textTransform: "uppercase",
-          fontFamily: "var(--font-montserrat)", fontWeight: 600, margin: "0 0 0.8rem"
+          color: "#C9A84C", fontSize: "0.48rem", letterSpacing: "0.35em", textTransform: "uppercase",
+          fontFamily: "var(--font-montserrat)", fontWeight: 600, margin: "0 0 0.2rem"
         }}>
           Explore the property
         </p>
         <h2 style={{
-          color: "#ffffff", fontSize: "clamp(1.8rem,3.5vw,3rem)", fontWeight: 800,
-          fontFamily: "var(--font-montserrat)", margin: "0 0 1rem", lineHeight: 1.1
+          color: "#ffffff", fontSize: "clamp(1.1rem,2.4vw,1.8rem)", fontWeight: 800,
+          fontFamily: "var(--font-montserrat)", margin: "0 0 0.25rem", lineHeight: 1.1
         }}>
-          5.6 million sq ft<br />
+          5.6 million sq ft{" "}
           <span style={{ color: "#C9A84C" }}>across 4 floors</span>
         </h2>
         <p style={{
-          color: "rgba(255,255,255,0.35)", fontSize: "0.8rem", fontFamily: "var(--font-montserrat)",
-          fontWeight: 400, margin: "0 auto", maxWidth: "400px", lineHeight: 1.75
+          color: "rgba(255,255,255,0.28)", fontSize: "0.58rem", fontFamily: "var(--font-montserrat)",
+          fontWeight: 400, margin: "0 auto", maxWidth: "420px", lineHeight: 1.5
         }}>
           Rotate the building and click any floor to explore its retail mix, key tenants, and commercial opportunity.
         </p>
       </div>
 
       {/* Main grid */}
-      <div className="map-canvas-wrap" style={{ padding: "0 clamp(1rem,4vw,4rem)" }}>
-        <div className="map-inner-grid">
+      {/* Main body — fills remaining space */}
+      <div className="map-canvas-wrap" style={{ flex: 1, minHeight: 0, padding: "0 clamp(0.8rem,3vw,3rem)" }}>
+        <div className="map-inner-grid" style={{ height: "100%" }}>
 
           {/* Left — floor buttons */}
-          <div style={{ display: "flex", flexDirection: "column", justifyContent: "center", gap: "1rem" }}>
+          <div style={{ display: "flex", flexDirection: "column", justifyContent: "center", gap: "0.6rem" }}>
             <p style={{
-              color: "rgba(255,255,255,0.2)", fontSize: "0.56rem", letterSpacing: "0.3em",
-              textTransform: "uppercase", fontFamily: "var(--font-montserrat)", fontWeight: 600, margin: "0 0 0.4rem"
+              color: "rgba(255,255,255,0.2)", fontSize: "0.48rem", letterSpacing: "0.3em",
+              textTransform: "uppercase", fontFamily: "var(--font-montserrat)", fontWeight: 600, margin: "0 0 0.2rem"
             }}>
               Select floor
             </p>
             <FloorButtons selected={selected} onSelect={handleSelect} />
             <p style={{
-              color: "rgba(255,255,255,0.15)", fontSize: "0.56rem", fontFamily: "var(--font-montserrat)",
-              fontWeight: 400, margin: "0.4rem 0 0", lineHeight: 1.6, letterSpacing: "0.04em"
+              color: "rgba(255,255,255,0.15)", fontSize: "0.48rem", fontFamily: "var(--font-montserrat)",
+              fontWeight: 400, margin: "0.2rem 0 0", lineHeight: 1.5, letterSpacing: "0.04em"
             }}>
               Drag to rotate.<br />Click floor to explore.
             </p>
@@ -864,7 +861,7 @@ export default function MallMapSection() {
 
           {/* Centre — 3D building */}
           <div style={{
-            height: "clamp(320px,48vw,520px)", position: "relative",
+            height: "100%", position: "relative",
             border: "1px solid rgba(201,168,76,0.08)", background: "#060504"
           }}>
             {mounted && (
@@ -917,7 +914,7 @@ export default function MallMapSection() {
           </div>
 
           {/* Right — info panel */}
-          <div style={{ borderLeft: "1px solid rgba(201,168,76,0.08)", paddingLeft: "1.4rem", minHeight: "200px" }}>
+          <div style={{ borderLeft: "1px solid rgba(201,168,76,0.08)", paddingLeft: "0.75rem", minHeight: 0, overflow: "hidden" }}>
             <SidePanel floor={selected !== null ? FLOORS[selected] : null} visible={true} gsapRef={gsapRef} />
           </div>
 
@@ -926,7 +923,7 @@ export default function MallMapSection() {
 
       {/* Bottom divider */}
       <div style={{
-        marginTop: "5rem", height: "1px",
+        flexShrink: 0, height: "1px",
         background: "linear-gradient(to right,transparent,rgba(201,168,76,0.12),transparent)"
       }} />
 
@@ -938,13 +935,13 @@ export default function MallMapSection() {
         }
         @media (min-width: 768px) {
           .map-inner-grid {
-            grid-template-columns: 130px 1fr 230px;
+            grid-template-columns: 100px 1fr clamp(160px, 18vw, 240px);
             gap: 0;
           }
         }
         @media (min-width: 1024px) {
           .map-inner-grid {
-            grid-template-columns: 150px 1fr 270px;
+            grid-template-columns: 110px 1fr clamp(190px, 20vw, 280px);
           }
         }
       `}</style>

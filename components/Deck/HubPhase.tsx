@@ -4,34 +4,79 @@ import { useState } from "react";
 import Image from "next/image";
 
 const SLIDES = [
-  { id: "intro",         label: "Intro",         chapter: "01" },
-  { id: "scale",         label: "Scale",          chapter: "02" },
-  { id: "whos-here",     label: "Who's Here",     chapter: "03" },
-  { id: "explore",       label: "Explore",        chapter: "04" },
-  { id: "entertainment", label: "Entertainment",  chapter: "05" },
-  { id: "events",        label: "Events",         chapter: "06" },
-  { id: "sponsorship",   label: "Sponsorship",    chapter: "07" },
-  { id: "get-started",   label: "Get Started",    chapter: "08" },
+  { id: "intro", label: "Intro & Stats", chapter: "01", path: "/intro" },
+  { id: "whos-here", label: "Who's Here", chapter: "02", path: "/WhosHereSection" },
+  { id: "explore", label: "Explore", chapter: "03", path: "/explore" },
+  { id: "entertainment", label: "Entertainment", chapter: "04", path: "/Entertainment" },
+  { id: "events", label: "Events", chapter: "05", path: "/events" },
+  { id: "take-action", label: "Take Action", chapter: "06", path: "/takeAction" },
 ];
 
 const SLIDE_IMAGES: Record<string, string> = {
-  "intro":         "/photos/intro&stats.webp",
-  "scale":         "/photos/splash-5.webp",
-  "whos-here":     "/photos/splash-2.webp",
-  "explore":       "/photos/splash-3.webp",
-  "entertainment": "/photos/splash-6.webp",
-  "events":        "/photos/splash-4.webp",
-  "sponsorship":   "/photos/splash-5.webp",
-  "get-started":   "/photos/splash-2.webp",
+  "intro": "/photos/intro&stats.webp",
+  "whos-here": "/photos/main_hub_whosHere.webp",
+  "explore": "/photos/main_hub_explore.webp",
+  "entertainment": "/photos/main_hub_entertainment.webp",
+  "events": "/photos/main_hub_events.webp",
+  "take-action": "/photos/main_hub_action.webp",
 };
 
-const SUB_ITEMS: Record<string, string[]> = {
-  "whos-here":     ["Samsung", "Apple", "Nike", "Lego"],
-  "explore":       ["Floor 1 — Retail", "Floor 2 — Fashion", "Floor 3 — Entertainment", "Floor 4 — Dining"],
-  "entertainment": ["Nickelodeon Universe", "Sea Life Aquarium", "Dining & Restaurants", "Shopping"],
-  "events":        ["Tech Events", "Brand Activations", "Corporate & Convention"],
-  "sponsorship":   ["Platinum", "Gold", "Partner"],
-  "get-started":   ["Lease a Space", "Host an Event", "Become a Sponsor"],
+const SUB_ITEMS: Record<string, { label: string; slideIndex: number; indent?: boolean }[]> = {
+  "intro": [
+    { label: "Hero", slideIndex: 0 },
+    { label: "Stats", slideIndex: 1 },
+  ],
+  "whos-here": [
+    { label: "Who's Here (Overview)", slideIndex: 2 },
+    { label: "They Chose to be here", slideIndex: 3 },
+    { label: "Brands that trusted us", slideIndex: 4 },
+  ],
+  "explore": [
+    { label: "Explore", slideIndex: 5 },
+    { label: "Mall Map", slideIndex: 6 },
+    { label: "Where Your Brand Lives", slideIndex: 7 },
+  ],
+  "entertainment": [
+    { label: "Nickelodeon Universe", slideIndex: 9 },
+    { label: "Sea Life Aquarium", slideIndex: 10 },
+    { label: "Dining & Restaurants", slideIndex: 11 },
+    { label: "Shopping", slideIndex: 12 },
+  ],
+  "events": [
+    // Overview + stats
+    { label: "Events Overview",        slideIndex: 13 },
+    { label: "Events Stats",           slideIndex: 14 },
+    // Tech Events — parent
+    { label: "Tech Events",            slideIndex: 15 },
+    { label: "  Vision Pro Demo",      slideIndex: 16, indent: true },
+    { label: "  Samsung Store Opening",slideIndex: 17, indent: true },
+    { label: "  VR & Gaming Zones",    slideIndex: 18, indent: true },
+    // Entertainment & Gaming — parent
+    { label: "Entertainment & Gaming", slideIndex: 19 },
+    { label: "  Nike Sneaker Launch",  slideIndex: 20, indent: true },
+    { label: "  Adidas Fan Engagement",slideIndex: 21, indent: true },
+    { label: "  Xbox Gaming Events",   slideIndex: 22, indent: true },
+    // Footfall → Revenue
+    { label: "Footfall → Revenue",     slideIndex: 23 },
+  ],
+  "take-action": [
+    { label: "Overview",           slideIndex: 24 },
+    { label: "Partnership",        slideIndex: 25 },
+    { label: "Lease a Space",      slideIndex: 26 },
+    { label: "Become a Sponsor",   slideIndex: 27 },
+    { label: "Host an Event",      slideIndex: 28 },
+    { label: "Final Actions",      slideIndex: 29 },
+  ],
+};
+
+// Map hub slide id → deck slide index for direct clicks (no sub-items)
+const SLIDE_INDEX_MAP: Record<string, number> = {
+  "intro": 0,
+  "whos-here": 2,
+  "explore": 5,
+  "entertainment": 8,
+  "events": 13,
+  "take-action": 24,
 };
 
 interface Props {
@@ -39,12 +84,10 @@ interface Props {
 }
 
 export default function HubPhase({ onEnterDeck }: Props) {
-  const [hoveredId,  setHoveredId]  = useState<string>("intro");
+  const [hoveredId, setHoveredId] = useState<string>("intro");
   const [expandedId, setExpandedId] = useState<string | null>(null);
-  const [bgImage,    setBgImage]    = useState(SLIDE_IMAGES["intro"]);
-  const [fadeKey,    setFadeKey]    = useState(0);
-
-  // Mobile: track which item is "active" for the preview image above the list
+  const [bgImage, setBgImage] = useState(SLIDE_IMAGES["intro"]);
+  const [fadeKey, setFadeKey] = useState(0);
   const [mobilePreviewId, setMobilePreviewId] = useState<string>("intro");
 
   const handleHover = (id: string) => {
@@ -59,12 +102,16 @@ export default function HubPhase({ onEnterDeck }: Props) {
     setFadeKey(k => k + 1);
   };
 
-  const handleClick = (id: string, index: number) => {
+  const handleClick = (id: string) => {
     if (SUB_ITEMS[id]) {
       setExpandedId(prev => prev === id ? null : id);
     } else {
-      onEnterDeck(index);
+      onEnterDeck(SLIDE_INDEX_MAP[id] ?? 0);
     }
+  };
+
+  const handleSubItemClick = (sub: { label: string; slideIndex: number }) => {
+    onEnterDeck(sub.slideIndex);
   };
 
   return (
@@ -88,14 +135,9 @@ export default function HubPhase({ onEnterDeck }: Props) {
       </div>
 
       {/* ══════════════════════════════════════════════
-          DESKTOP LAYOUT  (≥ 768px)
-          Left panel + Right image
+          DESKTOP LAYOUT
       ══════════════════════════════════════════════ */}
-      <div className="hub-desktop" style={{
-        display: "flex",
-        width: "100%",
-        height: "100%",
-      }}>
+      <div className="hub-desktop" style={{ display: "flex", width: "100%", height: "100%" }}>
 
         {/* ── LEFT PANEL ── */}
         <div style={{
@@ -129,10 +171,7 @@ export default function HubPhase({ onEnterDeck }: Props) {
               display: "flex", alignItems: "center", justifyContent: "center",
               flexShrink: 0,
             }}>
-              <svg viewBox="0 0 44 44"
-                width="clamp(32px, 4.5vw, 46px)"
-                height="clamp(32px, 4.5vw, 46px)"
-              >
+              <svg viewBox="0 0 44 44" width="clamp(32px,4.5vw,46px)" height="clamp(32px,4.5vw,46px)">
                 <defs>
                   <linearGradient id="hub-logo-g" x1="0%" y1="0%" x2="100%" y2="100%">
                     <stop offset="0%" stopColor="#F0D988" />
@@ -140,12 +179,8 @@ export default function HubPhase({ onEnterDeck }: Props) {
                     <stop offset="100%" stopColor="#8A6820" />
                   </linearGradient>
                 </defs>
-                <circle cx="22" cy="22" r="14" fill="none"
-                  stroke="url(#hub-logo-g)" strokeWidth="1.5" opacity="0.9"
-                />
-                <polygon points="22,14 30,22 22,30 14,22"
-                  fill="none" stroke="url(#hub-logo-g)" strokeWidth="1.8" opacity="0.95"
-                />
+                <circle cx="22" cy="22" r="14" fill="none" stroke="url(#hub-logo-g)" strokeWidth="1.5" opacity="0.9" />
+                <polygon points="22,14 30,22 22,30 14,22" fill="none" stroke="url(#hub-logo-g)" strokeWidth="1.8" opacity="0.95" />
                 <polygon points="22,17 27,22 22,27 17,22" fill="url(#hub-logo-g)" />
                 <circle cx="22" cy="22" r="2" fill="#0a0805" opacity="0.7" />
               </svg>
@@ -159,7 +194,7 @@ export default function HubPhase({ onEnterDeck }: Props) {
                 Interactive Deck
               </p>
               <p style={{
-                color: "rgba(255,255,255,0.75)", fontSize: "clamp(0.85rem, 1.4vw, 1rem)",
+                color: "rgba(255,255,255,0.75)", fontSize: "clamp(0.85rem,1.4vw,1rem)",
                 fontWeight: 800, letterSpacing: "0.06em", textTransform: "uppercase",
                 fontFamily: "var(--font-montserrat)", margin: "0.15rem 0 0",
               }}>
@@ -170,30 +205,30 @@ export default function HubPhase({ onEnterDeck }: Props) {
 
           {/* Navigation menu */}
           <nav style={{ flex: 1, padding: "0.5rem 0" }}>
-            {SLIDES.map((slide, i) => {
-              const isActive   = hoveredId === slide.id;
+            {SLIDES.map((slide) => {
+              const isActive = hoveredId === slide.id;
               const isExpanded = expandedId === slide.id;
-              const hasSubs    = !!SUB_ITEMS[slide.id];
+              const hasSubs = !!SUB_ITEMS[slide.id];
 
               return (
                 <div key={slide.id}>
                   <button
                     onMouseEnter={() => handleHover(slide.id)}
-                    onClick={() => handleClick(slide.id, i)}
+                    onClick={() => handleClick(slide.id)}
                     style={{
                       display: "flex", alignItems: "center",
                       width: "100%",
                       background: isActive || isExpanded ? "rgba(201,168,76,0.08)" : "transparent",
                       border: "none",
                       borderLeft: isActive || isExpanded ? "3px solid #C9A84C" : "3px solid transparent",
-                      padding: "clamp(0.65rem, 1.4vh, 0.95rem) clamp(1.2rem, 2.4vw, 2rem)",
+                      padding: "clamp(0.65rem,1.4vh,0.95rem) clamp(1.2rem,2.4vw,2rem)",
                       cursor: "pointer", textAlign: "left",
                       transition: "all 0.2s ease", gap: "1rem",
                     }}
                   >
                     <span style={{
                       color: isActive || isExpanded ? "#C9A84C" : "rgba(201,168,76,0.35)",
-                      fontSize: "clamp(0.52rem, 0.85vw, 0.62rem)",
+                      fontSize: "clamp(0.52rem,0.85vw,0.62rem)",
                       fontWeight: 700, letterSpacing: "0.2em",
                       fontFamily: "var(--font-montserrat)",
                       flexShrink: 0, width: "24px",
@@ -203,7 +238,7 @@ export default function HubPhase({ onEnterDeck }: Props) {
                     </span>
                     <span style={{
                       color: isActive || isExpanded ? "#ffffff" : "rgba(255,255,255,0.58)",
-                      fontSize: "clamp(0.78rem, 1.25vw, 0.92rem)",
+                      fontSize: "clamp(0.78rem,1.25vw,0.92rem)",
                       fontWeight: isActive || isExpanded ? 800 : 600,
                       letterSpacing: "0.08em", textTransform: "uppercase",
                       fontFamily: "var(--font-montserrat)", flexGrow: 1,
@@ -235,22 +270,40 @@ export default function HubPhase({ onEnterDeck }: Props) {
                     }}>
                       {SUB_ITEMS[slide.id].map(sub => (
                         <button
-                          key={sub}
-                          onClick={() => onEnterDeck(i)}
+                          key={sub.label}
+                          onClick={() => handleSubItemClick(sub)}
                           style={{
                             display: "block", width: "100%",
                             background: "transparent", border: "none",
-                            padding: "0.55rem clamp(1.2rem,2.4vw,2rem) 0.55rem clamp(2rem,4vw,3.2rem)",
+                            padding: sub.indent
+                              ? "0.4rem clamp(1.2rem,2.4vw,2rem) 0.4rem clamp(3rem,5.5vw,4.5rem)"
+                              : "0.55rem clamp(1.2rem,2.4vw,2rem) 0.55rem clamp(2rem,4vw,3.2rem)",
                             textAlign: "left", cursor: "pointer",
-                            color: "rgba(255,255,255,0.48)",
-                            fontSize: "clamp(0.7rem, 1.05vw, 0.8rem)",
-                            fontFamily: "var(--font-montserrat)", fontWeight: 500,
+                            color: sub.indent ? "rgba(255,255,255,0.32)" : "rgba(255,255,255,0.52)",
+                            fontSize: sub.indent
+                              ? "clamp(0.58rem,0.9vw,0.68rem)"
+                              : "clamp(0.7rem,1.05vw,0.8rem)",
+                            fontFamily: "var(--font-montserrat)", fontWeight: sub.indent ? 400 : 500,
                             letterSpacing: "0.04em", transition: "color 0.15s ease",
+                            display: "flex", alignItems: "center", gap: "0.5rem",
                           }}
-                          onMouseEnter={e => { e.currentTarget.style.color = "#C9A84C"; }}
-                          onMouseLeave={e => { e.currentTarget.style.color = "rgba(255,255,255,0.48)"; }}
+                          onMouseEnter={e => { e.currentTarget.style.color = sub.indent ? "rgba(201,168,76,0.7)" : "#C9A84C"; }}
+                          onMouseLeave={e => { e.currentTarget.style.color = sub.indent ? "rgba(255,255,255,0.32)" : "rgba(255,255,255,0.52)"; }}
                         >
-                          {sub}
+                          {sub.indent ? (
+                            <span style={{
+                              width: "3px", height: "3px",
+                              background: "rgba(201,168,76,0.35)",
+                              borderRadius: "50%", flexShrink: 0, display: "inline-block",
+                            }} />
+                          ) : (
+                            <span style={{
+                              width: "4px", height: "1px",
+                              background: "rgba(201,168,76,0.5)",
+                              flexShrink: 0, display: "inline-block",
+                            }} />
+                          )}
+                          {sub.label.trim()}
                         </button>
                       ))}
                     </div>
@@ -297,15 +350,17 @@ export default function HubPhase({ onEnterDeck }: Props) {
 
           {/* Chapter counter — top right */}
           <div style={{
-            position: "absolute", top: "clamp(1.2rem,3.5vh,2.2rem)",
-            right: "clamp(1.2rem,3.5vw,2.5rem)", zIndex: 3,
+            position: "absolute",
+            top: "clamp(1.2rem,3.5vh,2.2rem)",
+            right: "clamp(1.2rem,3.5vw,2.5rem)",
+            zIndex: 3,
           }}>
             <span style={{
               color: "rgba(201,168,76,0.6)", fontSize: "clamp(0.52rem,0.82vw,0.62rem)",
               fontWeight: 700, letterSpacing: "0.3em", textTransform: "uppercase",
               fontFamily: "var(--font-montserrat)",
             }}>
-              {SLIDES.find(s => s.id === hoveredId)?.chapter} / {String(SLIDES.length).padStart(2,"0")}
+              {SLIDES.find(s => s.id === hoveredId)?.chapter} / {String(SLIDES.length).padStart(2, "0")}
             </span>
           </div>
 
@@ -340,35 +395,30 @@ export default function HubPhase({ onEnterDeck }: Props) {
       </div>
 
       {/* ══════════════════════════════════════════════
-          MOBILE LAYOUT  (< 768px)
-          Top image preview + Bottom scrollable menu
+          MOBILE LAYOUT
       ══════════════════════════════════════════════ */}
       <div className="hub-mobile" style={{
-        display: "none",
-        flexDirection: "column",
-        width: "100%",
-        height: "100%",
+        display: "none", flexDirection: "column",
+        width: "100%", height: "100%",
       }}>
 
-        {/* Top — image preview (40vh) */}
+        {/* Top — image preview */}
         <div style={{ position: "relative", height: "38vh", flexShrink: 0, overflow: "hidden" }}>
           <div key={`m-${fadeKey}`} style={{
             position: "absolute", inset: 0,
-            animation: "hubImgFade 0.55s ease forwards",
-            zIndex: 1,
+            animation: "hubImgFade 0.55s ease forwards", zIndex: 1,
           }}>
             <Image
               src={bgImage} alt="" fill sizes="100vw" quality={70}
               style={{ objectFit: "cover", objectPosition: "center" }}
             />
           </div>
-          {/* Overlays */}
           <div style={{
             position: "absolute", inset: 0, zIndex: 2,
             background: "linear-gradient(to bottom, rgba(5,4,2,0.3) 0%, rgba(5,4,2,0.7) 100%)",
           }} />
 
-          {/* Logo + title overlay */}
+          {/* Logo overlay */}
           <div style={{
             position: "absolute", bottom: "1.2rem", left: "1.2rem", zIndex: 3,
             display: "flex", alignItems: "center", gap: "0.75rem",
@@ -400,49 +450,41 @@ export default function HubPhase({ onEnterDeck }: Props) {
               }}>Interactive Deck</p>
               <p style={{
                 color: "#ffffff", fontSize: "0.88rem",
-                fontWeight: 800, letterSpacing: "0.06em",
-                textTransform: "uppercase",
+                fontWeight: 800, letterSpacing: "0.06em", textTransform: "uppercase",
                 fontFamily: "var(--font-montserrat)", margin: "0.1rem 0 0",
               }}>Mall of America</p>
             </div>
           </div>
 
-          {/* Active chapter indicator */}
-          <div style={{
-            position: "absolute", top: "1rem", right: "1rem", zIndex: 3,
-          }}>
+          <div style={{ position: "absolute", top: "1rem", right: "1rem", zIndex: 3 }}>
             <span style={{
               color: "rgba(201,168,76,0.7)", fontSize: "0.52rem",
               fontWeight: 700, letterSpacing: "0.28em",
               textTransform: "uppercase", fontFamily: "var(--font-montserrat)",
             }}>
-              {SLIDES.find(s => s.id === mobilePreviewId)?.chapter} / {String(SLIDES.length).padStart(2,"0")}
+              {SLIDES.find(s => s.id === mobilePreviewId)?.chapter} / {String(SLIDES.length).padStart(2, "0")}
             </span>
           </div>
         </div>
 
-        {/* Bottom — scrollable nav list (62vh) */}
+        {/* Bottom — scrollable nav */}
         <div style={{
-          flex: 1,
-          background: "rgba(5,4,2,0.98)",
-          overflowY: "auto",
-          overflowX: "hidden",
+          flex: 1, background: "rgba(5,4,2,0.98)",
+          overflowY: "auto", overflowX: "hidden",
           paddingBottom: "env(safe-area-inset-bottom, 1rem)",
-          /* Custom scrollbar hidden */
           scrollbarWidth: "none",
         }}>
-          {SLIDES.map((slide, i) => {
+          {SLIDES.map((slide) => {
             const isExpanded = expandedId === slide.id;
-            const hasSubs    = !!SUB_ITEMS[slide.id];
+            const hasSubs = !!SUB_ITEMS[slide.id];
 
             return (
               <div key={slide.id}>
                 <button
                   onTouchStart={() => handleMobileTouch(slide.id)}
-                  onClick={() => handleClick(slide.id, i)}
+                  onClick={() => handleClick(slide.id)}
                   style={{
-                    display: "flex", alignItems: "center",
-                    width: "100%",
+                    display: "flex", alignItems: "center", width: "100%",
                     background: isExpanded ? "rgba(201,168,76,0.07)" : "transparent",
                     border: "none",
                     borderLeft: isExpanded ? "3px solid #C9A84C" : "3px solid transparent",
@@ -461,8 +503,7 @@ export default function HubPhase({ onEnterDeck }: Props) {
                   </span>
                   <span style={{
                     color: isExpanded ? "#ffffff" : "rgba(255,255,255,0.65)",
-                    fontSize: "0.88rem",
-                    fontWeight: isExpanded ? 800 : 600,
+                    fontSize: "0.88rem", fontWeight: isExpanded ? 800 : 600,
                     letterSpacing: "0.07em", textTransform: "uppercase",
                     fontFamily: "var(--font-montserrat)", flexGrow: 1,
                   }}>
@@ -472,8 +513,7 @@ export default function HubPhase({ onEnterDeck }: Props) {
                     <span style={{
                       color: "#C9A84C", fontSize: "0.62rem",
                       transform: isExpanded ? "rotate(90deg)" : "rotate(0deg)",
-                      transition: "transform 0.25s ease",
-                      opacity: 0.8,
+                      transition: "transform 0.25s ease", opacity: 0.8,
                     }}>▶</span>
                   ) : (
                     <span style={{ color: "#C9A84C", fontSize: "0.88rem", opacity: 0.7 }}>→</span>
@@ -488,28 +528,31 @@ export default function HubPhase({ onEnterDeck }: Props) {
                   }}>
                     {SUB_ITEMS[slide.id].map(sub => (
                       <button
-                        key={sub}
-                        onClick={() => onEnterDeck(i)}
+                        key={sub.label}
+                        onClick={() => handleSubItemClick(sub)}
                         style={{
                           display: "flex", alignItems: "center",
                           width: "100%", background: "transparent", border: "none",
                           borderBottom: "1px solid rgba(201,168,76,0.05)",
-                          padding: "0.75rem 1.2rem 0.75rem 2.4rem",
+                          padding: sub.indent
+                            ? "0.55rem 1.2rem 0.55rem 3.2rem"
+                            : "0.75rem 1.2rem 0.75rem 2.4rem",
                           textAlign: "left", cursor: "pointer",
-                          color: "rgba(255,255,255,0.5)",
-                          fontSize: "0.8rem",
-                          fontFamily: "var(--font-montserrat)", fontWeight: 500,
-                          letterSpacing: "0.04em",
-                          gap: "0.6rem",
+                          color: sub.indent ? "rgba(255,255,255,0.32)" : "rgba(255,255,255,0.5)",
+                          fontSize: sub.indent ? "0.7rem" : "0.8rem",
+                          fontFamily: "var(--font-montserrat)",
+                          fontWeight: sub.indent ? 400 : 500,
+                          letterSpacing: "0.04em", gap: "0.5rem",
                         }}
                       >
                         <span style={{
-                          width: "4px", height: "4px",
-                          background: "rgba(201,168,76,0.4)",
+                          width: sub.indent ? "3px" : "4px",
+                          height: sub.indent ? "3px" : "4px",
+                          background: sub.indent ? "rgba(201,168,76,0.3)" : "rgba(201,168,76,0.4)",
                           borderRadius: "50%", flexShrink: 0,
                           display: "inline-block",
                         }} />
-                        {sub}
+                        {sub.label.trim()}
                       </button>
                     ))}
                   </div>
@@ -517,35 +560,25 @@ export default function HubPhase({ onEnterDeck }: Props) {
               </div>
             );
           })}
-
-          {/* Bottom padding so last item isn't hidden behind pill nav */}
           <div style={{ height: "2rem" }} />
         </div>
       </div>
 
-      {/* ── ANIMATIONS + RESPONSIVE SWITCH ── */}
+      {/* ── ANIMATIONS + RESPONSIVE ── */}
       <style>{`
         @keyframes hubImgFade {
           from { opacity: 0; transform: scale(1.03); }
           to   { opacity: 1; transform: scale(1); }
         }
-
-        /* Desktop layout */
         @media (min-width: 768px) {
           .hub-desktop { display: flex !important; }
           .hub-mobile  { display: none  !important; }
         }
-
-        /* Mobile layout */
         @media (max-width: 767px) {
           .hub-desktop { display: none  !important; }
           .hub-mobile  { display: flex  !important; }
         }
-
-        /* Hide scrollbar in mobile nav */
         .hub-mobile div::-webkit-scrollbar { display: none; }
-
-        /* Tap highlight removal on mobile */
         .hub-mobile button { -webkit-tap-highlight-color: transparent; }
       `}</style>
     </div>

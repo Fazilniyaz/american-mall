@@ -1,1001 +1,571 @@
 "use client";
 
-import { useEffect, useRef, useState, useCallback, memo } from "react";
+import { useEffect, useRef, useState } from "react";
 import Image from "next/image";
+import { useRouter } from "next/navigation";
 
-// ── Lazy GSAP loader ──────────────────────────────────────────────────────
-type GsapType = typeof import("gsap")["default"];
-type ScrollTriggerType = typeof import("gsap/ScrollTrigger")["ScrollTrigger"];
-
-let _gsap: GsapType | null = null;
-let _ST: ScrollTriggerType | null = null;
-
-const loadGsap = async () => {
-  if (_gsap && _ST) return { gsap: _gsap, ScrollTrigger: _ST };
-  const [gsapMod, stMod] = await Promise.all([
-    import("gsap"),
-    import("gsap/ScrollTrigger"),
-  ]);
-  _gsap = gsapMod.default;
-  _ST = stMod.ScrollTrigger;
-  _gsap.registerPlugin(_ST);
-  return { gsap: _gsap, ScrollTrigger: _ST };
-};
-
-// ─── Hero slideshow data ──────────────────────────────────────────────────────
-const HERO_SLIDES = [
+// ─── Slide data ───────────────────────────────────────────────────────────────
+const SLIDES = [
   {
     src: "/photos/event-hero-1.jpg",
-    alt: "Live event production crew at Mall of America",
-    headline: "300+",
-    sub: "Live events every year",
-    accent: "#C9A84C",
-    overlay: "linear-gradient(135deg, rgba(10,6,0,0.88) 0%, rgba(5,4,2,0.55) 60%, rgba(5,4,2,0.2) 100%)",
+    alt: "Live event production at Mall of America",
+    overlay: "linear-gradient(120deg, rgba(5,4,2,0.92) 0%, rgba(5,4,2,0.55) 55%, rgba(5,4,2,0.18) 100%)",
   },
   {
     src: "/photos/event-hero-2.jpg",
     alt: "Samsung Galaxy Unpacked event arena",
-    headline: "500K+",
-    sub: "Annual event attendees",
-    accent: "#00c8f0",
-    overlay: "linear-gradient(135deg, rgba(0,10,20,0.92) 0%, rgba(0,15,30,0.6) 60%, rgba(0,10,20,0.2) 100%)",
+    overlay: "linear-gradient(120deg, rgba(0,8,18,0.94) 0%, rgba(0,12,26,0.58) 55%, rgba(0,8,18,0.18) 100%)",
   },
   {
     src: "/photos/event-hero-3.jpg",
     alt: "Concert crowd energy at night event",
-    headline: "40M",
-    sub: "Witnesses per year",
-    accent: "#C9A84C",
-    overlay: "linear-gradient(135deg, rgba(15,4,0,0.9) 0%, rgba(10,2,0,0.6) 60%, rgba(5,4,2,0.2) 100%)",
+    overlay: "linear-gradient(120deg, rgba(12,4,0,0.93) 0%, rgba(8,2,0,0.58) 55%, rgba(5,4,2,0.18) 100%)",
   },
 ];
 
-// ─── Hero stat pills ──────────────────────────────────────────────────────────
-const HERO_STATS = [
-  { value: "300+", label: "Annual Events" },
-  { value: "500K+", label: "Event Attendees" },
-  { value: "40M", label: "Yearly Witnesses" },
-  { value: "20K", label: "Max Capacity" },
-];
-
-// ─── ONLY THE 3 CHANGED DATA ARRAYS ──────────────────────────────────────────
-// Replace these arrays in your EventsPanel.tsx — everything else stays identical
-
-// 1. TECH_EVENTS — samsung-vr card: video prepended
-const TECH_EVENTS = [
+// ─── Event categories — sub-routes this slide links into ──────────────────────
+const CATEGORIES = [
   {
-    id: "apple-vr",
-    brand: "Apple",
-    event: "Vision Pro Demo Experience",
-    year: "2024–Present",
-    stat: "8,000+",
-    statLabel: "Demo sessions",
-    desc: "First hands-on Vision Pro demo experiences in the Midwest. Visitors queued for hours for a chance to step into spatial computing.",
-    images: [
-      { src: "/photos/apple-vr-1.jpg", alt: "Apple Vision Pro launch crowd" },
-      { src: "/photos/apple-vr-2.jpg", alt: "Woman wearing Apple Vision Pro" },
-      { src: "/photos/apple-vr-3.jpg", alt: "Apple Vision Pro selfie event" },
-    ],
-    accent: "#f5f5f7",
-    tag: "Tech · AR/VR",
+    label: "Tech Events",
+    sub: "Apple · Samsung · Xbox",
+    href: "/events/tech",
+    icon: (
+      <svg viewBox="0 0 20 20" width="14" height="14" fill="none">
+        <rect x="3" y="5" width="14" height="9" rx="1" stroke="#C9A84C" strokeWidth="1.2" />
+        <path d="M7 14v2M13 14v2M5 16h10" stroke="#C9A84C" strokeWidth="1.2" strokeLinecap="round" />
+      </svg>
+    ),
   },
   {
-    id: "samsung-store",
-    brand: "Samsung",
-    event: "Galaxy Experience Store Grand Opening",
-    year: "2025",
-    stat: "22K+",
-    statLabel: "Opening day visitors",
-    desc: "Samsung's first Midwest Experience Store launched at Mall of America. Crowds lined up before dawn for Galaxy S25 hands-on demos.",
-    images: [
-      { src: "/videos/samsung_event.mp4", alt: "Samsung Galaxy store opening event", type: "video" as const },
-      { src: "/photos/samsung-store-1.webp", alt: "Samsung Galaxy store opening" },
-    ],
-    accent: "#1428A0",
-    tag: "Tech · Retail",
+    label: "Entertainment",
+    sub: "Nike · Adidas · Gaming",
+    href: "/events/entertainment",
+    icon: (
+      <svg viewBox="0 0 20 20" width="14" height="14" fill="none">
+        <circle cx="10" cy="10" r="7" stroke="#C9A84C" strokeWidth="1.2" />
+        <path d="M8 7.5l5 2.5-5 2.5V7.5z" fill="#C9A84C" />
+      </svg>
+    ),
   },
   {
-    id: "samsung-vr",
-    brand: "Samsung",
-    event: "VR & Gaming Experience Zones",
-    year: "2024",
-    stat: "15K+",
-    statLabel: "VR sessions",
-    desc: "Immersive Galaxy VR gaming zones activated across the property. Full-scale demo pods, headsets, and live competitions.",
-    images: [
-      // ✅ VIDEO FIRST — then the 2 existing images
-      { src: "/videos/samsung_vr.mp4", alt: "Samsung VR experience zone live footage", type: "video" as const },
-      { src: "/photos/samsung-vr-1.avif", alt: "Samsung VR experience" },
-      { src: "/photos/samsung-vr-2.jpg", alt: "Samsung VR gaming zone" },
-    ],
-    accent: "#1428A0",
-    tag: "Tech · Gaming",
+    label: "Brand Activations",
+    sub: "Pop-ups · Launches · PR",
+    href: "/events/activations",
+    icon: (
+      <svg viewBox="0 0 20 20" width="14" height="14" fill="none">
+        <path d="M10 3l2 4h4l-3 3 1 4-4-2-4 2 1-4-3-3h4l2-4z" stroke="#C9A84C" strokeWidth="1.2" strokeLinejoin="round" />
+      </svg>
+    ),
+  },
+  {
+    label: "Event Stats",
+    sub: "300+ events · 500K attendees",
+    href: "/events/stats",
+    icon: (
+      <svg viewBox="0 0 20 20" width="14" height="14" fill="none">
+        <path d="M3 15l4-5 4 3 3-6 3 4" stroke="#C9A84C" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round" />
+      </svg>
+    ),
   },
 ];
 
-// 2. ENT_EVENTS — nike and adidas: video prepended to each
-const ENT_EVENTS = [
-  {
-    id: "nike",
-    brand: "Nike",
-    event: "Sneaker Launch Events",
-    year: "2023–Present",
-    stat: "18K+",
-    statLabel: "Attendees per event",
-    desc: "Exclusive sneaker drops and athlete meet-and-greets. Nike transforms Mall of America's atrium into a full-scale brand experience.",
-    images: [
-      // ✅ VIDEO FIRST — then the 2 existing images
-      { src: "/videos/nike.mp4", alt: "Nike sneaker launch event footage", type: "video" as const },
-      { src: "/photos/nike-1.jpg", alt: "Nike sneaker launch event" },
-      { src: "/photos/nike-2.jpg", alt: "Nike fan engagement" },
-    ],
-    accent: "#111111",
-    tag: "Entertainment · Sport",
-  },
-  {
-    id: "adidas",
-    brand: "Adidas",
-    event: "Fan Engagement Events",
-    year: "2023–Present",
-    stat: "12K+",
-    statLabel: "Fan engagements",
-    desc: "Premium Adidas brand activations with exclusive merchandise drops, athlete appearances, and immersive product showcases.",
-    images: [
-      // ✅ VIDEO FIRST — then the 2 existing images
-      { src: "/videos/adidas.mp4", alt: "Adidas fan engagement event footage", type: "video" as const },
-      { src: "/photos/adidas-1.jpg", alt: "Adidas fan event" },
-      { src: "/photos/adidas-2.webp", alt: "Adidas Palace event space" },
-    ],
-    accent: "#000000",
-    tag: "Entertainment · Sport",
-  },
-  {
-    id: "xbox",
-    brand: "Xbox",
-    event: "Gaming Events & Showcase",
-    year: "2024",
-    stat: "10K+",
-    statLabel: "Gaming sessions",
-    desc: "Microsoft Xbox brought the Games Showcase experience to Mall of America. 4K gaming zones, early access titles, and live tournaments.",
-    images: [
-      { src: "/photos/xbox1.jpg", alt: "Xbox Games Showcase" },
-      { src: "/photos/xbox2.jpg", alt: "Xbox gaming devices" },
-    ],
-    accent: "#107C10",
-    tag: "Gaming · Microsoft",
-  },
+// ─── Key stats ────────────────────────────────────────────────────────────────
+const STATS = [
+  { val: "300+", label: "Annual Events" },
+  { val: "500K+", label: "Attendees" },
+  { val: "40M", label: "Witnesses" },
+  { val: "20K", label: "Max Capacity" },
 ];
 
-// ─── Lazy video slide — only loads/plays when active + visible ─────────────────
-// preload="none" ensures ZERO bytes downloaded until the slide is visible.
-// IntersectionObserver pauses the video when off-screen to save CPU/GPU.
-function LazyVideoSlide({
-  src,
-  alt,
-  isActive,
-}: {
-  src: string;
-  alt: string;
-  isActive: boolean;
-}) {
-  const videoRef = useRef<HTMLVideoElement>(null);
-  const wrapRef = useRef<HTMLDivElement>(null);
-  const isVisibleRef = useRef(false);
-  const srcLoaded = useRef(false);
-
-  // Track visibility via IntersectionObserver
-  useEffect(() => {
-    const el = wrapRef.current;
-    if (!el) return;
-    const obs = new IntersectionObserver(
-      ([entry]) => { isVisibleRef.current = entry.isIntersecting; },
-      { threshold: 0.1 }
-    );
-    obs.observe(el);
-    return () => obs.disconnect();
-  }, []);
-
-  // Load src on first activation + play/pause based on active + visible state
-  useEffect(() => {
-    const video = videoRef.current;
-    if (!video) return;
-
-    if (isActive && isVisibleRef.current) {
-      // Lazy-set src only on first activation — zero upfront cost
-      if (!srcLoaded.current) {
-        video.src = src;
-        video.load();
-        srcLoaded.current = true;
-      }
-      video.play().catch(() => { });
-    } else {
-      video.pause();
-    }
-  }, [isActive, src]);
-
-  return (
-    <div ref={wrapRef} style={{ position: "absolute", inset: 0 }}>
-      <video
-        ref={videoRef}
-        muted
-        loop
-        playsInline
-        preload="none"
-        aria-label={alt}
-        style={{
-          width: "100%",
-          height: "100%",
-          objectFit: "cover",
-          objectPosition: "center",
-          display: "block",
-        }}
-      />
-    </div>
-  );
-}
-
-// ─── Media carousel (images + videos) shared by all event cards ───────────────
-function ImageCarousel({
-  images,
-  accent,
-}: {
-  images: { src: string; alt: string; type?: "video" }[];
-  accent: string;
-}) {
-  const [active, setActive] = useState(0);
+export default function EventsOverview() {
+  const router = useRouter();
+  const [slide, setSlide] = useState(0);
+  const [prevSlide, setPrevSlide] = useState<number | null>(null);
+  const [transitioning, setTransitioning] = useState(false);
+  const [mounted, setMounted] = useState(false);
+  const [visible, setVisible] = useState(false);
+  const [hovNext, setHovNext] = useState(false);
+  const [hovBack, setHovBack] = useState(false);
+  const [hovCat, setHovCat] = useState<number | null>(null);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const particleRef = useRef<HTMLCanvasElement>(null);
+  const rafRef = useRef<number>(0);
 
-  const go = useCallback((idx: number) => {
-    setActive(idx);
+  // ── Mount + entrance ────────────────────────────────────────────────────────
+  useEffect(() => {
+    const t = setTimeout(() => { setMounted(true); setTimeout(() => setVisible(true), 60); }, 80);
+    return () => clearTimeout(t);
   }, []);
 
-  // Auto-advance only when more than 1 item
-  // Video slides get longer display time (6s) vs images (3.8s)
+  // ── Auto-advance slides ─────────────────────────────────────────────────────
   useEffect(() => {
-    if (images.length <= 1) return;
-    const currentItem = images[active];
-    const delay = currentItem?.type === "video" ? 6000 : 3800;
-    timerRef.current = setTimeout(() => {
-      setActive(p => (p + 1) % images.length);
-    }, delay);
-    return () => { if (timerRef.current) clearTimeout(timerRef.current); };
-  }, [images, active]);
+    timerRef.current = setInterval(() => advanceSlide(), 4800);
+    return () => { if (timerRef.current) clearInterval(timerRef.current); };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [slide]);
+
+  const advanceSlide = () => {
+    if (transitioning) return;
+    setTransitioning(true);
+    setPrevSlide(slide);
+    setSlide(p => (p + 1) % SLIDES.length);
+    setTimeout(() => { setPrevSlide(null); setTransitioning(false); }, 900);
+  };
+
+  const goSlide = (i: number) => {
+    if (i === slide || transitioning) return;
+    if (timerRef.current) clearInterval(timerRef.current);
+    setTransitioning(true);
+    setPrevSlide(slide);
+    setSlide(i);
+    setTimeout(() => { setPrevSlide(null); setTransitioning(false); }, 900);
+  };
+
+  // ── Particle canvas ─────────────────────────────────────────────────────────
+  useEffect(() => {
+    const canvas = particleRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return;
+
+    let W = canvas.width = canvas.offsetWidth;
+    let H = canvas.height = canvas.offsetHeight;
+
+    const onResize = () => { W = canvas.width = canvas.offsetWidth; H = canvas.height = canvas.offsetHeight; };
+    window.addEventListener("resize", onResize);
+
+    const dots = Array.from({ length: 45 }, () => ({
+      x: Math.random() * W, y: Math.random() * H,
+      r: Math.random() * 1.2 + 0.2,
+      vx: (Math.random() - 0.5) * 0.15,
+      vy: (Math.random() - 0.5) * 0.15,
+      a: Math.random() * 0.35 + 0.08,
+    }));
+
+    const draw = () => {
+      ctx.clearRect(0, 0, W, H);
+      dots.forEach(d => {
+        d.x += d.vx; d.y += d.vy;
+        if (d.x < 0) d.x = W; if (d.x > W) d.x = 0;
+        if (d.y < 0) d.y = H; if (d.y > H) d.y = 0;
+        ctx.beginPath();
+        ctx.arc(d.x, d.y, d.r, 0, Math.PI * 2);
+        ctx.fillStyle = `rgba(201,168,76,${d.a})`;
+        ctx.fill();
+      });
+      rafRef.current = requestAnimationFrame(draw);
+    };
+    draw();
+
+    return () => {
+      window.removeEventListener("resize", onResize);
+      cancelAnimationFrame(rafRef.current);
+    };
+  }, []);
+
+  const ease = (s: boolean) => `opacity 0.6s ease${s ? "" : " 0.1s"}, transform 0.7s cubic-bezier(0.22,1,0.36,1)${s ? "" : " 0.1s"}`;
 
   return (
-    <div style={{ position: "relative", width: "100%", height: "100%", overflow: "hidden" }}>
-      {images.map((img, i) => (
-        <div
-          key={img.src}
-          style={{
-            position: "absolute",
-            inset: 0,
-            opacity: i === active ? 1 : 0,
-            transition: "opacity 0.75s ease",
-            // Prevent hidden slides from consuming GPU resources
-            visibility: i === active ? "visible" : "hidden",
-          }}
-        >
-          {img.type === "video" ? (
-            <LazyVideoSlide
-              src={img.src}
-              alt={img.alt}
-              isActive={i === active}
-            />
-          ) : (
+    <section style={{
+      position: "relative",
+      width: "100%",
+      height: "100vh",
+      minHeight: "580px",
+      background: "#050402",
+      overflow: "hidden",
+      display: "flex",
+      flexDirection: "column",
+      fontFamily: "var(--font-montserrat, 'Montserrat', sans-serif)",
+    }}>
+
+      {/* ══ BACKGROUND SLIDESHOW ════════════════════════════════════════════════ */}
+      {SLIDES.map((s, i) => (
+        <div key={s.src} style={{
+          position: "absolute", inset: 0, zIndex: 0,
+          opacity: i === slide ? 1 : i === prevSlide ? 0 : 0,
+          transition: "opacity 1s ease",
+          pointerEvents: "none",
+        }}>
+          {mounted && (
             <Image
-              src={img.src}
-              alt={img.alt}
-              fill
-              loading="lazy"
-              sizes="(max-width:768px) 100vw, 33vw"
-              style={{ objectFit: "cover", objectPosition: "center" }}
+              src={s.src} alt={s.alt} fill
+              priority={i === 0} loading={i === 0 ? "eager" : "lazy"}
+              sizes="100vw"
+              style={{ objectFit: "cover", objectPosition: "center 40%" }}
             />
           )}
+          <div style={{ position: "absolute", inset: 0, background: s.overlay, zIndex: 1 }} />
         </div>
       ))}
 
-      {/* Overlay */}
+      {/* Deep vignette bottom — ensures bottom UI always readable */}
       <div style={{
-        position: "absolute",
-        inset: 0,
-        background: "linear-gradient(to top, rgba(5,4,2,0.85) 0%, rgba(5,4,2,0.1) 55%)",
-        zIndex: 2,
+        position: "absolute", bottom: 0, left: 0, right: 0,
+        height: "55%", zIndex: 1, pointerEvents: "none",
+        background: "linear-gradient(to top, rgba(5,4,2,0.97) 0%, rgba(5,4,2,0.7) 50%, transparent 100%)",
       }} />
 
-      {/* Dot indicators */}
-      {images.length > 1 && (
-        <div style={{
-          position: "absolute",
-          bottom: "0.7rem",
-          left: "50%",
-          transform: "translateX(-50%)",
-          display: "flex",
-          gap: "5px",
-          zIndex: 3,
-        }}>
-          {images.map((_, i) => (
-            <button
-              key={i}
-              onClick={() => go(i)}
-              style={{
-                width: i === active ? "16px" : "5px",
-                height: "5px",
-                background: i === active ? accent : "rgba(255,255,255,0.35)",
-                border: "none",
-                cursor: "pointer",
-                padding: 0,
-                transition: "all 0.3s ease",
-              }}
-              aria-label={`View slide ${i + 1}`}
-            />
-          ))}
-        </div>
-      )}
-    </div>
-  );
-}
+      {/* Particle layer */}
+      <canvas ref={particleRef} style={{
+        position: "absolute", inset: 0, width: "100%", height: "100%",
+        zIndex: 2, pointerEvents: "none", opacity: 0.6,
+      }} />
 
-// ─── Event card ───────────────────────────────────────────────────────────────
-const EventCard = memo(function EventCard({
-  evt,
-  index,
-  className,
-}: {
-  evt: typeof TECH_EVENTS[0];
-  index: number;
-  className: string;
-}) {
-  const cardRef = useRef<HTMLDivElement>(null);
+      {/* Vertical gold rule — left accent */}
+      <div style={{
+        position: "absolute", left: 0, top: "15%", bottom: "15%", width: "2px", zIndex: 3,
+        background: "linear-gradient(to bottom, transparent, #C9A84C 30%, #C9A84C 70%, transparent)",
+        opacity: visible ? 0.35 : 0, transition: "opacity 1s ease 0.5s",
+        pointerEvents: "none",
+      }} />
 
-  const onMove = (e: React.MouseEvent<HTMLDivElement>) => {
-    const r = e.currentTarget.getBoundingClientRect();
-    const mx = ((e.clientX - r.left) / r.width - 0.5) * 10;
-    const my = ((e.clientY - r.top) / r.height - 0.5) * -10;
-    loadGsap().then(({ gsap }) => {
-      gsap.to(e.currentTarget, {
-        rotateY: mx, rotateX: my, duration: 0.3, ease: "power2.out",
-        transformPerspective: 700,
-      });
-    });
-  };
-  const onLeave = (e: React.MouseEvent<HTMLDivElement>) => {
-    loadGsap().then(({ gsap }) => {
-      gsap.to(e.currentTarget, {
-        rotateY: 0, rotateX: 0, duration: 0.55, ease: "elastic.out(1,0.6)",
-        transformPerspective: 700,
-      });
-    });
-  };
-
-  return (
-    <div
-      ref={cardRef}
-      className={className}
-      onMouseMove={onMove}
-      onMouseLeave={onLeave}
-      style={{
-        background: "rgba(255,255,255,0.025)",
-        border: "1px solid rgba(201,168,76,0.12)",
-        display: "flex",
-        flexDirection: "column",
-        overflow: "hidden",
-        willChange: "transform",
-        transformStyle: "preserve-3d",
-        opacity: 0,
-        transform: "translateY(32px)",
-        transition: "border-color 0.25s ease",
-      }}
-      onMouseEnter={e => {
-        e.currentTarget.style.borderColor = "rgba(201,168,76,0.38)";
-      }}
-    >
-      {/* Image carousel — fixed height */}
-      <div style={{ position: "relative", height: "clamp(160px,20vw,240px)", flexShrink: 0 }}>
-        <ImageCarousel images={evt.images} accent={evt.accent} />
-
-        {/* Brand tag */}
-        <div style={{
-          position: "absolute",
-          top: "0.7rem",
-          left: "0.7rem",
-          zIndex: 4,
-          background: "rgba(5,4,2,0.75)",
-          border: "1px solid rgba(201,168,76,0.2)",
-          backdropFilter: "blur(8px)",
-          padding: "3px 9px",
-        }}>
-          <span style={{
-            color: "#C9A84C",
-            fontSize: "0.55rem",
-            fontWeight: 700,
-            letterSpacing: "0.22em",
-            textTransform: "uppercase",
-            fontFamily: "var(--font-montserrat)",
-          }}>
-            {evt.tag}
-          </span>
-        </div>
-
-        {/* Year badge */}
-        <div style={{
-          position: "absolute",
-          top: "0.7rem",
-          right: "0.7rem",
-          zIndex: 4,
-          background: "rgba(5,4,2,0.6)",
-          padding: "3px 8px",
-        }}>
-          <span style={{
-            color: "rgba(255,255,255,0.5)",
-            fontSize: "0.55rem",
-            fontFamily: "var(--font-montserrat)",
-            fontWeight: 600,
-            letterSpacing: "0.1em",
-          }}>
-            {evt.year}
-          </span>
-        </div>
-      </div>
-
-      {/* Text content */}
-      <div style={{ padding: "1.2rem 1.2rem 1.4rem", display: "flex", flexDirection: "column", gap: "0.7rem", flexGrow: 1 }}>
-        {/* Brand + event name */}
-        <div>
-          <p style={{
-            color: "#C9A84C",
-            fontSize: "0.58rem",
-            fontWeight: 700,
-            letterSpacing: "0.22em",
-            textTransform: "uppercase",
-            fontFamily: "var(--font-montserrat)",
-            margin: "0 0 0.25rem",
-            opacity: 0.8,
-          }}>
-            {evt.brand}
-          </p>
-          <h3 style={{
-            color: "#ffffff",
-            fontSize: "clamp(0.88rem, 1.4vw, 1rem)",
-            fontWeight: 700,
-            fontFamily: "var(--font-montserrat)",
-            margin: 0,
-            lineHeight: 1.25,
-          }}>
-            {evt.event}
-          </h3>
-        </div>
-
-        {/* Description */}
-        <p style={{
-          color: "rgba(255,255,255,0.48)",
-          fontSize: "0.72rem",
-          fontFamily: "var(--font-montserrat)",
-          fontWeight: 400,
-          lineHeight: 1.65,
-          margin: 0,
-          flexGrow: 1,
-        }}>
-          {evt.desc}
-        </p>
-
-        {/* Stat */}
-        <div style={{
-          display: "flex",
-          alignItems: "baseline",
-          gap: "0.5rem",
-          paddingTop: "0.8rem",
-          borderTop: "1px solid rgba(255,255,255,0.06)",
-        }}>
-          <span style={{
-            color: "#C9A84C",
-            fontSize: "clamp(1.1rem, 2vw, 1.4rem)",
-            fontWeight: 800,
-            fontFamily: "var(--font-montserrat)",
-            lineHeight: 1,
-            fontVariantNumeric: "tabular-nums",
-          }}>
-            {evt.stat}
-          </span>
-          <span style={{
-            color: "rgba(255,255,255,0.3)",
-            fontSize: "0.58rem",
-            fontFamily: "var(--font-montserrat)",
-            fontWeight: 600,
-            letterSpacing: "0.1em",
-            textTransform: "uppercase",
-          }}>
-            {evt.statLabel}
-          </span>
-        </div>
-      </div>
-    </div>
-  );
-});
-
-// ─── Hero Slideshow ───────────────────────────────────────────────────────────
-function EventsHero({ scrollerEl }: { scrollerEl: HTMLElement | null }) {
-  const [active, setActive] = useState(0);
-  const [entered, setEntered] = useState(false);
-  const heroRef = useRef<HTMLDivElement>(null);
-  const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
-
-  // Auto-advance
-  useEffect(() => {
-    timerRef.current = setInterval(() => {
-      setActive(p => (p + 1) % HERO_SLIDES.length);
-    }, 4500);
-    return () => { if (timerRef.current) clearInterval(timerRef.current); };
-  }, []);
-
-  // Entrance animation
-  useEffect(() => {
-    if (!heroRef.current || !scrollerEl) return;
-    let cancelled = false;
-    loadGsap().then(({ gsap, ScrollTrigger }) => {
-      if (cancelled || !heroRef.current) return;
-      ScrollTrigger.create({
-        trigger: heroRef.current,
-        start: "top 80%",
-        once: true,
-        ...(scrollerEl ? { scroller: scrollerEl } : {}),
-        onEnter: () => {
-          setEntered(true);
-          gsap.fromTo(".evh-cat", { opacity: 0, y: 20 }, { opacity: 1, y: 0, duration: 0.6, ease: "power2.out" });
-          gsap.fromTo(".evh-head", { opacity: 0, y: 30 }, { opacity: 1, y: 0, duration: 0.7, ease: "power2.out", delay: 0.15 });
-          gsap.fromTo(".evh-sub", { opacity: 0, y: 20 }, { opacity: 1, y: 0, duration: 0.6, ease: "power2.out", delay: 0.25 });
-          gsap.fromTo(".evh-stat", { opacity: 0, y: 16 }, { opacity: 1, y: 0, duration: 0.5, ease: "power2.out", stagger: 0.1, delay: 0.4 });
-          gsap.fromTo(".evh-dots", { opacity: 0 }, { opacity: 1, duration: 0.5, delay: 0.6 });
-        },
-      });
-    });
-    return () => {
-      cancelled = true;
-      loadGsap().then(({ ScrollTrigger }) => {
-        ScrollTrigger.getAll().filter(st => st.vars.trigger === heroRef.current).forEach(st => st.kill());
-      });
-    };
-  }, [scrollerEl]);
-
-  const slide = HERO_SLIDES[active];
-
-  return (
-    <div
-      ref={heroRef}
-      style={{
-        position: "relative",
-        width: "100%",
-        minHeight: "80vh",
-        overflow: "hidden",
-        background: "#050402",
-        display: "flex",
-        alignItems: "center",
-      }}
-    >
-      {/* Background slides */}
-      {HERO_SLIDES.map((s, i) => (
-        <div key={s.src} style={{
-          position: "absolute",
-          inset: 0,
-          zIndex: 1,
-          opacity: i === active ? 1 : 0,
-          transition: "opacity 1s ease",
-        }}>
-          <Image
-            src={s.src}
-            alt={s.alt}
-            fill
-            loading={i === 0 ? "eager" : "lazy"}
-            sizes="100vw"
-            style={{ objectFit: "cover", objectPosition: "center 40%" }}
-          />
-          <div style={{
-            position: "absolute",
-            inset: 0,
-            background: s.overlay,
-            zIndex: 2,
-          }} />
-        </div>
+      {/* Corner brackets */}
+      {(["tl", "tr", "bl", "br"] as const).map(pos => (
+        <div key={pos} style={{
+          position: "absolute", width: "24px", height: "24px", zIndex: 4, pointerEvents: "none",
+          ...(pos.includes("t") ? { top: "10px" } : { bottom: "10px" }),
+          ...(pos.includes("l") ? { left: "10px" } : { right: "10px" }),
+          borderTop: pos.includes("t") ? "1px solid rgba(201,168,76,0.25)" : "none",
+          borderBottom: pos.includes("b") ? "1px solid rgba(201,168,76,0.25)" : "none",
+          borderLeft: pos.includes("l") ? "1px solid rgba(201,168,76,0.25)" : "none",
+          borderRight: pos.includes("r") ? "1px solid rgba(201,168,76,0.25)" : "none",
+          opacity: visible ? 1 : 0, transition: "opacity 1s ease 0.3s",
+        }} />
       ))}
 
-      {/* Top + bottom fade */}
-      <div style={{ position: "absolute", top: 0, left: 0, right: 0, height: "80px", background: "linear-gradient(to bottom, #050402, transparent)", zIndex: 3 }} />
-      <div style={{ position: "absolute", bottom: 0, left: 0, right: 0, height: "120px", background: "linear-gradient(to bottom, transparent, #050402)", zIndex: 3 }} />
-
-      {/* Content */}
+      {/* ══ TOP BAR ════════════════════════════════════════════════════════════ */}
       <div style={{
-        position: "relative",
-        zIndex: 4,
-        padding: "5rem clamp(1.5rem, 6vw, 6rem)",
-        width: "100%",
-        maxWidth: "900px",
+        flexShrink: 0, height: "52px", zIndex: 5,
+        display: "flex", alignItems: "center", justifyContent: "space-between",
+        padding: "0 clamp(1.2rem,3.5vw,2.5rem)",
+        borderBottom: "1px solid rgba(201,168,76,0.1)",
+        opacity: visible ? 1 : 0, transition: ease(visible),
       }}>
-        <p className="evh-cat" style={{
-          color: "#C9A84C",
-          fontSize: "0.68rem",
-          letterSpacing: "0.42em",
-          textTransform: "uppercase",
-          fontFamily: "var(--font-montserrat)",
-          fontWeight: 700,
-          margin: "0 0 1rem",
-          opacity: entered ? 1 : 0,
-        }}>
-          Events & Activations · Mall of America
-        </p>
+        {/* Left: Empty placeholder to maintain flex space-between */}
+        <div style={{ width: "70px" }}></div>
 
-        <h2 className="evh-head" style={{
-          color: "#ffffff",
-          fontSize: "clamp(3rem, 7vw, 6.5rem)",
-          fontWeight: 800,
-          fontFamily: "var(--font-montserrat)",
-          margin: 0,
-          lineHeight: 0.92,
-          opacity: entered ? 1 : 0,
-          fontVariantNumeric: "tabular-nums",
-          transition: "color 0.6s ease",
-          //   color:      slide.accent,
-        }}>
-          {slide.headline}
-        </h2>
-        <h3 style={{
-          color: "rgba(255,255,255,0.55)",
-          fontSize: "clamp(1rem, 2.5vw, 1.8rem)",
-          fontWeight: 700,
-          fontFamily: "var(--font-montserrat)",
-          margin: "0.3rem 0 2.5rem",
-          lineHeight: 1.2,
-          transition: "opacity 0.6s ease",
-        }}
-          className="evh-sub"
-        >
-          {slide.sub}
-        </h3>
+        {/* Center: section title */}
+        <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "0.6rem", marginTop: "0.5rem" }}>
+          <div style={{ color: "#C9A84C", fontSize: "0.9rem", lineHeight: 1 }}>◈</div>
+          <h1 style={{ color: "#fff", fontSize: "0.75rem", fontWeight: 800, margin: 0, lineHeight: 1, letterSpacing: "0.15em", textTransform: "uppercase" }}>
+            Events & Activations
+          </h1>
+        </div>
 
-        {/* Stats row */}
-        <div style={{ display: "flex", gap: "clamp(1rem, 3vw, 3rem)", flexWrap: "wrap" }}>
-          {HERO_STATS.map(s => (
-            <div key={s.value} className="evh-stat" style={{
-              borderLeft: "2px solid #C9A84C",
-              paddingLeft: "0.9rem",
-              opacity: entered ? 1 : 0,
-            }}>
+        {/* Right: slide counter */}
+        <div style={{ display: "flex", alignItems: "center", gap: "0.3rem" }}>
+          <span style={{ color: "#C9A84C", fontSize: "0.68rem", fontWeight: 700 }}>05</span>
+          <span style={{ color: "rgba(255,255,255,0.18)", fontSize: "0.62rem" }}>/ 08</span>
+        </div>
+      </div>
+
+      {/* ══ MAIN BODY ═══════════════════════════════════════════════════════════ */}
+      <div className="ev-body" style={{
+        flex: 1, minHeight: 0, zIndex: 5,
+        display: "grid",
+        padding: "0 clamp(1.2rem,3.5vw,2.5rem)",
+        opacity: visible ? 1 : 0,
+        transition: "opacity 0.9s ease 0.15s",
+      }}>
+
+        {/* ── LEFT COLUMN: hero copy ──────────────────────────────────────── */}
+        <div style={{
+          display: "flex", flexDirection: "column",
+          justifyContent: "center", gap: "0",
+          paddingRight: "clamp(1rem,2vw,2rem)",
+          borderRight: "1px solid rgba(201,168,76,0.08)",
+        }}>
+
+          {/* Eyebrow */}
+          <p style={{
+            color: "#C9A84C", fontSize: "0.55rem", letterSpacing: "0.42em",
+            textTransform: "uppercase", fontWeight: 700, margin: "0 0 0.7rem",
+            opacity: visible ? 1 : 0,
+            transform: visible ? "translateY(0)" : "translateY(16px)",
+            transition: ease(visible),
+          }}>
+            Events & Activations
+          </p>
+
+          {/* Main headline */}
+          <h2 style={{
+            color: "#fff", fontWeight: 900, margin: "0 0 0.5rem",
+            fontSize: "clamp(2rem,4.5vw,4rem)",
+            lineHeight: 1.0, letterSpacing: "0.03em", textTransform: "uppercase",
+            opacity: visible ? 1 : 0,
+            transform: visible ? "translateY(0)" : "translateY(22px)",
+            transition: `opacity 0.8s ease 0.2s, transform 0.9s cubic-bezier(0.22,1,0.36,1) 0.2s`,
+          }}>
+            America's
+          </h2>
+          <h2 style={{
+            color: "#C9A84C", fontWeight: 900, margin: "0 0 1.2rem",
+            fontSize: "clamp(2rem,4.5vw,4rem)",
+            lineHeight: 1.0, letterSpacing: "0.03em", textTransform: "uppercase",
+            opacity: visible ? 1 : 0,
+            transform: visible ? "translateY(0)" : "translateY(22px)",
+            transition: `opacity 0.8s ease 0.3s, transform 0.9s cubic-bezier(0.22,1,0.36,1) 0.3s`,
+          }}>
+            Biggest Stage
+          </h2>
+
+          {/* Divider */}
+          <div style={{
+            width: visible ? "clamp(50px,8vw,80px)" : "0px",
+            height: "2px",
+            background: "linear-gradient(to right, #C9A84C, transparent)",
+            marginBottom: "1.1rem",
+            transition: "width 0.9s ease 0.5s",
+          }} />
+
+          {/* Description */}
+          <p style={{
+            color: "rgba(255,255,255,0.45)", fontSize: "clamp(0.7rem,1.1vw,0.82rem)",
+            lineHeight: 1.7, fontWeight: 400, margin: "0 0 1.4rem",
+            maxWidth: "340px",
+            opacity: visible ? 1 : 0,
+            transform: visible ? "translateY(0)" : "translateY(14px)",
+            transition: ease(visible),
+          }}>
+            300+ live events every year. World-class brand activations, tech launches,
+            and entertainment spectacles — witnessed by 40 million visitors.
+          </p>
+
+          {/* Stats */}
+          <div style={{
+            display: "grid", gridTemplateColumns: "1fr 1fr",
+            gap: "0.6rem 1.2rem",
+          }}>
+            {STATS.map((s, i) => (
+              <div key={s.val} style={{
+                opacity: visible ? 1 : 0,
+                transform: visible ? "translateY(0)" : "translateY(12px)",
+                transition: `opacity 0.7s ease ${0.45 + i * 0.08}s, transform 0.7s cubic-bezier(0.22,1,0.36,1) ${0.45 + i * 0.08}s`,
+              }}>
+                <div style={{
+                  color: "#C9A84C", fontSize: "clamp(1rem,2vw,1.4rem)",
+                  fontWeight: 800, lineHeight: 1, letterSpacing: "0.02em",
+                }}>
+                  {s.val}
+                </div>
+                <div style={{
+                  color: "rgba(255,255,255,0.28)", fontSize: "0.5rem",
+                  fontWeight: 600, letterSpacing: "0.2em", textTransform: "uppercase",
+                  marginTop: "2px",
+                }}>
+                  {s.label}
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {/* Slide dots */}
+          <div style={{
+            display: "flex", gap: "5px", marginTop: "1.4rem",
+            opacity: visible ? 0.9 : 0, transition: "opacity 1s ease 0.8s",
+          }}>
+            {SLIDES.map((_, i) => (
+              <button key={i} onClick={() => goSlide(i)} style={{
+                width: i === slide ? "22px" : "5px", height: "5px",
+                background: i === slide ? "#C9A84C" : "rgba(255,255,255,0.25)",
+                border: "none", cursor: "pointer", padding: 0,
+                transition: "all 0.35s ease",
+              }} aria-label={`Slide ${i + 1}`} />
+            ))}
+          </div>
+        </div>
+
+        {/* ── RIGHT COLUMN: category navigation cards ──────────────────────── */}
+        <div className="ev-right-col" style={{
+          display: "flex", flexDirection: "column",
+          justifyContent: "center", gap: "0.55rem",
+          paddingLeft: "clamp(1rem,2vw,2rem)",
+        }}>
+
+          {/* Section micro-label */}
+          <p style={{
+            color: "rgba(255,255,255,0.18)", fontSize: "0.48rem", letterSpacing: "0.32em",
+            textTransform: "uppercase", fontWeight: 600, margin: "0 0 0.3rem",
+          }}>
+            Explore events
+          </p>
+
+          {/* Category cards */}
+          {CATEGORIES.map((cat, i) => (
+            <button
+              key={cat.label}
+              onClick={() => router.push(cat.href)}
+              onMouseEnter={() => setHovCat(i)}
+              onMouseLeave={() => setHovCat(null)}
+              style={{
+                background: hovCat === i ? "rgba(201,168,76,0.08)" : "rgba(255,255,255,0.02)",
+                border: `1px solid ${hovCat === i ? "rgba(201,168,76,0.45)" : "rgba(201,168,76,0.1)"}`,
+                padding: "0.65rem 0.9rem",
+                cursor: "pointer", textAlign: "left",
+                display: "flex", alignItems: "center", gap: "0.7rem",
+                transition: `opacity 0.7s ease ${0.3 + i * 0.1}s, transform 0.75s cubic-bezier(0.22,1,0.36,1) ${0.3 + i * 0.1}s, background 0.22s ease, border-color 0.22s ease`,
+                opacity: visible ? 1 : 0,
+                transform: visible ? "translateX(0)" : "translateX(18px)",
+              }}
+            >
+              {/* Icon box */}
               <div style={{
-                color: "#C9A84C",
-                fontSize: "clamp(1.2rem, 2.5vw, 1.8rem)",
-                fontWeight: 800,
-                fontFamily: "var(--font-montserrat)",
-                lineHeight: 1,
-                fontVariantNumeric: "tabular-nums",
-              }}>{s.value}</div>
+                width: "30px", height: "30px", flexShrink: 0,
+                background: hovCat === i ? "rgba(201,168,76,0.12)" : "rgba(201,168,76,0.06)",
+                border: "1px solid rgba(201,168,76,0.18)",
+                display: "flex", alignItems: "center", justifyContent: "center",
+                transition: "background 0.22s ease",
+              }}>
+                {cat.icon}
+              </div>
+              {/* Text */}
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{
+                  color: hovCat === i ? "#F0D988" : "#fff",
+                  fontSize: "0.68rem", fontWeight: 700,
+                  letterSpacing: "0.08em", textTransform: "uppercase",
+                  transition: "color 0.22s ease",
+                  whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis",
+                }}>
+                  {cat.label}
+                </div>
+                <div style={{
+                  color: "rgba(255,255,255,0.28)", fontSize: "0.5rem",
+                  fontWeight: 500, letterSpacing: "0.06em", marginTop: "1px",
+                  whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis",
+                }}>
+                  {cat.sub}
+                </div>
+              </div>
+              {/* Arrow */}
+              <svg viewBox="0 0 12 12" width="10" height="10" fill="none" style={{
+                flexShrink: 0,
+                transform: hovCat === i ? "translateX(3px)" : "translateX(0)",
+                transition: "transform 0.22s ease",
+              }}>
+                <path d="M3 6h6M6 3l3 3-3 3" stroke={hovCat === i ? "#C9A84C" : "rgba(201,168,76,0.35)"} strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round" />
+              </svg>
+            </button>
+          ))}
+
+          {/* CTA — proceed to next section */}
+          <button
+            onClick={() => router.push(window.innerWidth <= 767 ? "/events/tech" : "/events/stats")}
+            onMouseEnter={() => setHovNext(true)}
+            onMouseLeave={() => setHovNext(false)}
+            style={{
+              marginTop: "0.4rem",
+              background: hovNext ? "#C9A84C" : "transparent",
+              border: "1px solid rgba(201,168,76,0.35)",
+              padding: "0.7rem 1rem",
+              cursor: "pointer",
+              display: "flex", alignItems: "center", justifyContent: "space-between",
+              gap: "0.8rem",
+              transition: "all 0.28s ease",
+              opacity: visible ? 1 : 0,
+              transform: visible ? "translateY(0)" : "translateY(10px)",
+            }}
+          >
+            <div>
               <div style={{
-                color: "rgba(255,255,255,0.35)",
-                fontSize: "0.58rem",
-                letterSpacing: "0.16em",
-                textTransform: "uppercase",
-                fontFamily: "var(--font-montserrat)",
-                fontWeight: 600,
-                marginTop: "0.2rem",
-              }}>{s.label}</div>
+                color: hovNext ? "#050402" : "#C9A84C",
+                fontSize: "0.58rem", fontWeight: 700, letterSpacing: "0.22em",
+                textTransform: "uppercase", transition: "color 0.25s ease",
+              }}>
+                View Event Stats
+              </div>
+              <div style={{
+                color: hovNext ? "rgba(5,4,2,0.55)" : "rgba(255,255,255,0.25)",
+                fontSize: "0.48rem", fontWeight: 500, letterSpacing: "0.1em",
+                marginTop: "1px", transition: "color 0.25s ease",
+              }}>
+                300+ events · 500K attendees
+              </div>
+            </div>
+            <svg viewBox="0 0 16 16" width="13" height="13" fill="none">
+              <path d="M4 8h8M9 5l3 3-3 3" stroke={hovNext ? "#050402" : "#C9A84C"} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" style={{ transition: "stroke 0.25s" }} />
+            </svg>
+          </button>
+
+        </div>
+      </div>
+
+      {/* ══ BOTTOM STATUS BAR ═══════════════════════════════════════════════════ */}
+      <div style={{
+        flexShrink: 0, height: "38px", zIndex: 5,
+        display: "flex", alignItems: "center", justifyContent: "space-between",
+        padding: "0 clamp(1.2rem,3.5vw,2.5rem)",
+        borderTop: "1px solid rgba(201,168,76,0.08)",
+        opacity: visible ? 1 : 0, transition: "opacity 0.9s ease 0.3s",
+      }}>
+        {/* Live indicator */}
+        <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
+          <div style={{
+            width: "5px", height: "5px",
+            background: "#C9A84C",
+            animation: "evPulse 2s ease-in-out infinite",
+          }} />
+          <span style={{
+            color: "rgba(255,255,255,0.3)", fontSize: "0.48rem",
+            fontWeight: 600, letterSpacing: "0.2em", textTransform: "uppercase",
+          }}>
+            Events Overview
+          </span>
+        </div>
+
+        {/* Center: quick stats inline */}
+        <div className="ev-bottom-stats" style={{ display: "flex", alignItems: "center", gap: "1.8rem" }}>
+          {STATS.map(s => (
+            <div key={s.val} style={{ display: "flex", alignItems: "baseline", gap: "0.3rem" }}>
+              <span style={{ color: "#C9A84C", fontSize: "clamp(0.68rem,1.1vw,0.8rem)", fontWeight: 800 }}>{s.val}</span>
+              <span style={{ color: "rgba(255,255,255,0.18)", fontSize: "0.44rem", fontWeight: 600, letterSpacing: "0.18em", textTransform: "uppercase" }}>{s.label}</span>
             </div>
           ))}
         </div>
-      </div>
 
-      {/* Slide dots */}
-      <div className="evh-dots" style={{
-        position: "absolute",
-        bottom: "2rem",
-        left: "clamp(1.5rem, 6vw, 6rem)",
-        display: "flex",
-        gap: "6px",
-        zIndex: 5,
-        opacity: 0,
-      }}>
-        {HERO_SLIDES.map((_, i) => (
-          <button
-            key={i}
-            onClick={() => setActive(i)}
-            style={{
-              width: i === active ? "24px" : "6px",
-              height: "6px",
-              background: i === active ? "#C9A84C" : "rgba(255,255,255,0.3)",
-              border: "none",
-              cursor: "pointer",
-              padding: 0,
-              transition: "all 0.35s ease",
-            }}
-            aria-label={`Slide ${i + 1}`}
-          />
-        ))}
-      </div>
-    </div>
-  );
-}
-
-// ─── Tech events section ──────────────────────────────────────────────────────
-function TechEventsSection({ scrollerEl }: { scrollerEl: HTMLElement | null }) {
-  const secRef = useRef<HTMLDivElement>(null);
-  const triggered = useRef(false);
-
-  useEffect(() => {
-    if (!secRef.current || !scrollerEl) return;
-    let cancelled = false;
-    loadGsap().then(({ gsap, ScrollTrigger }) => {
-      if (cancelled || !secRef.current) return;
-      ScrollTrigger.create({
-        trigger: secRef.current,
-        start: "top 80%",
-        once: true,
-        ...(scrollerEl ? { scroller: scrollerEl } : {}),
-        onEnter: () => {
-          if (triggered.current) return;
-          triggered.current = true;
-          gsap.fromTo(".tech-heading", { opacity: 0, y: 24 }, { opacity: 1, y: 0, duration: 0.8, ease: "power2.out" });
-          gsap.to(".tech-card", {
-            opacity: 1, y: 0, duration: 0.7, ease: "power2.out",
-            stagger: 0.14, delay: 0.2,
-          });
-        },
-      });
-    });
-    return () => {
-      cancelled = true;
-      loadGsap().then(({ ScrollTrigger }) => {
-        ScrollTrigger.getAll().filter(st => st.vars.trigger === secRef.current).forEach(st => st.kill());
-      });
-    };
-  }, [scrollerEl]);
-
-  return (
-    <div
-      ref={secRef}
-      style={{
-        position: "relative",
-        overflow: "hidden",
-        padding: "5rem 0 4rem",
-      }}
-    >
-      {/* Background image */}
-      <div style={{ position: "absolute", inset: 0, zIndex: 1 }}>
-        <Image
-          src="/photos/event-hero-2.jpg"
-          alt="Tech events background"
-          fill
-          loading="lazy"
-          sizes="100vw"
-          style={{ objectFit: "cover", objectPosition: "center" }}
-        />
-        <div style={{
-          position: "absolute",
-          inset: 0,
-          background: "linear-gradient(to bottom, rgba(0,10,20,0.97) 0%, rgba(0,15,30,0.92) 50%, rgba(0,10,20,0.97) 100%)",
-          zIndex: 2,
-        }} />
-      </div>
-
-      <div style={{ position: "relative", zIndex: 3, padding: "0 clamp(1.2rem, 4vw, 4rem)" }}>
-        {/* Section heading */}
-        <div className="tech-heading" style={{ marginBottom: "2.5rem", opacity: 0 }}>
-          <p style={{
-            color: "rgba(0,200,240,0.85)",
-            fontSize: "0.68rem",
-            letterSpacing: "0.4em",
-            textTransform: "uppercase",
-            fontFamily: "var(--font-montserrat)",
-            fontWeight: 700,
-            margin: "0 0 0.6rem",
-          }}>
-            Tech Events
-          </p>
-          <h3 style={{
-            color: "#ffffff",
-            fontSize: "clamp(1.4rem, 3vw, 2.4rem)",
-            fontWeight: 800,
-            fontFamily: "var(--font-montserrat)",
-            margin: 0,
-            lineHeight: 1.1,
-          }}>
-            Where tech brands<br />
-            <span style={{ color: "rgba(0,200,240,0.9)" }}>launch their future</span>
-          </h3>
-        </div>
-
-        {/* Cards grid */}
-        <div className="events-3col-grid">
-          {TECH_EVENTS.map((evt, i) => (
-            <EventCard key={evt.id} evt={evt} index={i} className="tech-card" />
-          ))}
-        </div>
-      </div>
-    </div>
-  );
-}
-
-// ─── Entertainment + Gaming section ──────────────────────────────────────────
-function EntGamingSection({ scrollerEl }: { scrollerEl: HTMLElement | null }) {
-  const secRef = useRef<HTMLDivElement>(null);
-  const triggered = useRef(false);
-
-  useEffect(() => {
-    if (!secRef.current || !scrollerEl) return;
-    let cancelled = false;
-    loadGsap().then(({ gsap, ScrollTrigger }) => {
-      if (cancelled || !secRef.current) return;
-      ScrollTrigger.create({
-        trigger: secRef.current,
-        start: "top 80%",
-        once: true,
-        ...(scrollerEl ? { scroller: scrollerEl } : {}),
-        onEnter: () => {
-          if (triggered.current) return;
-          triggered.current = true;
-          gsap.fromTo(".eg-heading", { opacity: 0, y: 24 }, { opacity: 1, y: 0, duration: 0.8, ease: "power2.out" });
-          gsap.to(".eg-card", {
-            opacity: 1, y: 0, duration: 0.7, ease: "power2.out",
-            stagger: 0.14, delay: 0.2,
-          });
-        },
-      });
-    });
-    return () => {
-      cancelled = true;
-      loadGsap().then(({ ScrollTrigger }) => {
-        ScrollTrigger.getAll().filter(st => st.vars.trigger === secRef.current).forEach(st => st.kill());
-      });
-    };
-  }, [scrollerEl]);
-
-  return (
-    <div
-      ref={secRef}
-      style={{
-        position: "relative",
-        overflow: "hidden",
-        padding: "5rem 0 6rem",
-      }}
-    >
-      {/* Background */}
-      <div style={{ position: "absolute", inset: 0, zIndex: 1 }}>
-        <Image
-          src="/photos/event-hero-3.jpg"
-          alt="Entertainment events background"
-          fill
-          loading="lazy"
-          sizes="100vw"
-          style={{ objectFit: "cover", objectPosition: "center 30%" }}
-        />
-        <div style={{
-          position: "absolute",
-          inset: 0,
-          background: "linear-gradient(to bottom, rgba(15,4,0,0.97) 0%, rgba(10,2,0,0.9) 50%, rgba(5,4,2,0.97) 100%)",
-          zIndex: 2,
-        }} />
-      </div>
-
-      <div style={{ position: "relative", zIndex: 3, padding: "0 clamp(1.2rem, 4vw, 4rem)" }}>
-        {/* Section heading */}
-        <div className="eg-heading" style={{ marginBottom: "2.5rem", opacity: 0 }}>
-          <p style={{
-            color: "#C9A84C",
-            fontSize: "0.68rem",
-            letterSpacing: "0.4em",
-            textTransform: "uppercase",
-            fontFamily: "var(--font-montserrat)",
-            fontWeight: 700,
-            margin: "0 0 0.6rem",
-          }}>
-            Entertainment & Gaming
-          </p>
-          <h3 style={{
-            color: "#ffffff",
-            fontSize: "clamp(1.4rem, 3vw, 2.4rem)",
-            fontWeight: 800,
-            fontFamily: "var(--font-montserrat)",
-            margin: 0,
-            lineHeight: 1.1,
-          }}>
-            Sport, culture & gaming<br />
-            <span style={{ color: "#C9A84C" }}>collide on our stage</span>
-          </h3>
-        </div>
-
-        {/* Cards grid */}
-        <div className="events-3col-grid">
-          {ENT_EVENTS.map((evt, i) => (
-            <EventCard key={evt.id} evt={evt} index={i} className="eg-card" />
-          ))}
-        </div>
-      </div>
-
-      {/* Bottom CTA */}
-      <div style={{
-        position: "relative",
-        zIndex: 3,
-        textAlign: "center",
-        padding: "4rem 1.5rem 0",
-        display: "flex",
-        flexDirection: "column",
-        alignItems: "center",
-        gap: "1.2rem",
-      }}>
-        <p style={{
-          color: "rgba(255,255,255,0.28)",
-          fontSize: "0.78rem",
-          fontFamily: "var(--font-montserrat)",
-          fontWeight: 400,
-          margin: 0,
-          maxWidth: "380px",
-          lineHeight: 1.6,
+        {/* Right: current slide label */}
+        <span style={{
+          color: "rgba(201,168,76,0.45)", fontSize: "0.48rem",
+          fontWeight: 600, letterSpacing: "0.2em", textTransform: "uppercase",
         }}>
-          Your brand. Our stage. 40 million witnesses.
-        </p>
-        <p style={{
-          color: "rgba(201,168,76,0.55)",
-          fontSize: "0.65rem",
-          fontFamily: "var(--font-montserrat)",
-          fontWeight: 600,
-          margin: 0,
-          letterSpacing: "0.22em",
-          textTransform: "uppercase",
-        }}>
-          Booking details continue in the closing slide
-        </p>
+          {["Live Events", "Tech Activations", "Entertainment"][slide]}
+        </span>
       </div>
-    </div>
-  );
-}
 
-// ─── Main export ──────────────────────────────────────────────────────────────
-export default function EventsPanel({ scrollerEl }: { scrollerEl: HTMLElement | null }) {
-  return (
-    <div id="events-panel" style={{ background: "#050402", overflow: "hidden" }}>
-      {/* Separator */}
-      <div style={{
-        height: "1px",
-        background: "linear-gradient(to right, transparent, rgba(201,168,76,0.2), transparent)",
-      }} />
-
-      {/* 1 — Hero slideshow */}
-      <EventsHero scrollerEl={scrollerEl} />
-
-      {/* 2 — Tech events */}
-      <TechEventsSection scrollerEl={scrollerEl} />
-
-      {/* Divider */}
-      <div style={{
-        height: "1px",
-        margin: "0 clamp(1.2rem, 4vw, 4rem)",
-        background: "linear-gradient(to right, transparent, rgba(201,168,76,0.12), transparent)",
-      }} />
-
-      {/* 3 — Entertainment & Gaming */}
-      <EntGamingSection scrollerEl={scrollerEl} />
-
-      {/* Bottom divider */}
-      <div style={{
-        height: "1px",
-        background: "linear-gradient(to right, transparent, rgba(201,168,76,0.15), transparent)",
-      }} />
-
-      {/* Responsive grid styles */}
       <style>{`
-        .events-3col-grid {
-          display: grid;
+        /* ── Body grid columns ── */
+        .ev-body {
           grid-template-columns: 1fr;
-          gap: 1px;
-          background: rgba(201,168,76,0.07);
-          border: 1px solid rgba(201,168,76,0.07);
         }
+        .ev-right-col { display: none !important; }
+        .ev-bottom-stats { display: none !important; }
+
         @media (min-width: 640px) {
-          .events-3col-grid {
-            grid-template-columns: 1fr 1fr;
-          }
+          .ev-body { grid-template-columns: 1fr 220px; }
+          .ev-right-col { display: flex !important; }
         }
-        @media (min-width: 1024px) {
-          .events-3col-grid {
-            grid-template-columns: repeat(3, 1fr);
-          }
+
+        @media (min-width: 900px) {
+          .ev-body { grid-template-columns: 1fr 260px; }
+          .ev-bottom-stats { display: flex !important; }
+        }
+
+        @media (min-width: 1200px) {
+          .ev-body { grid-template-columns: 1fr 300px; }
+        }
+
+        /* Pulse animation for live dot */
+        @keyframes evPulse {
+          0%, 100% { opacity: 0.4; transform: scale(0.85); }
+          50%       { opacity: 1;   transform: scale(1.15); }
+        }
+
+        /* Fix the transition2 hack — use a real CSS class approach */
+        .ev-cat-btn {
+          transition: opacity 0.7s ease, transform 0.75s cubic-bezier(0.22,1,0.36,1),
+                      background 0.22s ease, border-color 0.22s ease !important;
         }
       `}</style>
-    </div>
+    </section>
   );
 }

@@ -28,7 +28,7 @@ export default function RootLayout({
           Inline critical CSS — this is NOT render-blocking because it's
           part of the HTML document itself (no external fetch needed).
         */}
-        <style dangerouslySetInnerHTML={{
+        <style suppressHydrationWarning dangerouslySetInnerHTML={{
           __html: [
             "*{margin:0;padding:0;box-sizing:border-box}",
             "html,body{width:100%;height:100%;background:#000;overflow-x:hidden}",
