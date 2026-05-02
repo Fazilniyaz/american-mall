@@ -273,7 +273,7 @@ export default function HubPhase({ onEnterDeck }: Props) {
                           key={sub.label}
                           onClick={() => handleSubItemClick(sub)}
                           style={{
-                            display: "block", width: "100%",
+                            width: "100%",
                             background: "transparent", border: "none",
                             padding: sub.indent
                               ? "0.4rem clamp(1.2rem,2.4vw,2rem) 0.4rem clamp(3rem,5.5vw,4.5rem)"
