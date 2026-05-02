@@ -13,10 +13,10 @@ const TICKER_ROW_2 = [
 ];
 
 const BRANDS = [
-  { name: "Samsung", category: "Technology", quote: "Samsung chose Mall of America to launch their Galaxy Experience Store — their first in the Midwest.", stat: "2.1M", statLabel: "Yearly brand touchpoints", reach: 92, color: "#1428A0", image: "/photos/samsung_lauch.webp" },
-  { name: "Apple", category: "Technology", quote: "Apple Store at Mall of America consistently ranks among the highest-traffic Apple locations in North America.", stat: "3.4M", statLabel: "Annual store visits", reach: 98, color: "#1d1d1f", image: "/photos/apple_activation.webp" },
-  { name: "Nike", category: "Sportswear", quote: "Nike's flagship presence drives the highest conversion rate of any apparel brand in the property.", stat: "1.8M", statLabel: "Yearly footfall", reach: 85, color: "#111", image: "/photos/nike_activation.webp" },
-  { name: "Lego", category: "Entertainment Retail", quote: "The Mall of America LEGO store is one of the top-performing experiential retail locations in the US.", stat: "900K", statLabel: "Family visits per year", reach: 74, color: "#006DB7", image: "/photos/lego_activation.webp" },
+  { name: "Samsung", category: "Technology", quote: "Samsung chose Mall of America to launch their Galaxy Experience Store — their first in the Midwest.", stat: "2.1M", statLabel: "Yearly brand touchpoints", reach: 92, color: "#1428A0", image: "/photos/samsung_lauch-opt.webp" },
+  { name: "Apple", category: "Technology", quote: "Apple Store at Mall of America consistently ranks among the highest-traffic Apple locations in North America.", stat: "3.4M", statLabel: "Annual store visits", reach: 98, color: "#1d1d1f", image: "/photos/apple_activation-opt.webp" },
+  { name: "Nike", category: "Sportswear", quote: "Nike's flagship presence drives the highest conversion rate of any apparel brand in the property.", stat: "1.8M", statLabel: "Yearly footfall", reach: 85, color: "#111", image: "/photos/nike_activation-opt.webp" },
+  { name: "Lego", category: "Entertainment Retail", quote: "The Mall of America LEGO store is one of the top-performing experiential retail locations in the US.", stat: "900K", statLabel: "Family visits per year", reach: 74, color: "#006DB7", image: "/photos/lego_activation-opt.webp" },
 ];
 
 // ─── Radial reach arc ────────────────────────────────────────────────
@@ -69,6 +69,7 @@ function BrandCard({ brand, index }: { brand: typeof BRANDS[0]; index: number })
       padding: "clamp(1rem,1.8vh,1.4rem) clamp(1rem,1.5vw,1.4rem)",
       display: "flex", flexDirection: "column", gap: "clamp(0.5rem,1vh,0.8rem)",
       cursor: "default", transition: "transform 0.3s ease, border-color 0.3s ease, background 0.3s ease",
+      opacity: 0,
     }}
       onMouseEnter={e => { const el = e.currentTarget; el.style.borderColor = "rgba(201,168,76,0.4)"; el.style.background = "rgba(201,168,76,0.04)"; el.style.transform = "translateY(-4px)"; }}
       onMouseLeave={e => { const el = e.currentTarget; el.style.borderColor = "rgba(201,168,76,0.14)"; el.style.background = "rgba(255,255,255,0.03)"; el.style.transform = "translateY(0)"; }}
@@ -82,7 +83,7 @@ function BrandCard({ brand, index }: { brand: typeof BRANDS[0]; index: number })
       </div>
       {brand.image && (
         <div className="wh1-desktop-img" style={{ position: "relative", width: "100%", flexGrow: 1, minHeight: "80px", borderRadius: "4px", overflow: "hidden", border: "1px solid rgba(255,255,255,0.06)" }}>
-          <img src={brand.image} alt={brand.name} style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover" }} />
+          <img src={brand.image} alt={brand.name} loading={index < 2 ? "eager" : "lazy"} fetchPriority={index === 0 ? "high" : "auto"} style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover" }} />
           <div style={{ position: "absolute", inset: 0, background: "linear-gradient(to top, rgba(5,4,2,0.8), transparent)" }} />
           <p style={{ position: "absolute", bottom: "0.5rem", left: "0.5rem", right: "0.5rem", color: "rgba(255,255,255,0.8)", fontSize: "clamp(0.55rem,0.7vw,0.65rem)", fontFamily: "var(--font-montserrat)", fontWeight: 500, lineHeight: 1.4, margin: 0, fontStyle: "italic", textShadow: "0 1px 4px rgba(0,0,0,0.8)" }}>
             &ldquo;{brand.quote}&rdquo;
@@ -134,18 +135,7 @@ export default function WhosHereOneSection() {
     obs.observe(el); return () => obs.disconnect();
   }, []);
 
-  useEffect(() => {
-    if (!inView) return;
-    let ctx: { revert: () => void } | null = null;
-    Promise.all([import("gsap"), import("gsap/ScrollTrigger")]).then(([gsapMod, stMod]) => {
-      const gsap = gsapMod.default; gsap.registerPlugin(stMod.ScrollTrigger);
-      ctx = gsap.context(() => {
-        gsap.fromTo(".wh1-heading", { opacity: 0, y: 32 }, { opacity: 1, y: 0, duration: 0.9, ease: "power2.out" });
-        gsap.fromTo(".wh1-brand-card", { opacity: 0, y: 30 }, { opacity: 1, y: 0, duration: 0.65, ease: "power2.out", stagger: 0.1, delay: 0.3 });
-      }, sectionRef);
-    });
-    return () => { ctx?.revert(); };
-  }, [inView]);
+  // Removed heavy GSAP import block — relying purely on CSS animations when inView becomes true.
 
   return (
     <section id="whos-here-one" ref={sectionRef} style={{
@@ -155,7 +145,7 @@ export default function WhosHereOneSection() {
       <div style={{ height: "1px", background: "linear-gradient(to right, transparent, rgba(201,168,76,0.2), transparent)", flexShrink: 0 }} />
 
       {/* Heading */}
-      <div className="wh1-heading" style={{ textAlign: "center", padding: "clamp(1.5rem,3vh,2.5rem) 1.5rem clamp(1rem,2vh,1.5rem)", flexShrink: 0 }}>
+      <div className={`wh1-heading ${inView ? "animate-in" : ""}`} style={{ textAlign: "center", padding: "clamp(1.5rem,3vh,2.5rem) 1.5rem clamp(1rem,2vh,1.5rem)", flexShrink: 0, opacity: 0 }}>
         <p style={{ color: "#C9A84C", fontSize: "clamp(0.55rem,0.85vw,0.65rem)", letterSpacing: "0.4em", textTransform: "uppercase", fontFamily: "var(--font-montserrat)", fontWeight: 600, margin: "0 0 0.5rem" }}>The world&apos;s most iconic brands</p>
         <h2 style={{ color: "#ffffff", fontSize: "clamp(1.4rem,3vw,2.4rem)", fontWeight: 800, fontFamily: "var(--font-montserrat)", margin: "0 0 0.6rem", lineHeight: 1.1 }}>
           They chose here.<br /><span style={{ color: "#C9A84C" }}>Will you be next?</span>
@@ -174,7 +164,7 @@ export default function WhosHereOneSection() {
       {/* Brand cards */}
       <div style={{ flex: 1, minHeight: 0, padding: "0 clamp(1.2rem,4vw,4rem)", display: "flex", flexDirection: "column" }}>
         <p style={{ color: "rgba(255,255,255,0.25)", fontSize: "0.58rem", letterSpacing: "0.35em", textTransform: "uppercase", fontFamily: "var(--font-montserrat)", fontWeight: 600, margin: "0 0 clamp(0.6rem,1.2vh,1rem)", flexShrink: 0 }}>Featured tenants</p>
-        <div className="wh1-brand-grid-inner" style={{ flex: 1, minHeight: 0 }}>
+        <div className={`wh1-brand-grid-inner ${inView ? "animate-in" : ""}`} style={{ flex: 1, minHeight: 0 }}>
           {BRANDS.map((brand, i) => (<BrandCard key={brand.name} brand={brand} index={i} />))}
         </div>
       </div>
@@ -196,6 +186,22 @@ export default function WhosHereOneSection() {
           .wh1-mobile-quote { display: none; }
         }
         @media (prefers-reduced-motion: reduce) { .wh1-ticker-track { animation: none !important; } }
+        
+        @keyframes fadeInUp {
+          from { opacity: 0; transform: translateY(30px); }
+          to { opacity: 1; transform: translateY(0); }
+        }
+        
+        /* Heading animation */
+        .wh1-heading.animate-in {
+          animation: fadeInUp 0.8s ease-out forwards;
+        }
+        
+        /* Staggered card animations */
+        .wh1-brand-grid-inner.animate-in .wh1-brand-card-0 { animation: fadeInUp 0.6s ease-out 0.2s forwards; }
+        .wh1-brand-grid-inner.animate-in .wh1-brand-card-1 { animation: fadeInUp 0.6s ease-out 0.3s forwards; }
+        .wh1-brand-grid-inner.animate-in .wh1-brand-card-2 { animation: fadeInUp 0.6s ease-out 0.4s forwards; }
+        .wh1-brand-grid-inner.animate-in .wh1-brand-card-3 { animation: fadeInUp 0.6s ease-out 0.5s forwards; }
       `}</style>
     </section>
   );
