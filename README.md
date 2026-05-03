@@ -29,6 +29,30 @@ The experience is organized as **8 non-linear chapters**, navigated via a floati
 | 07 | **Sponsorship** | D3 impression comparison bars + treemap + tiered packages | Tier selection and enquiry |
 | 08 | **Get Started** | Three action paths + deck action buttons (mailto / download) | Lease, sponsor, or book |
 
+## The "I Need to Be Here" Moments
+
+To create that undeniable **"I need to be here"** feeling for a brand executive, the deck doesn't rely on a single slide; it strategically layers psychological triggers. Here are the specific, engineered moments in the project that force an executive to realize they are missing out by not being at Mall of America:
+
+### 1. The Scale Realization (Route: `/introTwo`)
+**The Moment:** The D3 animated counters hit **40,000,000 Annual Visitors**.
+**Why it works:** Executives deal in scale. When they realize that this single building gets more foot traffic than Disney World or the Eiffel Tower, the paradigm shifts. They are no longer looking at a "mall lease"—they are looking at acquiring the population of a small country as a captive audience. It turns a real estate decision into a mass-media acquisition.
+
+### 2. The Competitor Halo (Route: `/WhosHereOne`)
+**The Moment:** Seeing the massive, bespoke flagship facades of **Apple, Nike, and Zara**.
+**Why it works:** This triggers executive FOMO (Fear Of Missing Out). By highlighting the world's most selective and data-driven brands, it creates an immediate halo effect. The executive thinks: *"If Apple and Nike's real estate analytics teams decided they absolutely must have a massive flagship here, what data do they have that we are ignoring?"* It creates peer pressure at the corporate level.
+
+### 3. The "E-Commerce Proof" Engine (Route: `/Entertainment/themePark`)
+**The Moment:** Realizing there is a **7-acre Nickelodeon Theme Park** in the center of the building.
+**Why it works:** The biggest fear for retail executives is the "death of physical retail" via e-commerce. When they see the rollercoasters, they experience a lightbulb moment: *You can't ride a rollercoaster on Amazon.* They realize this property is completely insulated from e-commerce trends because the 40 million people are coming for the experience, and the retail is just the beneficiary.
+
+### 4. The Built-in Hype Machine (Routes: `/events/tech/samsungGrandStoreOpening` & `/events/entertainmentAndGaming/nikeSneakerLaunchEvent`)
+**The Moment:** Watching the video of thousands of people queued up, screaming for a **Samsung unboxing or a Nike sneaker drop**.
+**Why it works:** Launching a product is incredibly expensive because brands have to buy the audience's attention. When an executive sees these event slides, they realize Mall of America *already owns the audience*. They aren't just renting floor space; they are renting a built-in global hype machine and a literal stage.
+
+### 5. The Math Clicks (Route: `/footfall-revenue`)
+**The Moment:** Connecting the 40M visitors directly to **Brand ROI and Sales Density**.
+**Why it works:** Emotion gets the executive excited, but data gets the CFO's signature. This slide acts as the final "I need to be here" moment because it bridges the gap. It takes the awe of the theme park and the events and translates it into hard, undeniable revenue metrics. It gives the executive the exact ammunition they need to justify the investment to their board.
+
 ## Complete Route Documentation
 
 ### 01. Introduction & Scale
