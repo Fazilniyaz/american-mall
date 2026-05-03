@@ -3,11 +3,7 @@
 import { useEffect, useRef, useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
 
-let _gsap: typeof import("gsap")["default"] | null = null;
-const loadGsap = () =>
-  _gsap
-    ? Promise.resolve(_gsap)
-    : import("gsap").then((m) => { _gsap = m.default; return _gsap!; });
+
 
 // ─── Data ────────────────────────────────────────────────────────────────────
 const PARTNERSHIP_TYPES = [
@@ -62,22 +58,12 @@ export default function PartnerWithUsPage() {
   const active = PARTNERSHIP_TYPES.find(p => p.id === activeType)!;
   const activeIdx = PARTNERSHIP_TYPES.findIndex(p => p.id === activeType);
 
+  const [mounted, setMounted] = useState(false);
+
   // ── Entrance ────────────────────────────────────────────────────────────────
   useEffect(() => {
-    const t = setTimeout(() => {
-      loadGsap().then((gsap) => {
-        gsap.fromTo(".pw-eyebrow", { opacity: 0, y: 14 }, { opacity: 1, y: 0, duration: 0.55, ease: "power2.out" });
-        gsap.fromTo(".pw-headline", { opacity: 0, y: 24 }, { opacity: 1, y: 0, duration: 0.7, ease: "power2.out", delay: 0.12 });
-        gsap.fromTo(".pw-sub", { opacity: 0, y: 14 }, { opacity: 1, y: 0, duration: 0.55, ease: "power2.out", delay: 0.22 });
-        gsap.fromTo(".pw-divider", { scaleX: 0 }, { scaleX: 1, duration: 0.5, ease: "power2.out", delay: 0.32, transformOrigin: "left" });
-        gsap.fromTo(".pw-proof", { opacity: 0, y: 12 }, { opacity: 1, y: 0, duration: 0.55, ease: "power2.out", delay: 0.40 });
-        gsap.fromTo(".pw-types", { opacity: 0, y: 12 }, { opacity: 1, y: 0, duration: 0.55, ease: "power2.out", delay: 0.50 });
-        gsap.fromTo(".pw-cta", { opacity: 0, y: 10 }, { opacity: 1, y: 0, duration: 0.5, ease: "power2.out", delay: 0.60 });
-        gsap.fromTo(".pw-right", { opacity: 0, x: 24 }, { opacity: 1, x: 0, duration: 0.75, ease: "power2.out", delay: 0.18 });
-        gsap.fromTo(".pw-img", { opacity: 0, scale: 1.05 }, { opacity: 1, scale: 1, duration: 1.2, ease: "power2.out" });
-      });
-    }, 200);
-    return () => clearTimeout(t);
+    const raf = requestAnimationFrame(() => setMounted(true));
+    return () => cancelAnimationFrame(raf);
   }, []);
 
   // ── Slide marker on type change ──────────────────────────────────────────
@@ -130,24 +116,29 @@ export default function PartnerWithUsPage() {
           color:#C9A84C;
           font-size:clamp(0.52rem,0.8vw,0.66rem);
           letter-spacing:0.44em; text-transform:uppercase;
-          font-weight:700; margin:0; opacity:0;
+          font-weight:700; margin:0; opacity:0; transform:translateY(14px);
+          transition:opacity 0.55s ease, transform 0.55s ease;
         }
         .pw-headline {
           color:#fff;
           font-size:clamp(1.65rem,3vw,2.9rem);
           font-weight:800; line-height:1.04;
-          margin:0; opacity:0;
+          margin:0; opacity:0; transform:translateY(24px);
+          transition:opacity 0.7s ease 0.12s, transform 0.7s ease 0.12s;
         }
         .pw-headline em { color:#C9A84C; font-style:normal; }
         .pw-sub {
           color:rgba(255,255,255,0.44);
           font-size:clamp(0.7rem,1.05vw,0.84rem);
           font-weight:400; line-height:1.75;
-          margin:0; max-width:390px; opacity:0;
+          margin:0; max-width:390px; opacity:0; transform:translateY(14px);
+          transition:opacity 0.55s ease 0.22s, transform 0.55s ease 0.22s;
         }
         .pw-divider {
           width:52px; height:2px;
           background:linear-gradient(to right,#C9A84C,rgba(201,168,76,0.15));
+          transform:scaleX(0); transform-origin:left;
+          transition:transform 0.5s ease 0.32s;
         }
 
         /* ── Proof stats ── */
@@ -155,7 +146,8 @@ export default function PartnerWithUsPage() {
           display:grid;
           grid-template-columns:repeat(4,1fr);
           border:1px solid rgba(201,168,76,0.12);
-          opacity:0;
+          opacity:0; transform:translateY(12px);
+          transition:opacity 0.55s ease 0.4s, transform 0.55s ease 0.4s;
         }
         .pw-proof-item {
           padding:clamp(0.5rem,1vh,0.8rem) clamp(0.4rem,0.8vw,0.7rem);
@@ -192,7 +184,8 @@ export default function PartnerWithUsPage() {
 
         .pw-types {
           position:relative;
-          opacity:0;
+          opacity:0; transform:translateY(12px);
+          transition:opacity 0.55s ease 0.5s, transform 0.55s ease 0.5s;
         }
         /* Sliding gold highlight */
         .pw-type-marker {
@@ -284,7 +277,8 @@ export default function PartnerWithUsPage() {
         /* ── CTAs ── */
         .pw-cta {
           display:flex; gap:0.75rem; align-items:center; flex-wrap:wrap;
-          opacity:0;
+          opacity:0; transform:translateY(10px);
+          transition:opacity 0.5s ease 0.6s, transform 0.5s ease 0.6s;
         }
         .pw-btn-primary {
           background:#C9A84C; color:#050402; border:none;
@@ -311,15 +305,33 @@ export default function PartnerWithUsPage() {
 
         /* ════════ RIGHT ════════ */
         .pw-right {
-          position:relative; overflow:hidden; opacity:0;
+          position:relative; overflow:hidden; opacity:0; transform:translateX(24px);
+          transition:opacity 0.75s ease 0.18s, transform 0.75s ease 0.18s;
         }
         .pw-img {
           position:absolute; inset:0;
           width:100%; height:100%;
           object-fit:cover; object-position:center 22%;
-          opacity:0;
+          opacity:0; transform:scale(1.05);
           filter:brightness(0.32) saturate(0.65);
-          transition:opacity 0.8s ease;
+          transition:opacity 1.2s ease, transform 1.2s ease;
+        }
+
+        /* Mounted states */
+        .pw-root.mounted .pw-eyebrow,
+        .pw-root.mounted .pw-headline,
+        .pw-root.mounted .pw-sub,
+        .pw-root.mounted .pw-proof,
+        .pw-root.mounted .pw-types,
+        .pw-root.mounted .pw-cta,
+        .pw-root.mounted .pw-right {
+          opacity: 1; transform: translate(0,0);
+        }
+        .pw-root.mounted .pw-divider {
+          transform: scaleX(1);
+        }
+        .pw-root.mounted .pw-img {
+          opacity: 1; transform: scale(1);
         }
         .pw-fade-l {
           position:absolute; top:0; left:0; bottom:0; width:30%;
@@ -594,7 +606,7 @@ export default function PartnerWithUsPage() {
         }
       `}</style>
 
-      <div className="pw-root">
+      <div className={`pw-root ${mounted ? "mounted" : ""}`}>
 
         {/* ══ LEFT ══ */}
         <div className="pw-left">
@@ -679,7 +691,6 @@ export default function PartnerWithUsPage() {
             className="pw-img"
             src="/photos/partnership.webp"
             alt="Strategic partnership handshake at Mall of America"
-            onLoad={(e) => { (e.target as HTMLImageElement).style.opacity = "1"; }}
           />
           <div className="pw-fade-l" />
           <div className="pw-fade-b" />
