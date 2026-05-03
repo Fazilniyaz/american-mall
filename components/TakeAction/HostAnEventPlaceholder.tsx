@@ -1,13 +1,7 @@
 "use client";
 
-import { useEffect, useRef, useState, useCallback } from "react";
-import { useRouter } from "next/navigation";
-
-let _gsap: typeof import("gsap")["default"] | null = null;
-const loadGsap = () =>
-  _gsap
-    ? Promise.resolve(_gsap)
-    : import("gsap").then((m) => { _gsap = m.default; return _gsap!; });
+import { useEffect, useState, useCallback } from "react";
+import Image from "next/image";
 
 const VENUES = [
   { id: "rotunda", name: "Rotunda", cap: "10,000+", sqft: "30,000 sqft", tag: "Flagship", desc: "The iconic heart of MOA. Soaring atrium, full 360° brand exposure across all 4 floors." },
@@ -30,27 +24,15 @@ const EVENT_TYPES = [
 ];
 
 export default function HostAnEventPage() {
-  const router = useRouter();
+  const [mounted, setMounted] = useState(false);
   const [activeVenue, setActiveVenue] = useState(0);
   const [formOpen, setFormOpen] = useState(false);
   const [sent, setSent] = useState(false);
-  const indicatorRef = useRef<HTMLDivElement>(null);
 
   // ── Entrance ────────────────────────────────────────────────────────────────
   useEffect(() => {
-    const t = setTimeout(() => {
-      loadGsap().then((gsap) => {
-        gsap.fromTo(".hae-eyebrow", { opacity: 0, y: 14 }, { opacity: 1, y: 0, duration: 0.55, ease: "power2.out" });
-        gsap.fromTo(".hae-headline", { opacity: 0, y: 24 }, { opacity: 1, y: 0, duration: 0.7, ease: "power2.out", delay: 0.12 });
-        gsap.fromTo(".hae-sub", { opacity: 0, y: 14 }, { opacity: 1, y: 0, duration: 0.55, ease: "power2.out", delay: 0.22 });
-        gsap.fromTo(".hae-divider", { scaleX: 0 }, { scaleX: 1, duration: 0.5, ease: "power2.out", delay: 0.32, transformOrigin: "left" });
-        gsap.fromTo(".hae-stats", { opacity: 0, y: 12 }, { opacity: 1, y: 0, duration: 0.55, ease: "power2.out", delay: 0.42 });
-        gsap.fromTo(".hae-cta", { opacity: 0, y: 10 }, { opacity: 1, y: 0, duration: 0.5, ease: "power2.out", delay: 0.54 });
-        gsap.fromTo(".hae-right", { opacity: 0, x: 24 }, { opacity: 1, x: 0, duration: 0.75, ease: "power2.out", delay: 0.2 });
-        gsap.fromTo(".hae-img", { opacity: 0, scale: 1.05 }, { opacity: 1, scale: 1, duration: 1.2, ease: "power2.out" });
-      });
-    }, 200);
-    return () => clearTimeout(t);
+    const raf = requestAnimationFrame(() => setMounted(true));
+    return () => cancelAnimationFrame(raf);
   }, []);
 
   const handleSubmit = useCallback((e: React.FormEvent) => {
@@ -98,14 +80,16 @@ export default function HostAnEventPage() {
           letter-spacing: 0.44em;
           text-transform: uppercase;
           font-weight: 700;
-          margin: 0; opacity:0;
+          margin: 0; opacity:0; transform:translateY(14px);
+          transition:opacity 0.55s ease, transform 0.55s ease;
         }
         .hae-headline {
           color: #fff;
           font-size: clamp(1.65rem,3vw,2.9rem);
           font-weight: 800;
           line-height: 1.05;
-          margin: 0; opacity:0;
+          margin: 0; opacity:0; transform:translateY(24px);
+          transition:opacity 0.7s ease 0.12s, transform 0.7s ease 0.12s;
         }
         .hae-headline em { color:#C9A84C; font-style:normal; }
 
@@ -114,12 +98,15 @@ export default function HostAnEventPage() {
           font-size: clamp(0.7rem,1.05vw,0.84rem);
           font-weight: 400;
           line-height: 1.75;
-          margin: 0; max-width:390px; opacity:0;
+          margin: 0; max-width:390px; opacity:0; transform:translateY(14px);
+          transition:opacity 0.55s ease 0.22s, transform 0.55s ease 0.22s;
         }
 
         .hae-divider {
           width:52px; height:2px;
           background: linear-gradient(to right,#C9A84C,rgba(201,168,76,0.15));
+          transform:scaleX(0); transform-origin:left;
+          transition:transform 0.5s ease 0.32s;
         }
 
         /* ── Stats row ── */
@@ -128,7 +115,8 @@ export default function HostAnEventPage() {
           grid-template-columns: repeat(4, 1fr);
           gap: 0;
           border: 1px solid rgba(201,168,76,0.12);
-          opacity:0;
+          opacity:0; transform:translateY(12px);
+          transition:opacity 0.55s ease 0.42s, transform 0.55s ease 0.42s;
         }
         .hae-stat {
           padding: clamp(0.55rem,1.1vh,0.9rem) clamp(0.5rem,0.9vw,0.8rem);
@@ -271,7 +259,8 @@ export default function HostAnEventPage() {
           gap: 0.75rem;
           align-items: center;
           flex-wrap: wrap;
-          opacity:0;
+          opacity:0; transform:translateY(10px);
+          transition:opacity 0.5s ease 0.54s, transform 0.5s ease 0.54s;
         }
         .hae-btn-primary {
           background: #C9A84C;
@@ -315,17 +304,25 @@ export default function HostAnEventPage() {
         .hae-right {
           position: relative;
           overflow: hidden;
-          opacity:0;
+          opacity:0; transform:translateX(24px);
+          transition:opacity 0.75s ease 0.2s, transform 0.75s ease 0.2s;
         }
-        .hae-img {
-          position:absolute; inset:0;
-          width:100%; height:100%;
-          object-fit:cover;
-          object-position: center 20%;
-          opacity:0;
-          filter: brightness(0.35) saturate(0.65);
-          transition: opacity 0.8s ease;
+        .hae-img-wrap {
+          opacity:0; transform:scale(1.05);
+          transition:opacity 1.2s ease, transform 1.2s ease;
         }
+
+        /* Mounted states */
+        .hae-root.mounted .hae-eyebrow,
+        .hae-root.mounted .hae-headline,
+        .hae-root.mounted .hae-sub,
+        .hae-root.mounted .hae-stats,
+        .hae-root.mounted .hae-cta,
+        .hae-root.mounted .hae-right {
+          opacity:1; transform:translate(0,0);
+        }
+        .hae-root.mounted .hae-divider { transform:scaleX(1); }
+        .hae-root.mounted .hae-img-wrap { opacity:1; transform:scale(1); }
         /* Photo edge fades */
         .hae-fade-l {
           position:absolute; top:0; left:0; bottom:0; width:28%;
@@ -614,7 +611,7 @@ export default function HostAnEventPage() {
         }
       `}</style>
 
-      <div className="hae-root">
+      <div className={`hae-root ${mounted ? "mounted" : ""}`}>
 
         {/* ══ LEFT ══ */}
         <div className="hae-left">
@@ -674,9 +671,9 @@ export default function HostAnEventPage() {
             <button className="hae-btn-primary" onClick={() => setFormOpen(true)}>
               Submit Event Brief
             </button>
-            <button className="hae-btn-secondary" onClick={() => router.push("/takeAction/LeaseASpace")}>
+            <a href="/takeAction/LeaseASpace" className="hae-btn-secondary" style={{textDecoration:'none'}}>
               Lease a Space →
-            </button>
+            </a>
           </div>
 
         </div>
@@ -684,12 +681,16 @@ export default function HostAnEventPage() {
         {/* ══ RIGHT ══ */}
         <div className="hae-right">
 
-          <img
-            className="hae-img"
-            src="/photos/host.webp"
-            alt="Brand activation planning at Mall of America"
-            onLoad={(e) => { (e.target as HTMLImageElement).style.opacity = "1"; }}
-          />
+          <div className="hae-img-wrap" style={{position:'absolute',inset:0}}>
+            <Image
+              src="/photos/host.webp"
+              alt="Brand activation planning at Mall of America"
+              fill
+              priority
+              sizes="(max-width:700px) 100vw, 50vw"
+              style={{objectFit:'cover',objectPosition:'center 20%',filter:'brightness(0.35) saturate(0.65)'}}
+            />
+          </div>
 
           <div className="hae-fade-l" />
           <div className="hae-fade-b" />
@@ -721,7 +722,7 @@ export default function HostAnEventPage() {
 
       {/* ══ BOTTOM NAV ══ */}
       <div className="hae-nav">
-        <button className="hae-nav-btn" onClick={() => router.back()} aria-label="Back">‹</button>
+        <button className="hae-nav-btn" onClick={() => history.back()} aria-label="Back">‹</button>
         <span className="hae-nav-label">Host an Event</span>
         <div style={{ width: "clamp(34px,4vw,42px)" }} />
       </div>

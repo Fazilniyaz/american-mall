@@ -1,13 +1,7 @@
 "use client";
 
-import { useEffect, useRef, useState, useCallback } from "react";
-import { useRouter } from "next/navigation";
-
-let _gsap: typeof import("gsap")["default"] | null = null;
-const loadGsap = () =>
-  _gsap
-    ? Promise.resolve(_gsap)
-    : import("gsap").then((m) => { _gsap = m.default; return _gsap!; });
+import { useEffect, useState, useCallback } from "react";
+import Image from "next/image";
 
 // ─── Data ────────────────────────────────────────────────────────────────────
 const TIERS = [
@@ -70,7 +64,7 @@ const CATEGORIES = [
 type TierId = typeof TIERS[number]["id"];
 
 export default function BecomeASponsorPage() {
-  const router = useRouter();
+  const [mounted, setMounted] = useState(false);
   const [activeTier, setActiveTier] = useState<TierId>("presenting");
   const [formOpen, setFormOpen] = useState(false);
   const [sent, setSent] = useState(false);
@@ -79,20 +73,8 @@ export default function BecomeASponsorPage() {
 
   // ── Entrance ────────────────────────────────────────────────────────────────
   useEffect(() => {
-    const t = setTimeout(() => {
-      loadGsap().then((gsap) => {
-        gsap.fromTo(".bas-eyebrow", { opacity: 0, y: 14 }, { opacity: 1, y: 0, duration: 0.55, ease: "power2.out" });
-        gsap.fromTo(".bas-headline", { opacity: 0, y: 24 }, { opacity: 1, y: 0, duration: 0.7, ease: "power2.out", delay: 0.12 });
-        gsap.fromTo(".bas-sub", { opacity: 0, y: 14 }, { opacity: 1, y: 0, duration: 0.55, ease: "power2.out", delay: 0.22 });
-        gsap.fromTo(".bas-divider", { scaleX: 0 }, { scaleX: 1, duration: 0.5, ease: "power2.out", delay: 0.32, transformOrigin: "left" });
-        gsap.fromTo(".bas-reach", { opacity: 0, y: 12 }, { opacity: 1, y: 0, duration: 0.55, ease: "power2.out", delay: 0.40 });
-        gsap.fromTo(".bas-tiers", { opacity: 0, y: 12 }, { opacity: 1, y: 0, duration: 0.55, ease: "power2.out", delay: 0.50 });
-        gsap.fromTo(".bas-cta", { opacity: 0, y: 10 }, { opacity: 1, y: 0, duration: 0.5, ease: "power2.out", delay: 0.60 });
-        gsap.fromTo(".bas-right", { opacity: 0, x: 24 }, { opacity: 1, x: 0, duration: 0.75, ease: "power2.out", delay: 0.18 });
-        gsap.fromTo(".bas-img", { opacity: 0, scale: 1.05 }, { opacity: 1, scale: 1, duration: 1.2, ease: "power2.out" });
-      });
-    }, 200);
-    return () => clearTimeout(t);
+    const raf = requestAnimationFrame(() => setMounted(true));
+    return () => cancelAnimationFrame(raf);
   }, []);
 
   const handleSubmit = useCallback((e: React.FormEvent) => {
@@ -134,24 +116,29 @@ export default function BecomeASponsorPage() {
           color:#C9A84C;
           font-size:clamp(0.52rem,0.8vw,0.66rem);
           letter-spacing:0.44em; text-transform:uppercase;
-          font-weight:700; margin:0; opacity:0;
+          font-weight:700; margin:0; opacity:0; transform:translateY(14px);
+          transition:opacity 0.55s ease, transform 0.55s ease;
         }
         .bas-headline {
           color:#fff;
           font-size:clamp(1.65rem,3vw,2.9rem);
           font-weight:800; line-height:1.04;
-          margin:0; opacity:0;
+          margin:0; opacity:0; transform:translateY(24px);
+          transition:opacity 0.7s ease 0.12s, transform 0.7s ease 0.12s;
         }
         .bas-headline em { color:#C9A84C; font-style:normal; }
         .bas-sub {
           color:rgba(255,255,255,0.44);
           font-size:clamp(0.7rem,1.05vw,0.84rem);
           font-weight:400; line-height:1.75;
-          margin:0; max-width:390px; opacity:0;
+          margin:0; max-width:390px; opacity:0; transform:translateY(14px);
+          transition:opacity 0.55s ease 0.22s, transform 0.55s ease 0.22s;
         }
         .bas-divider {
           width:52px; height:2px;
           background:linear-gradient(to right,#C9A84C,rgba(201,168,76,0.15));
+          transform:scaleX(0); transform-origin:left;
+          transition:transform 0.5s ease 0.32s;
         }
 
         /* ── Reach stats ── */
@@ -159,7 +146,8 @@ export default function BecomeASponsorPage() {
           display:grid;
           grid-template-columns:repeat(4,1fr);
           border:1px solid rgba(201,168,76,0.12);
-          opacity:0;
+          opacity:0; transform:translateY(12px);
+          transition:opacity 0.55s ease 0.4s, transform 0.55s ease 0.4s;
         }
         .bas-reach-item {
           padding:clamp(0.5rem,1vh,0.8rem) clamp(0.4rem,0.8vw,0.7rem);
@@ -198,7 +186,8 @@ export default function BecomeASponsorPage() {
           flex-direction:column;
           gap:0;
           border:1px solid rgba(201,168,76,0.12);
-          opacity:0;
+          opacity:0; transform:translateY(12px);
+          transition:opacity 0.55s ease 0.5s, transform 0.55s ease 0.5s;
         }
         .bas-tier {
           display:flex;
@@ -291,7 +280,8 @@ export default function BecomeASponsorPage() {
         /* ── CTAs ── */
         .bas-cta {
           display:flex; gap:0.75rem; align-items:center; flex-wrap:wrap;
-          opacity:0;
+          opacity:0; transform:translateY(10px);
+          transition:opacity 0.5s ease 0.6s, transform 0.5s ease 0.6s;
         }
         .bas-btn-primary {
           background:#C9A84C; color:#050402; border:none;
@@ -318,16 +308,26 @@ export default function BecomeASponsorPage() {
 
         /* ════════ RIGHT ════════ */
         .bas-right {
-          position:relative; overflow:hidden; opacity:0;
+          position:relative; overflow:hidden; opacity:0; transform:translateX(24px);
+          transition:opacity 0.75s ease 0.18s, transform 0.75s ease 0.18s;
         }
-        .bas-img {
-          position:absolute; inset:0;
-          width:100%; height:100%;
-          object-fit:cover; object-position:center 18%;
-          opacity:0;
-          filter:brightness(0.33) saturate(0.6);
-          transition:opacity 0.8s ease;
+        .bas-img-wrap {
+          opacity:0; transform:scale(1.05);
+          transition:opacity 1.2s ease, transform 1.2s ease;
         }
+
+        /* Mounted states */
+        .bas-root.mounted .bas-eyebrow,
+        .bas-root.mounted .bas-headline,
+        .bas-root.mounted .bas-sub,
+        .bas-root.mounted .bas-reach,
+        .bas-root.mounted .bas-tiers,
+        .bas-root.mounted .bas-cta,
+        .bas-root.mounted .bas-right {
+          opacity:1; transform:translate(0,0);
+        }
+        .bas-root.mounted .bas-divider { transform:scaleX(1); }
+        .bas-root.mounted .bas-img-wrap { opacity:1; transform:scale(1); }
         .bas-fade-l {
           position:absolute; top:0; left:0; bottom:0; width:30%;
           background:linear-gradient(to right,#050402,transparent);
@@ -601,7 +601,7 @@ export default function BecomeASponsorPage() {
         }
       `}</style>
 
-      <div className="bas-root">
+      <div className={`bas-root ${mounted ? "mounted" : ""}`}>
 
         {/* ══ LEFT ══ */}
         <div className="bas-left">
@@ -669,9 +669,9 @@ export default function BecomeASponsorPage() {
             <button className="bas-btn-primary" onClick={() => setFormOpen(true)}>
               Request Sponsorship Deck
             </button>
-            <button className="bas-btn-secondary" onClick={() => router.push("/takeAction/hostAnEvent")}>
+            <a href="/takeAction/HostAnEvent" className="bas-btn-secondary" style={{textDecoration:'none'}}>
               Host an Event →
-            </button>
+            </a>
           </div>
 
         </div>
@@ -679,12 +679,16 @@ export default function BecomeASponsorPage() {
         {/* ══ RIGHT ══ */}
         <div className="bas-right">
 
-          <img
-            className="bas-img"
-            src="/photos/sponsor.webp"
-            alt="Sponsorship agreement signing at Mall of America"
-            onLoad={(e) => { (e.target as HTMLImageElement).style.opacity = "1"; }}
-          />
+          <div className="bas-img-wrap" style={{position:'absolute',inset:0}}>
+            <Image
+              src="/photos/sponsor.webp"
+              alt="Sponsorship agreement signing at Mall of America"
+              fill
+              priority
+              sizes="(max-width:700px) 100vw, 50vw"
+              style={{objectFit:'cover',objectPosition:'center 18%',filter:'brightness(0.33) saturate(0.6)'}}
+            />
+          </div>
           <div className="bas-fade-l" />
           <div className="bas-fade-b" />
           <div className="bas-fade-t" />
@@ -724,7 +728,7 @@ export default function BecomeASponsorPage() {
 
       {/* ══ NAV ══ */}
       <div className="bas-nav">
-        <button className="bas-nav-btn" onClick={() => router.back()} aria-label="Back">‹</button>
+        <button className="bas-nav-btn" onClick={() => history.back()} aria-label="Back">‹</button>
         <span className="bas-nav-label">Become a Sponsor</span>
         <div style={{ width: "clamp(34px,4vw,42px)" }} />
       </div>
