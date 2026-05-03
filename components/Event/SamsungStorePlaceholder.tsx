@@ -68,10 +68,19 @@ export default function SamsungGrandStoreOpeningPage() {
     const v = videoRef.current;
     if (!v) return;
     v.muted = true;
-    v.play().catch(() => { });
+
+    // Delay video fetch/decode to prioritize LCP rendering
+    const t = setTimeout(() => {
+      v.src = "/videos/samsung_event.mp4";
+      v.play().catch(() => {});
+    }, 400);
+
     const onReady = () => setVideoReady(true);
     v.addEventListener("canplay", onReady, { once: true });
-    return () => v.removeEventListener("canplay", onReady);
+    return () => {
+      clearTimeout(t);
+      v.removeEventListener("canplay", onReady);
+    };
   }, []);
 
   useEffect(() => {
@@ -369,10 +378,9 @@ export default function SamsungGrandStoreOpeningPage() {
           {/* //Video */}
           <video
             ref={videoRef}
-            src="/videos/samsung_event.mp4"
             playsInline
             loop
-            preload="metadata"
+            preload="none"
             style={{
               width: "100%", height: "100%",
               objectFit: "cover",

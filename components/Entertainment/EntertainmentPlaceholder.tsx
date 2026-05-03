@@ -48,10 +48,19 @@ export default function EntertainmentEntrance({ onExplore }: Props) {
     const v = videoRef.current;
     if (!v) return;
     v.muted = isMuted;
-    v.play().catch(() => { });
+    
+    // Delay video fetching/decoding so it doesn't block initial UI rendering
+    const t = setTimeout(() => {
+      v.src = "/videos/entryentertainment.mp4";
+      v.play().catch(() => {});
+    }, 400);
+
     const onReady = () => setVideoReady(true);
     v.addEventListener("canplay", onReady);
-    return () => v.removeEventListener("canplay", onReady);
+    return () => {
+      clearTimeout(t);
+      v.removeEventListener("canplay", onReady);
+    };
   }, []);
 
   useEffect(() => {
@@ -322,8 +331,7 @@ export default function EntertainmentEntrance({ onExplore }: Props) {
 
         <video
           ref={videoRef}
-          src="/videos/entryentertainment.mp4"
-          playsInline loop
+          playsInline loop preload="none"
           style={{
             width: "100%", height: "100%",
             objectFit: "cover",
