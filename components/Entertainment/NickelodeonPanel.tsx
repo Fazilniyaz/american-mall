@@ -1,16 +1,7 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect, useState } from "react";
 import Image from "next/image";
-
-type GsapType = typeof import("gsap")["default"];
-let _gsap: GsapType | null = null;
-const loadGsap = async () => {
-  if (_gsap) return _gsap;
-  const m = await import("gsap");
-  _gsap = m.default;
-  return _gsap;
-};
 
 const THUMBS = [
   { src: "/photos/nickelodeon-arcade.jpg", label: "Arcade Zone", desc: "Neon-lit gaming world" },
@@ -25,32 +16,18 @@ const STATS = [
 ];
 
 export default function NickelodeonPanel() {
-  const panelRef = useRef<HTMLDivElement>(null);
-  const animated = useRef(false);
+  const [visible, setVisible] = useState(false);
 
+  // Single rAF-deferred mount — gives browser one frame to paint background first
   useEffect(() => {
-    if (!panelRef.current || animated.current) return;
-    let cancelled = false;
-
-    loadGsap().then((gsap) => {
-      if (cancelled || !panelRef.current || animated.current) return;
-      animated.current = true;
-
-      const tl = gsap.timeline({ delay: 0.15 });
-      tl.to(".nick-cat", { opacity: 1, y: 0, duration: 0.55, ease: "power2.out" })
-        .to(".nick-headline", { opacity: 1, y: 0, duration: 0.65, ease: "power2.out" }, "-=0.25")
-        .to(".nick-sub", { opacity: 1, y: 0, duration: 0.6, ease: "power2.out" }, "-=0.35")
-        .to(".nick-body", { opacity: 1, y: 0, duration: 0.6, ease: "power2.out" }, "-=0.25")
-        .to(".nick-stat", { opacity: 1, y: 0, duration: 0.5, ease: "power2.out", stagger: 0.09 }, "-=0.2")
-        .to(".nick-thumb", { opacity: 1, x: 0, duration: 0.6, ease: "power2.out", stagger: 0.14 }, "-=0.4");
+    const raf = requestAnimationFrame(() => {
+      setVisible(true);
     });
-
-    return () => { cancelled = true; };
+    return () => cancelAnimationFrame(raf);
   }, []);
 
   return (
     <div
-      ref={panelRef}
       className="nick-panel"
       style={{
         position: "relative",
@@ -62,14 +39,14 @@ export default function NickelodeonPanel() {
         background: "#050402",
       }}
     >
-      {/* ── Hero background image — pirate ship / atrium ── */}
+      {/* ── Hero background image ── */}
       <div style={{ position: "absolute", inset: 0, zIndex: 1 }}>
         <picture>
           <source media="(max-width: 767px)" srcSet="/photos/nickelodeon-park-mobile.jpg" />
           <img
             src="/photos/nickelodeon-park.jpg"
             alt="Nickelodeon Universe — pirate ship atrium at Mall of America"
-            loading="eager"
+            fetchPriority="high"
             decoding="async"
             style={{ width: "100%", height: "100%", objectFit: "cover", objectPosition: "center 30%" }}
           />
@@ -92,37 +69,49 @@ export default function NickelodeonPanel() {
       </div>
 
       {/* ── Content ── */}
-      <div style={{
-        position: "relative", zIndex: 4, width: "100%",
-        padding: "6rem clamp(1.5rem, 6vw, 6rem)",
-        display: "grid", gap: "3rem",
-      }} className="nick-content-grid">
+      <div
+        style={{
+          position: "relative", zIndex: 4, width: "100%",
+          padding: "6rem clamp(1.5rem, 6vw, 6rem)",
+          display: "grid", gap: "3rem",
+        }}
+        className="nick-content-grid"
+      >
         {/* Left — text block */}
         <div style={{ display: "flex", flexDirection: "column", gap: "1.2rem", maxWidth: "520px" }}>
-          <p className="nick-cat" style={{
+          
+          <p style={{
             color: "#C9A84C", fontSize: "0.68rem", letterSpacing: "0.42em",
             textTransform: "uppercase", fontFamily: "var(--font-montserrat)",
-            fontWeight: 700, margin: 0, opacity: 0, transform: "translateY(16px)",
+            fontWeight: 700, margin: 0,
+            opacity: visible ? 1 : 0, transform: visible ? "translateY(0)" : "translateY(16px)",
+            transition: "opacity 0.55s ease, transform 0.55s cubic-bezier(0.22,1,0.36,1)",
           }}>Theme Park · Nickelodeon Universe</p>
 
-          <h2 className="nick-headline" style={{
+          <h2 style={{
             color: "#ffffff", fontSize: "clamp(2.4rem, 5.5vw, 5rem)",
             fontWeight: 800, fontFamily: "var(--font-montserrat)",
-            margin: 0, lineHeight: 0.95, opacity: 0, transform: "translateY(24px)",
+            margin: 0, lineHeight: 0.95,
+            opacity: visible ? 1 : 0, transform: visible ? "translateY(0)" : "translateY(24px)",
+            transition: "opacity 0.65s ease 0.1s, transform 0.65s cubic-bezier(0.22,1,0.36,1) 0.1s",
           }}>7 roller<br />coasters.</h2>
 
-          <h3 className="nick-sub" style={{
+          <h3 style={{
             color: "rgba(255,255,255,0.42)", fontSize: "clamp(1.2rem, 2.8vw, 2.2rem)",
             fontWeight: 800, fontFamily: "var(--font-montserrat)",
-            margin: 0, lineHeight: 1.1, opacity: 0, transform: "translateY(20px)",
+            margin: 0, lineHeight: 1.1,
+            opacity: visible ? 1 : 0, transform: visible ? "translateY(0)" : "translateY(20px)",
+            transition: "opacity 0.6s ease 0.2s, transform 0.6s cubic-bezier(0.22,1,0.36,1) 0.2s",
           }}>Inside a mall.</h3>
 
           <div style={{ width: "48px", height: "2px", background: "linear-gradient(to right, #C9A84C, rgba(201,168,76,0.2))" }} />
 
-          <p className="nick-body" style={{
+          <p style={{
             color: "rgba(255,255,255,0.55)", fontSize: "clamp(0.82rem, 1.3vw, 0.96rem)",
             fontFamily: "var(--font-montserrat)", fontWeight: 400,
-            lineHeight: 1.8, margin: 0, opacity: 0, transform: "translateY(16px)", maxWidth: "420px",
+            lineHeight: 1.8, margin: 0, maxWidth: "420px",
+            opacity: visible ? 1 : 0, transform: visible ? "translateY(0)" : "translateY(16px)",
+            transition: "opacity 0.6s ease 0.3s, transform 0.6s cubic-bezier(0.22,1,0.36,1) 0.3s",
           }}>
             Nickelodeon Universe is the largest indoor theme park in North
             America — and it lives inside Mall of America. Your brand sits
@@ -131,10 +120,12 @@ export default function NickelodeonPanel() {
           </p>
 
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0.6rem", marginTop: "0.4rem" }}>
-            {STATS.map(s => (
-              <div key={s.value} className="nick-stat" style={{
+            {STATS.map((s, i) => (
+              <div key={s.value} style={{
                 background: "rgba(201,168,76,0.06)", border: "1px solid rgba(201,168,76,0.18)",
-                padding: "0.75rem 1rem", opacity: 0, transform: "translateY(12px)",
+                padding: "0.75rem 1rem",
+                opacity: visible ? 1 : 0, transform: visible ? "translateY(0)" : "translateY(12px)",
+                transition: `opacity 0.5s ease ${0.38 + i * 0.09}s, transform 0.5s cubic-bezier(0.22,1,0.36,1) ${0.38 + i * 0.09}s`,
               }}>
                 <div style={{ color: "#C9A84C", fontSize: "clamp(1.1rem, 2vw, 1.5rem)", fontWeight: 800, fontFamily: "var(--font-montserrat)", lineHeight: 1, fontVariantNumeric: "tabular-nums" }}>{s.value}</div>
                 <div style={{ color: "rgba(255,255,255,0.38)", fontSize: "0.58rem", letterSpacing: "0.14em", textTransform: "uppercase", fontFamily: "var(--font-montserrat)", fontWeight: 600, marginTop: "0.25rem" }}>{s.label}</div>
@@ -145,10 +136,12 @@ export default function NickelodeonPanel() {
 
         {/* Right — thumbnail stack */}
         <div className="nick-thumbs-col" style={{ display: "flex", flexDirection: "column", gap: "1px", alignSelf: "center" }}>
-          {THUMBS.map((t) => (
-            <div key={t.src} className="nick-thumb" style={{
+          {THUMBS.map((t, i) => (
+            <div key={t.src} style={{
               position: "relative", width: "100%", height: "clamp(140px, 18vw, 220px)",
-              overflow: "hidden", opacity: 0, transform: "translateX(40px)",
+              overflow: "hidden",
+              opacity: visible ? 1 : 0, transform: visible ? "translateX(0)" : "translateX(40px)",
+              transition: `opacity 0.6s ease ${0.54 + i * 0.14}s, transform 0.6s cubic-bezier(0.22,1,0.36,1) ${0.54 + i * 0.14}s`,
             }}>
               <Image src={t.src} alt={t.label} fill sizes="(max-width: 768px) 100vw, 35vw"
                 style={{ objectFit: "cover", transition: "transform 0.6s ease" }}
