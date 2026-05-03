@@ -8,8 +8,9 @@ import {
   memo,
 } from "react";
 
-// GSAP type for passing to sub-components after lazy load
+// GSAP type no longer needed for sub-components — kept only for type safety
 type GsapInstance = typeof import("gsap").default;
+
 
 // ─── Floor data ───────────────────────────────────────────────────────────────
 const FLOORS = [
@@ -79,79 +80,77 @@ const FLOORS = [
   },
 ];
 
-// ─── D3 chart ─────────────────────────────────────────────────────────────────
+// ─── Zone Chart — pure CSS/SVG, no D3, no GSAP ──────────────────────────────
 const ZoneChart = memo(function ZoneChart({
-  zones, visible, gsapRef,
-}: { zones: (typeof FLOORS)[0]["zones"]; visible: boolean; gsapRef: React.MutableRefObject<GsapInstance | null> }) {
-  const svgRef = useRef<SVGSVGElement>(null);
+  zones, visible,
+}: { zones: (typeof FLOORS)[0]["zones"]; visible: boolean }) {
+  const [val, setVal] = useState<number[]>(zones.map(() => 0));
 
   useEffect(() => {
-    if (!svgRef.current || !visible || !gsapRef.current) return;
-    const gsap = gsapRef.current;
-    let cancelled = false;
-    const el = svgRef.current;
-
-    import("d3-selection").then(({ select }) => {
-      if (cancelled || !el) return;
-      const svg = select(el);
-      svg.selectAll("*").remove();
-      const W = el.clientWidth || 260;
-      const rowH = 28;
-      const H = zones.length * rowH;
-      const barMaxW = W - 90;
-      svg.attr("width", W).attr("height", H).attr("viewBox", `0 0 ${W} ${H}`);
-      const g = svg.append("g");
-
-      zones.forEach((z, i) => {
-        const y = i * rowH + rowH / 2;
-        g.append("text").attr("x", 0).attr("y", y + 3)
-          .attr("font-size", "7px").attr("font-weight", "500")
-          .attr("font-family", "var(--font-montserrat)")
-          .attr("fill", "rgba(255,255,255,0.48)").attr("letter-spacing", "0.05em")
-          .text(z.label.toUpperCase());
-        g.append("rect").attr("x", 72).attr("y", y - 2)
-          .attr("width", barMaxW).attr("height", 4).attr("rx", 2)
-          .attr("fill", "rgba(255,255,255,0.05)");
-        const bar = g.append("rect").attr("x", 72).attr("y", y - 2)
-          .attr("width", 0).attr("height", 4).attr("rx", 2).attr("fill", "#C9A84C");
-        const pctText = g.append("text").attr("x", W).attr("y", y + 3)
-          .attr("text-anchor", "end").attr("font-size", "7px").attr("font-weight", "700")
-          .attr("font-family", "var(--font-montserrat)").attr("fill", "#C9A84C").text("0%");
-        const targetW = barMaxW * (z.pct / 100);
-        gsap.to({ w: 0, p: 0 }, {
-          w: targetW, p: z.pct, duration: 0.9, ease: "power2.out", delay: i * 0.1,
-          onUpdate: function () {
-            const t = this.targets()[0] as { w: number; p: number };
-            bar.attr("width", Math.max(0, t.w));
-            pctText.text(Math.round(t.p) + "%");
-          },
-        });
-      });
+    if (!visible) return;
+    let start = performance.now();
+    const raf = requestAnimationFrame(function animate(now) {
+      const t = Math.min((now - start) / 900, 1);
+      const ease = 1 - Math.pow(1 - t, 3);
+      setVal(zones.map(z => z.pct * ease));
+      if (t < 1) requestAnimationFrame(animate);
     });
+    return () => cancelAnimationFrame(raf);
+  }, [visible, zones]);
 
-    return () => { cancelled = true; };
-  }, [zones, visible, gsapRef]);
+  const W = 260;
+  const rowH = 28;
+  const barMaxW = W - 90;
+  const H = zones.length * rowH;
 
   return (
-    <svg ref={svgRef}
+    <svg
+      viewBox={`0 0 ${W} ${H}`}
       style={{ width: "100%", height: "auto", display: "block", overflow: "visible" }}
-      aria-label="Floor zone breakdown" />
+      aria-label="Floor zone breakdown"
+    >
+      {zones.map((z, i) => {
+        const y = i * rowH + rowH / 2;
+        const barW = Math.max(0, barMaxW * (val[i] / 100));
+        return (
+          <g key={z.label}>
+            <text x={0} y={y + 3} fontSize="7" fontWeight="500"
+              fontFamily="var(--font-montserrat)" fill="rgba(255,255,255,0.48)" letterSpacing="0.05em">
+              {z.label.toUpperCase()}
+            </text>
+            {/* Track */}
+            <rect x={72} y={y - 2} width={barMaxW} height={4} rx={2} fill="rgba(255,255,255,0.05)" />
+            {/* Fill bar */}
+            <rect x={72} y={y - 2} width={barW} height={4} rx={2} fill="#C9A84C" />
+            {/* Pct text */}
+            <text x={W} y={y + 3} textAnchor="end" fontSize="7" fontWeight="700"
+              fontFamily="var(--font-montserrat)" fill="#C9A84C">
+              {Math.round(val[i])}%
+            </text>
+          </g>
+        );
+      })}
+    </svg>
   );
 });
 
-// ─── Side panel ───────────────────────────────────────────────────────────────
+
+// ─── Side panel — CSS transition, no GSAP ────────────────────────────────────
 const SidePanel = memo(function SidePanel({
-  floor, visible, gsapRef,
-}: { floor: (typeof FLOORS)[0] | null; visible: boolean; gsapRef: React.MutableRefObject<GsapInstance | null> }) {
-  const panelRef = useRef<HTMLDivElement>(null);
+  floor, visible,
+}: { floor: (typeof FLOORS)[0] | null; visible: boolean }) {
+  const [key, setKey] = useState(0);
+  const [panelVisible, setPanelVisible] = useState(false);
 
   useEffect(() => {
-    if (!panelRef.current || !floor || !gsapRef.current) return;
-    gsapRef.current.fromTo(panelRef.current,
-      { opacity: 0, x: 16 },
-      { opacity: 1, x: 0, duration: 0.4, ease: "power2.out" }
-    );
-  }, [floor, gsapRef]);
+    if (!floor) return;
+    setPanelVisible(false);
+    const t = setTimeout(() => {
+      setKey(k => k + 1);
+      setPanelVisible(true);
+    }, 30);
+    return () => clearTimeout(t);
+  }, [floor]);
 
   if (!floor) {
     return (
@@ -173,7 +172,15 @@ const SidePanel = memo(function SidePanel({
   }
 
   return (
-    <div ref={panelRef} style={{ padding: "0.3rem 0" }}>
+    <div
+      key={key}
+      style={{
+        padding: "0.3rem 0",
+        opacity: panelVisible ? 1 : 0,
+        transform: panelVisible ? "translateX(0)" : "translateX(16px)",
+        transition: "opacity 0.4s ease, transform 0.4s cubic-bezier(0.22,1,0.36,1)",
+      }}
+    >
       <div style={{
         color: "#C9A84C", fontSize: "0.45rem", letterSpacing: "0.3em",
         textTransform: "uppercase", fontFamily: "var(--font-montserrat)", fontWeight: 700, marginBottom: "0.15rem"
@@ -192,7 +199,7 @@ const SidePanel = memo(function SidePanel({
       }}>
         {floor.stat}
       </p>
-      <ZoneChart zones={floor.zones} visible={visible} gsapRef={gsapRef} />
+      <ZoneChart zones={floor.zones} visible={visible} />
       <div style={{ marginTop: "0.6rem" }}>
         <p style={{
           color: "rgba(255,255,255,0.25)", fontSize: "0.42rem", letterSpacing: "0.25em",
@@ -215,6 +222,7 @@ const SidePanel = memo(function SidePanel({
     </div>
   );
 });
+
 
 // ─── Building geometry helpers ────────────────────────────────────────────────
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -747,64 +755,29 @@ export default function MallMapSection() {
   const [selected, setSelected] = useState<number | null>(null);
   const [isMobile, setIsMobile] = useState(false);
   const [mounted, setMounted] = useState(false);
+  // eslint-disable-next-line prefer-const
+
+    const [headingVisible, setHeadingVisible] = useState(false);
 
   useEffect(() => {
     const el = sectionRef.current;
     if (!el) return;
 
-    // ── Gate mount + GSAP behind IntersectionObserver ─────────────────────
-    // Previously: setMounted(true) + GSAP import ran IMMEDIATELY on page load,
-    // causing Three.js canvas to initialize and GSAP to parse while the user
-    // was still on the hero — wasting main thread budget and contributing to TBT.
-    //
-    // Now: Nothing happens until the section approaches the viewport (400px margin).
-    // This is the same pattern used by WhosHereSection.
-    let ctx: { revert: () => void } | null = null;
-
     const observer = new IntersectionObserver(
       ([entry]) => {
         if (!entry.isIntersecting) return;
         observer.disconnect();
-
         setIsMobile(window.innerWidth < 768);
         setMounted(true);
-
-        Promise.all([
-          import("gsap"),
-          import("gsap/ScrollTrigger"),
-        ]).then(([gsapMod, stMod]) => {
-          const gsap = gsapMod.default;
-          const { ScrollTrigger } = stMod;
-          gsap.registerPlugin(ScrollTrigger);
-          gsapRef.current = gsap;
-
-          ctx = gsap.context(() => {
-            gsap.fromTo(".map-heading",
-              { opacity: 0, y: 24 },
-              {
-                opacity: 1, y: 0, duration: 0.9, ease: "power2.out",
-                scrollTrigger: { trigger: ".map-heading", start: "top 85%" }
-              }
-            );
-            gsap.fromTo(".map-canvas-wrap",
-              { opacity: 0 },
-              {
-                opacity: 1, duration: 1.1, ease: "power2.out",
-                scrollTrigger: { trigger: ".map-canvas-wrap", start: "top 82%" }
-              }
-            );
-          }, sectionRef);
-        });
+        setHeadingVisible(true);
       },
       { rootMargin: "400px", threshold: 0 }
     );
     observer.observe(el);
 
-    return () => {
-      observer.disconnect();
-      ctx?.revert();
-    };
+    return () => observer.disconnect();
   }, []);
+
 
   const handleSelect = useCallback((id: number | null) => setSelected(id), []);
 
@@ -814,8 +787,18 @@ export default function MallMapSection() {
       ref={sectionRef}
       style={{ background: "#050402", width: "100%", height: "100vh", overflow: "hidden", position: "relative", display: "flex", flexDirection: "column" }}
     >
-      {/* Heading — ultra-compact */}
-      <div className="map-heading" style={{ textAlign: "center", padding: "clamp(1.2rem, 2vh, 1.8rem) 1rem clamp(0.6rem, 1.2vh, 1rem)", flexShrink: 0 }}>
+      {/* Heading */}
+      <div
+        className="map-heading"
+        style={{
+          textAlign: "center",
+          padding: "clamp(1.2rem, 2vh, 1.8rem) 1rem clamp(0.6rem, 1.2vh, 1rem)",
+          flexShrink: 0,
+          opacity: headingVisible ? 1 : 0,
+          transform: headingVisible ? "translateY(0)" : "translateY(24px)",
+          transition: "opacity 0.9s ease, transform 0.9s cubic-bezier(0.22,1,0.36,1)",
+        }}
+      >
         <p style={{
           color: "#C9A84C", fontSize: "0.48rem", letterSpacing: "0.35em", textTransform: "uppercase",
           fontFamily: "var(--font-montserrat)", fontWeight: 600, margin: "0 0 0.2rem"
@@ -837,9 +820,16 @@ export default function MallMapSection() {
         </p>
       </div>
 
-      {/* Main grid */}
       {/* Main body — fills remaining space */}
-      <div className="map-canvas-wrap" style={{ flex: 1, minHeight: 0, padding: "0 clamp(0.8rem,3vw,3rem)" }}>
+      <div
+        className="map-canvas-wrap"
+        style={{
+          flex: 1, minHeight: 0,
+          padding: "0 clamp(0.8rem,3vw,3rem)",
+          opacity: mounted ? 1 : 0,
+          transition: "opacity 1.1s ease 0.2s",
+        }}
+      >
         <div className="map-inner-grid" style={{ height: "100%" }}>
 
           {/* Left — floor buttons */}
@@ -915,7 +905,7 @@ export default function MallMapSection() {
 
           {/* Right — info panel */}
           <div style={{ borderLeft: "1px solid rgba(201,168,76,0.08)", paddingLeft: "0.75rem", minHeight: 0, overflow: "hidden" }}>
-            <SidePanel floor={selected !== null ? FLOORS[selected] : null} visible={true} gsapRef={gsapRef} />
+            <SidePanel floor={selected !== null ? FLOORS[selected] : null} visible={true} />
           </div>
 
         </div>
