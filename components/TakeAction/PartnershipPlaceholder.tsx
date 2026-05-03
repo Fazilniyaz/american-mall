@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState, useCallback } from "react";
-import { useRouter } from "next/navigation";
+import Image from "next/image";
 
 
 
@@ -48,7 +48,6 @@ const PARTNER_LOGOS = [
 ];
 
 export default function PartnerWithUsPage() {
-  const router = useRouter();
   const [activeType, setActiveType] = useState<PartnerType>("strategic");
   const [formOpen, setFormOpen] = useState(false);
   const [sent, setSent] = useState(false);
@@ -308,12 +307,8 @@ export default function PartnerWithUsPage() {
           position:relative; overflow:hidden; opacity:0; transform:translateX(24px);
           transition:opacity 0.75s ease 0.18s, transform 0.75s ease 0.18s;
         }
-        .pw-img {
-          position:absolute; inset:0;
-          width:100%; height:100%;
-          object-fit:cover; object-position:center 22%;
+        .pw-img-wrap {
           opacity:0; transform:scale(1.05);
-          filter:brightness(0.32) saturate(0.65);
           transition:opacity 1.2s ease, transform 1.2s ease;
         }
 
@@ -330,7 +325,7 @@ export default function PartnerWithUsPage() {
         .pw-root.mounted .pw-divider {
           transform: scaleX(1);
         }
-        .pw-root.mounted .pw-img {
+        .pw-root.mounted .pw-img-wrap {
           opacity: 1; transform: scale(1);
         }
         .pw-fade-l {
@@ -687,11 +682,20 @@ export default function PartnerWithUsPage() {
         {/* ══ RIGHT ══ */}
         <div className="pw-right">
 
-          <img
-            className="pw-img"
-            src="/photos/partnership.webp"
-            alt="Strategic partnership handshake at Mall of America"
-          />
+          <div className="pw-img-wrap" style={{ position: "absolute", inset: 0 }}>
+            <Image
+              src="/photos/partnership.webp"
+              alt="Strategic partnership handshake at Mall of America"
+              fill
+              priority
+              sizes="(max-width:700px) 100vw, 50vw"
+              style={{
+                objectFit: "cover",
+                objectPosition: "center 22%",
+                filter: "brightness(0.32) saturate(0.65)",
+              }}
+            />
+          </div>
           <div className="pw-fade-l" />
           <div className="pw-fade-b" />
           <div className="pw-fade-t" />
@@ -734,7 +738,7 @@ export default function PartnerWithUsPage() {
 
       {/* ══ NAV ══ */}
       <div className="pw-nav">
-        <button className="pw-nav-btn" onClick={() => router.back()} aria-label="Back">‹</button>
+        <button className="pw-nav-btn" onClick={() => history.back()} aria-label="Back">‹</button>
         <span className="pw-nav-label">Partner With Us</span>
         <div style={{ width: "clamp(34px,4vw,42px)" }} />
       </div>

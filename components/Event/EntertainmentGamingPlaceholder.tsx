@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useRef, useState, useCallback } from "react";
+import { useEffect, useState, useCallback } from "react";
+import Image from "next/image";
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 const EVENT = {
@@ -161,29 +162,13 @@ function HighlightCard({ item, active, onClick }: {
 // ─── Main ─────────────────────────────────────────────────────────────────────
 export default function EntertainmentAndGamingPage() {
   const [mounted, setMounted] = useState(false);
-  const [imgLoaded, setImgLoaded] = useState(false);
   const [active, setActive] = useState(0);
 
-  // Neon flicker state — simulates arcade sign flicker
-  const [flicker, setFlicker] = useState(1);
-
-  useEffect(() => { const t = setTimeout(() => setMounted(true), 60); return () => clearTimeout(t); }, []);
+  useEffect(() => { const raf = requestAnimationFrame(() => setMounted(true)); return () => cancelAnimationFrame(raf); }, []);
 
   // Auto-cycle highlights
   useEffect(() => {
     const id = setInterval(() => setActive(i => (i + 1) % HIGHLIGHTS.length), 3600);
-    return () => clearInterval(id);
-  }, []);
-
-  // Neon flicker — subtle random opacity dip every few seconds
-  useEffect(() => {
-    const flick = () => {
-      setFlicker(0.7);
-      setTimeout(() => setFlicker(1), 80);
-      setTimeout(() => setFlicker(0.85), 140);
-      setTimeout(() => setFlicker(1), 200);
-    };
-    const id = setInterval(flick, 3200 + Math.random() * 2000);
     return () => clearInterval(id);
   }, []);
 
@@ -250,13 +235,11 @@ export default function EntertainmentAndGamingPage() {
               fontWeight: 900, letterSpacing: "0.02em",
               textTransform: "uppercase", lineHeight: 1, margin: 0,
             }}>{EVENT.titleWhite}</h1>
-            <h1 style={{
+            <h1 className="eg-neon-flicker" style={{
               color: "#C9A84C", fontSize: "clamp(1.1rem,2.6vw,2.1rem)",
               fontWeight: 900, letterSpacing: "0.02em",
               textTransform: "uppercase", lineHeight: 1, margin: 0,
               textShadow: "0 0 40px rgba(201,168,76,0.25)",
-              opacity: flicker,
-              transition: "opacity 0.06s ease",
             }}>{EVENT.titleGold}</h1>
           </div>
         </div>
@@ -325,30 +308,18 @@ export default function EntertainmentAndGamingPage() {
           overflow: "hidden",
           background: "#060504",
         }}>
-          <img
+          <Image
             src="/photos/events/entgam.webp"
             alt="Galaxy Gaming & Arcade at Mall of America"
-            onLoad={() => setImgLoaded(true)}
+            fill
+            priority
+            sizes="(max-width:680px) 100vw, 64vw"
             style={{
-              width: "100%", height: "100%",
               objectFit: "cover",
               objectPosition: "center 25%",
-              display: "block",
-              opacity: imgLoaded ? 1 : 0,
-              transition: "opacity 1.1s ease",
               userSelect: "none",
             }}
           />
-
-          {/* Shimmer */}
-          {!imgLoaded && (
-            <div style={{
-              position: "absolute", inset: 0, zIndex: 1,
-              background: "linear-gradient(90deg,#0c0b08 25%,#141209 50%,#0c0b08 75%)",
-              backgroundSize: "400% 100%",
-              animation: "eg-shimmer 1.8s ease infinite",
-            }} />
-          )}
 
           {/* Right-edge blend into info panel */}
           <div style={{
@@ -587,13 +558,18 @@ export default function EntertainmentAndGamingPage() {
           0%,100% { opacity: 1; transform: scale(1); }
           50%      { opacity: 0.3; transform: scale(0.65); }
         }
-        @keyframes eg-shimmer {
-          0%   { background-position:  200% 0; }
-          100% { background-position: -200% 0; }
-        }
         @keyframes eg-ticker {
           0%   { transform: translateX(0); }
           100% { transform: translateX(-50%); }
+        }
+        @keyframes eg-flicker {
+          0%, 4%, 8%, 12%, 100% { opacity: 1; }
+          2%  { opacity: 0.7; }
+          6%  { opacity: 0.85; }
+          10% { opacity: 0.7; }
+        }
+        .eg-neon-flicker {
+          animation: eg-flicker 4s ease infinite;
         }
 
         /* ── Mobile: stack image top, info below ── */
