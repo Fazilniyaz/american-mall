@@ -6,6 +6,17 @@ This document outlines the complete route structure of the American Mall interac
 
 ---
 
+## 00. The Pre-Deck Sequence (Entry)
+
+### Route: `/`
+- **Storytelling Concept:** **The Grand Entrance.** Before the presentation even begins, we set a premium, cinematic tone. It acts as the lobby of a luxury hotel—creating a moment of anticipation. It immerses the viewer immediately, establishing the Mall of America as a global destination before a single fact is presented.
+- **Technologies:** Next.js, React, Google Flow
+- **Responsive:** ✅
+- **Lighthouse:** *(Root domain score, typically 99/100)*
+- **AI Assets:** AI-generated video in the background for the entrance section with voice-over. For mobiles, this is replaced with an AI-generated image.
+
+---
+
 ## 01. Introduction & Scale
 
 ### Route: `/intro`
@@ -13,7 +24,7 @@ This document outlines the complete route structure of the American Mall interac
 - **Technologies:** Next.js, Three.js (Particles), GSAP, Google Flow, Meta AI, Hugging face for AI Video and Image Generation.
 - **Responsive:** ✅
 - **Lighthouse (Mobile):** [View Report](https://pagespeed.web.dev/analysis/https-american-mall-vercel-app-intro/a7peefexr7?form_factor=mobile)
--- **AI Assets:** : The video in the background was AI generated video in the entrance section with voice over. For mobiles, I replaced this video with AI generated Image. 
+-- **AI Assets:** : Real video was used in background (B Roll of Mall of America)
 
 ### Route: `/introTwo`
 - **Storytelling Concept:** **The Proof of Dominance.** Transitioning from pure emotion to hard data. By animating massive numbers (40M visitors, 520+ stores, 5.6M sqft), we ground the initial awe in undeniable business reality. The viewer instantly realizes the sheer gravity and market dominance of the property.

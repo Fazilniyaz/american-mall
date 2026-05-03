@@ -55,6 +55,17 @@ To create that undeniable **"I need to be here"** feeling for a brand executive,
 
 ## Complete Route Documentation
 
+### 00. The Pre-Deck Sequence (Entry)
+
+**Route:** `/`
+- **Storytelling Concept:** **The Grand Entrance.** Before the presentation even begins, we set a premium, cinematic tone. It acts as the lobby of a luxury hotel—creating a moment of anticipation. It immerses the viewer immediately, establishing the Mall of America as a global destination before a single fact is presented.
+- **Technologies:** Next.js, React, Google Flow
+- **Responsive:** ✅
+- **Lighthouse:** *(Root domain score, typically 99/100)*
+- **AI Assets:** AI-generated video in the background for the entrance section with voice-over. For mobiles, this is replaced with an AI-generated image.
+
+---
+
 ### 01. Introduction & Scale
 
 **Route:** `/intro`
