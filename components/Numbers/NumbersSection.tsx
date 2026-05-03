@@ -49,129 +49,44 @@ function computeArc() {
 function ArcCounter({
   stat, index, size, r, sw,
 }: { stat: Stat; index: number; size: number; r: number; sw: number }) {
-  const svgRef = useRef<SVGSVGElement>(null);
-  const numRef = useRef<HTMLSpanElement>(null);
-  const triggered = useRef(false);
+  const [visible, setVisible] = useState(false);
+  const [val, setVal] = useState(0);
+  const ref = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    const svgEl = svgRef.current;
-    const numEl = numRef.current;
-    if (!svgEl || !numEl) return;
-    let dead = false;
-
-    // Wipe previous paint (handles resize re-render)
-    while (svgEl.firstChild) svgEl.removeChild(svgEl.firstChild);
-    triggered.current = false;
-
-    const GOLD = "#C9A84C";
-    const cx = size / 2, cy = size / 2;
-    const START = -Math.PI * 0.85;
-    const SPAN = Math.PI * 1.70;
-
-    Promise.all([import("d3-selection"), import("d3-shape")]).then(([sel, sh]) => {
-      if (dead) return;
-
-      const svg = sel
-        .select(svgEl)
-        .attr("width", size)
-        .attr("height", size)
-        .attr("viewBox", `0 0 ${size} ${size}`);
-
-      const mkArc = (end: number) =>
-        sh
-          .arc<unknown, unknown>()
-          .innerRadius(r - sw / 2)
-          .outerRadius(r + sw / 2)
-          .startAngle(START)
-          .endAngle(end)
-          .cornerRadius(2);
-
-      // Track ring
-      svg
-        .append("path")
-        // @ts-expect-error d3 no-datum arc
-        .attr("d", mkArc(START + SPAN)())
-        .attr("transform", `translate(${cx},${cy})`)
-        .attr("fill", "rgba(255,255,255,0.055)");
-
-      // Tick marks
-      for (let t = 0; t <= 7; t++) {
-        const a = START + (t / 7) * SPAN;
-        const i1 = r - sw - 5, i2 = r - sw - 2;
-        svg
-          .append("line")
-          .attr("x1", cx + Math.sin(a) * i1).attr("y1", cy - Math.cos(a) * i1)
-          .attr("x2", cx + Math.sin(a) * i2).attr("y2", cy - Math.cos(a) * i2)
-          .attr("stroke", "rgba(255,255,255,0.1)")
-          .attr("stroke-width", 1);
-      }
-
-      // Foreground arc (animated)
-      const fgPath = svg
-        .append("path")
-        // @ts-expect-error d3 no-datum arc
-        .attr("d", mkArc(START)())
-        .attr("transform", `translate(${cx},${cy})`)
-        .attr("fill", GOLD);
-
-      // Glow dot at arc tip
-      const dot = svg
-        .append("circle")
-        .attr("r", sw + 1.5)
-        .attr("fill", GOLD)
-        .attr("opacity", 0);
-
-      // Trigger only when visible
-      const io = new IntersectionObserver(([entry]) => {
-        if (!entry.isIntersecting || triggered.current) return;
-        triggered.current = true;
+    const el = ref.current;
+    if (!el) return;
+    const io = new IntersectionObserver(([entry]) => {
+      if (entry.isIntersecting) {
         io.disconnect();
+        setTimeout(() => {
+          setVisible(true);
+          let start = performance.now();
+          const animate = (time: number) => {
+            const progress = Math.min((time - start) / 1700, 1);
+            const ease = 1 - Math.pow(1 - progress, 4);
+            setVal(stat.value * ease);
+            if (progress < 1) requestAnimationFrame(animate);
+          };
+          requestAnimationFrame(animate);
+        }, index * 80);
+      }
+    }, { rootMargin: "0px 0px -10% 0px", threshold: 0 });
+    io.observe(el);
+    return () => io.disconnect();
+  }, [stat.value, index]);
 
-        import("gsap").then(({ default: gsap }) => {
-          const targetAngle = START + SPAN * stat.arc;
-          const p1 = { a: START };
-          const isFloat = stat.value % 1 !== 0;
-          const p2 = { v: 0 };
+  const cx = size / 2;
+  const cy = size / 2;
+  const C = 2 * Math.PI * r;
+  const totalArc = C * 0.85; // 306 / 360 = 0.85
+  const fillLength = totalArc * stat.arc;
 
-          gsap.to(p1, {
-            a: targetAngle,
-            duration: 1.5,
-            ease: "power2.out",
-            delay: index * 0.08,
-            onUpdate() {
-              const a = p1.a;
-              // @ts-expect-error d3 no-datum arc
-              fgPath.attr("d", mkArc(a)());
-              dot
-                .attr("opacity", 1)
-                .attr("cx", cx + Math.sin(a) * r)
-                .attr("cy", cy - Math.cos(a) * r);
-            },
-          });
-
-          gsap.to(p2, {
-            v: stat.value,
-            duration: 1.7,
-            ease: "power2.out",
-            delay: index * 0.08,
-            onUpdate() {
-              if (numEl)
-                numEl.textContent = isFloat
-                  ? p2.v.toFixed(1) + stat.suffix
-                  : Math.round(p2.v) + stat.suffix;
-            },
-          });
-        });
-      }, { rootMargin: "80px", threshold: 0 });
-
-      io.observe(svgEl);
-    });
-
-    return () => { dead = true; };
-  }, [stat, index, size, r, sw]);
+  const isFloat = stat.value % 1 !== 0;
+  const displayVal = isFloat ? val.toFixed(1) : Math.round(val);
 
   return (
-    <div className="ac-wrap">
+    <div className="ac-wrap" ref={ref}>
       {/* 3-D tilt shell */}
       <div
         className="ac-tilt"
@@ -190,16 +105,55 @@ function ArcCounter({
           setTimeout(() => { el.style.transition = ""; }, 680);
         }}
       >
-        <svg ref={svgRef} style={{ display: "block", position: "absolute", inset: 0 }} />
+        <svg style={{ display: "block", position: "absolute", inset: 0, width: size, height: size, transform: "rotate(117deg)" }}>
+          {/* Background track */}
+          <circle
+            cx={cx} cy={cy} r={r}
+            fill="none" stroke="rgba(255,255,255,0.055)" strokeWidth={sw}
+            strokeDasharray={`${totalArc} ${C}`}
+            strokeLinecap="round"
+          />
+          {/* Ticks */}
+          {Array.from({ length: 8 }).map((_, t) => {
+            const angle = (t / 7) * (Math.PI * 1.7);
+            const i1 = r - sw - 5;
+            const i2 = r - sw - 2;
+            return <line key={t} 
+              x1={cx + Math.cos(angle) * i1} y1={cy + Math.sin(angle) * i1} 
+              x2={cx + Math.cos(angle) * i2} y2={cy + Math.sin(angle) * i2} 
+              stroke="rgba(255,255,255,0.1)" strokeWidth="1" />;
+          })}
+          {/* Foreground Arc */}
+          <circle
+            cx={cx} cy={cy} r={r}
+            fill="none" stroke="#C9A84C" strokeWidth={sw}
+            strokeDasharray={`${C} ${C}`}
+            strokeDashoffset={visible ? C - fillLength : C}
+            strokeLinecap="round"
+            style={{ transition: "stroke-dashoffset 1.5s cubic-bezier(0.22, 1, 0.36, 1)" }}
+          />
+          {/* Glow Dot */}
+          <g style={{
+            transformOrigin: `${cx}px ${cy}px`,
+            transform: `rotate(${visible ? stat.arc * 306 : 0}deg)`,
+            transition: "transform 1.5s cubic-bezier(0.22, 1, 0.36, 1)"
+          }}>
+            <circle
+              cx={cx + r} cy={cy} r={sw + 1.5}
+              fill="#C9A84C"
+              style={{ opacity: visible ? 1 : 0, transition: "opacity 0.3s ease" }}
+            />
+          </g>
+        </svg>
+
         <span
-          ref={numRef}
           className="ac-num"
           style={{
             fontSize: `${Math.max(size * 0.148, 9)}px`,
             textShadow: `0 0 20px #C9A84C55`,
           }}
         >
-          0{stat.suffix}
+          {displayVal}{stat.suffix}
         </span>
       </div>
 
@@ -214,6 +168,8 @@ export default function NumbersSection() {
   const sectionRef = useRef<HTMLElement>(null);
   const scrollerEl = useScroller();
   const [arc, setArc] = useState(computeArc);
+
+  const [headingVisible, setHeadingVisible] = useState(false);
 
   // Debounced resize via rAF
   useEffect(() => {
@@ -231,29 +187,11 @@ export default function NumbersSection() {
     const el = sectionRef.current;
     if (!el) return;
     const io = new IntersectionObserver(([entry]) => {
-      if (!entry.isIntersecting) return;
-      io.disconnect();
-      Promise.all([import("gsap"), import("gsap/ScrollTrigger")]).then(
-        ([gm, stm]) => {
-          const gsap = gm.default;
-          gsap.registerPlugin(stm.ScrollTrigger);
-          const ctx = gsap.context(() => {
-            gsap.fromTo(".ns-heading",
-              { opacity: 0, y: 20 },
-              {
-                opacity: 1, y: 0, duration: 0.8, ease: "power2.out",
-                scrollTrigger: {
-                  trigger: ".ns-heading",
-                  start: "top 92%",
-                  scroller: scrollerEl ?? undefined,
-                },
-              }
-            );
-          }, sectionRef);
-          return () => ctx.revert();
-        }
-      );
-    }, { rootMargin: "150px" });
+      if (entry.isIntersecting) {
+        setHeadingVisible(true);
+        io.disconnect();
+      }
+    }, { rootMargin: "0px", threshold: 0.1 });
     io.observe(el);
     return () => io.disconnect();
   }, [scrollerEl]);
@@ -279,9 +217,15 @@ export default function NumbersSection() {
         /* ── Heading ── */
         .ns-heading {
           opacity: 0;
+          transform: translateY(20px);
+          transition: all 0.8s cubic-bezier(0.22, 1, 0.36, 1);
           text-align: center;
           flex-shrink: 0;
           margin-bottom: clamp(10px, 1.8vh, 24px);
+        }
+        .ns-heading.visible {
+          opacity: 1;
+          transform: translateY(0);
         }
         .ns-eyebrow {
           color: #C9A84C;
@@ -414,7 +358,7 @@ export default function NumbersSection() {
 
       <section id="numbers" ref={sectionRef} className="ns-root">
 
-        <div className="ns-heading">
+        <div className={`ns-heading ${headingVisible ? 'visible' : ''}`}>
           <p className="ns-eyebrow">By the numbers</p>
           <h2 className="ns-h2">
             The scale is <em>impossible to ignore</em>
