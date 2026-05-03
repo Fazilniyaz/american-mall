@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useRef, useState, useCallback } from "react";
+import { useEffect, useState, useCallback } from "react";
+
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 const EVENT = {
@@ -198,33 +199,17 @@ function ZoneCard({
 export default function VRAndGamingZonesPage() {
   const [mounted, setMounted] = useState(false);
   const [activeZone, setActiveZone] = useState(0);
-  const [imgLoaded, setImgLoaded] = useState(false);
-  const [scanY, setScanY] = useState(0);
-  const imgRef = useRef<HTMLImageElement>(null);
-  const scanRef = useRef<number>(0);
 
-  // Mount
+  // Mount gate — one rAF tick so background paints first
   useEffect(() => {
-    const t = setTimeout(() => setMounted(true), 60);
-    return () => clearTimeout(t);
+    const raf = requestAnimationFrame(() => setMounted(true));
+    return () => cancelAnimationFrame(raf);
   }, []);
 
   // Auto-cycle zones
   useEffect(() => {
     const id = setInterval(() => setActiveZone(i => (i + 1) % ZONES.length), 3800);
     return () => clearInterval(id);
-  }, []);
-
-  // Scan-line animation on image
-  useEffect(() => {
-    let frame = 0;
-    const animate = () => {
-      frame++;
-      setScanY(prev => (prev + 0.15) % 100);
-      scanRef.current = requestAnimationFrame(animate);
-    };
-    scanRef.current = requestAnimationFrame(animate);
-    return () => cancelAnimationFrame(scanRef.current);
   }, []);
 
   const handleZone = useCallback((i: number) => setActiveZone(i), []);
@@ -504,32 +489,17 @@ export default function VRAndGamingZonesPage() {
           background: "#060504",
         }}>
 
-          {/* Image */}
+          {/* Image — CSS fade-in on load, no JS state needed */}
           <img
-            ref={imgRef}
             src="/photos/events/VR.webp"
             alt="VR & Gaming Experience Zones at Mall of America"
-            onLoad={() => setImgLoaded(true)}
+            className="vr-hero-img"
             style={{
               width: "100%", height: "100%",
-              objectFit: "cover",
-              objectPosition: "center 30%",
-              display: "block",
-              opacity: imgLoaded ? 1 : 0,
-              transition: "opacity 1.1s ease",
-              userSelect: "none",
+              objectFit: "cover", objectPosition: "center 30%",
+              display: "block", userSelect: "none",
             }}
           />
-
-          {/* Shimmer while loading */}
-          {!imgLoaded && (
-            <div style={{
-              position: "absolute", inset: 0, zIndex: 1,
-              background: "linear-gradient(90deg,#0c0b08 25%,#141209 50%,#0c0b08 75%)",
-              backgroundSize: "400% 100%",
-              animation: "vr-shimmer 1.8s ease infinite",
-            }} />
-          )}
 
           {/* Left blend gradient */}
           <div style={{
@@ -540,21 +510,14 @@ export default function VRAndGamingZonesPage() {
             `,
           }} />
 
-          {/* Cyan neon tint — mirrors the image's own lighting */}
+          {/* Cyan neon tint */}
           <div style={{
             position: "absolute", inset: 0, pointerEvents: "none", zIndex: 2,
             background: "radial-gradient(ellipse 65% 55% at 55% 60%, rgba(34,211,238,0.04) 0%, transparent 65%)",
           }} />
 
-          {/* Animated scan line — cyber feel */}
-          <div style={{
-            position: "absolute", left: 0, right: 0, zIndex: 3,
-            height: "1px",
-            top: `${scanY}%`,
-            background: "linear-gradient(to right, transparent 0%, rgba(34,211,238,0.18) 20%, rgba(34,211,238,0.35) 50%, rgba(34,211,238,0.18) 80%, transparent 100%)",
-            pointerEvents: "none",
-            transition: "none",
-          }} />
+          {/* Scan line — pure CSS animation, zero JS re-renders */}
+          <div className="vr-scan-line" style={{ position: "absolute", left: 0, right: 0, zIndex: 3, height: "1px", pointerEvents: "none" }} />
 
           {/* "LIVE VR COMPETITION" banner — mirrors image's own banner */}
           <div style={{
@@ -654,13 +617,26 @@ export default function VRAndGamingZonesPage() {
           0%,100% { opacity: 1; transform: scale(1); }
           50%      { opacity: 0.3; transform: scale(0.65); }
         }
-        @keyframes vr-shimmer {
-          0%   { background-position:  200% 0; }
-          100% { background-position: -200% 0; }
-        }
         @keyframes vr-ticker {
           0%   { transform: translateX(0); }
           100% { transform: translateX(-50%); }
+        }
+        /* Scan line: GPU-only CSS animation — replaces 60fps setScanY rAF loop */
+        @keyframes vr-scan {
+          0%   { top: 0%; }
+          100% { top: 100%; }
+        }
+        .vr-scan-line {
+          animation: vr-scan 6s linear infinite;
+          background: linear-gradient(to right, transparent 0%, rgba(34,211,238,0.18) 20%, rgba(34,211,238,0.35) 50%, rgba(34,211,238,0.18) 80%, transparent 100%);
+        }
+        /* Image fades in via CSS once loaded */
+        .vr-hero-img {
+          animation: vr-img-fade 1.1s ease forwards;
+        }
+        @keyframes vr-img-fade {
+          from { opacity: 0; }
+          to   { opacity: 1; }
         }
 
         /* ── Mobile ── */
