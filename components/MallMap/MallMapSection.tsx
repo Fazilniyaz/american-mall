@@ -751,33 +751,59 @@ const FloorButtons = memo(function FloorButtons({
 // ─── Main export ──────────────────────────────────────────────────────────────
 export default function MallMapSection() {
   const sectionRef = useRef<HTMLElement>(null);
+  const canvasWrapRef = useRef<HTMLDivElement>(null);
   const gsapRef = useRef<GsapInstance | null>(null);
   const [selected, setSelected] = useState<number | null>(null);
   const [isMobile, setIsMobile] = useState(false);
-  const [mounted, setMounted] = useState(false);
-  // eslint-disable-next-line prefer-const
+  // headingVisible: shows text immediately when section enters viewport
+  const [headingVisible, setHeadingVisible] = useState(false);
+  // canvasReady: deferred — only true after user interaction or 3s idle
+  const [canvasReady, setCanvasReady] = useState(false);
 
-    const [headingVisible, setHeadingVisible] = useState(false);
-
+  // Phase 1: Show text/UI immediately on visibility
   useEffect(() => {
     const el = sectionRef.current;
     if (!el) return;
-
-    const observer = new IntersectionObserver(
+    const io = new IntersectionObserver(
       ([entry]) => {
         if (!entry.isIntersecting) return;
-        observer.disconnect();
+        io.disconnect();
         setIsMobile(window.innerWidth < 768);
-        setMounted(true);
         setHeadingVisible(true);
       },
-      { rootMargin: "400px", threshold: 0 }
+      { rootMargin: "0px", threshold: 0.01 }
     );
-    observer.observe(el);
-
-    return () => observer.disconnect();
+    io.observe(el);
+    return () => io.disconnect();
   }, []);
 
+  // Phase 2: Load Three.js only after interaction OR 3s idle
+  useEffect(() => {
+    if (canvasReady) return;
+    const wrap = canvasWrapRef.current;
+    if (!wrap) return;
+
+    const activate = () => {
+      if (canvasReady) return;
+      setCanvasReady(true);
+      wrap.removeEventListener("mouseenter", activate);
+      wrap.removeEventListener("touchstart", activate);
+      clearTimeout(idleTimer);
+    };
+
+    // Idle fallback: load after 3 seconds if no interaction
+    const idleTimer = setTimeout(activate, 3000);
+
+    wrap.addEventListener("mouseenter", activate, { once: true });
+    wrap.addEventListener("touchstart", activate, { once: true, passive: true });
+
+    return () => {
+      clearTimeout(idleTimer);
+      wrap.removeEventListener("mouseenter", activate);
+      wrap.removeEventListener("touchstart", activate);
+    };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [headingVisible]);
 
   const handleSelect = useCallback((id: number | null) => setSelected(id), []);
 
@@ -787,12 +813,12 @@ export default function MallMapSection() {
       ref={sectionRef}
       style={{ background: "#050402", width: "100%", height: "100vh", overflow: "hidden", position: "relative", display: "flex", flexDirection: "column" }}
     >
-      {/* Heading */}
+      {/* Heading — compact on mobile, full on desktop */}
       <div
         className="map-heading"
         style={{
           textAlign: "center",
-          padding: "clamp(1.2rem, 2vh, 1.8rem) 1rem clamp(0.6rem, 1.2vh, 1rem)",
+          padding: "clamp(0.6rem, 1.5vh, 1.4rem) 1rem clamp(0.3rem, 0.8vh, 0.7rem)",
           flexShrink: 0,
           opacity: headingVisible ? 1 : 0,
           transform: headingVisible ? "translateY(0)" : "translateY(24px)",
@@ -801,19 +827,19 @@ export default function MallMapSection() {
       >
         <p style={{
           color: "#C9A84C", fontSize: "0.48rem", letterSpacing: "0.35em", textTransform: "uppercase",
-          fontFamily: "var(--font-montserrat)", fontWeight: 600, margin: "0 0 0.2rem"
+          fontFamily: "var(--font-montserrat)", fontWeight: 600, margin: "0 0 0.15rem"
         }}>
           Explore the property
         </p>
         <h2 style={{
-          color: "#ffffff", fontSize: "clamp(1.1rem,2.4vw,1.8rem)", fontWeight: 800,
-          fontFamily: "var(--font-montserrat)", margin: "0 0 0.25rem", lineHeight: 1.1
+          color: "#ffffff", fontSize: "clamp(0.95rem,2.4vw,1.8rem)", fontWeight: 800,
+          fontFamily: "var(--font-montserrat)", margin: "0 0 0.15rem", lineHeight: 1.1
         }}>
           5.6 million sq ft{" "}
           <span style={{ color: "#C9A84C" }}>across 4 floors</span>
         </h2>
-        <p style={{
-          color: "rgba(255,255,255,0.28)", fontSize: "0.58rem", fontFamily: "var(--font-montserrat)",
+        <p className="map-subtitle" style={{
+          color: "rgba(255,255,255,0.28)", fontSize: "0.56rem", fontFamily: "var(--font-montserrat)",
           fontWeight: 400, margin: "0 auto", maxWidth: "420px", lineHeight: 1.5
         }}>
           Rotate the building and click any floor to explore its retail mix, key tenants, and commercial opportunity.
@@ -822,18 +848,21 @@ export default function MallMapSection() {
 
       {/* Main body — fills remaining space */}
       <div
+        ref={canvasWrapRef}
         className="map-canvas-wrap"
         style={{
           flex: 1, minHeight: 0,
-          padding: "0 clamp(0.8rem,3vw,3rem)",
-          opacity: mounted ? 1 : 0,
+          padding: "0 clamp(0.5rem,3vw,3rem)",
+          opacity: headingVisible ? 1 : 0,
           transition: "opacity 1.1s ease 0.2s",
+          position: "relative",
         }}
       >
+        {/* ── DESKTOP grid: left sidebar | canvas | right panel ── */}
         <div className="map-inner-grid" style={{ height: "100%" }}>
 
-          {/* Left — floor buttons */}
-          <div style={{ display: "flex", flexDirection: "column", justifyContent: "center", gap: "0.6rem" }}>
+          {/* Left — floor buttons (desktop sidebar) */}
+          <div className="map-left-col" style={{ display: "flex", flexDirection: "column", justifyContent: "center", gap: "0.6rem" }}>
             <p style={{
               color: "rgba(255,255,255,0.2)", fontSize: "0.48rem", letterSpacing: "0.3em",
               textTransform: "uppercase", fontFamily: "var(--font-montserrat)", fontWeight: 600, margin: "0 0 0.2rem"
@@ -849,18 +878,89 @@ export default function MallMapSection() {
             </p>
           </div>
 
-          {/* Centre — 3D building */}
+          {/* Centre — 3D building canvas */}
           <div style={{
             height: "100%", position: "relative",
             border: "1px solid rgba(201,168,76,0.08)", background: "#060504"
           }}>
-            {mounted && (
+            {/* CSS placeholder shown until Three.js is ready */}
+            {!canvasReady && (
+              <div style={{
+                position: "absolute", inset: 0, display: "flex",
+                alignItems: "center", justifyContent: "center",
+                flexDirection: "column", gap: "0.8rem",
+                background: "#060504",
+              }}>
+                {/* Isometric stacked floors placeholder */}
+                <svg width="160" height="180" viewBox="0 0 160 180" fill="none" style={{ opacity: 0.55 }}>
+                  {FLOORS.map((f, i) => {
+                    const yBase = 150 - i * 36;
+                    const w = 110 - i * 10;
+                    const h = 20;
+                    const cx = 80;
+                    return (
+                      <g key={f.id}>
+                        {/* Top face */}
+                        <polygon
+                          points={`${cx},${yBase - h} ${cx + w/2},${yBase - h/2} ${cx},${yBase} ${cx - w/2},${yBase - h/2}`}
+                          fill={f.dimColor} stroke={f.color} strokeWidth="0.8" strokeOpacity="0.5"
+                        />
+                        {/* Right face */}
+                        <polygon
+                          points={`${cx + w/2},${yBase - h/2} ${cx + w/2},${yBase + h/2} ${cx},${yBase + h} ${cx},${yBase}`}
+                          fill="rgba(0,0,0,0.4)" stroke={f.color} strokeWidth="0.8" strokeOpacity="0.3"
+                        />
+                        {/* Left face */}
+                        <polygon
+                          points={`${cx - w/2},${yBase - h/2} ${cx},${yBase} ${cx},${yBase + h} ${cx - w/2},${yBase + h/2}`}
+                          fill="rgba(0,0,0,0.2)" stroke={f.color} strokeWidth="0.8" strokeOpacity="0.3"
+                        />
+                      </g>
+                    );
+                  })}
+                  {/* Spire */}
+                  <line x1="80" y1="2" x2="80" y2="42" stroke="#C9A84C" strokeWidth="1.5" opacity="0.6" />
+                  <circle cx="80" cy="2" r="3" fill="#C9A84C" opacity="0.8" />
+                </svg>
+                <p style={{
+                  color: "rgba(201,168,76,0.4)", fontSize: "0.44rem",
+                  letterSpacing: "0.28em", textTransform: "uppercase",
+                  fontFamily: "var(--font-montserrat)", fontWeight: 600, margin: 0,
+                  animation: "mm-pulse 2s ease infinite",
+                }}>Hover to explore 3D</p>
+              </div>
+            )}
+
+            {canvasReady && (
               <BuildingCanvas
                 onFloorSelect={handleSelect}
                 selectedFloor={selected}
                 isMobile={isMobile}
               />
             )}
+
+            {/* ── MOBILE: horizontal floor pill bar overlaid at top of canvas ── */}
+            <div className="map-mobile-floor-bar">
+              {FLOORS.map(f => (
+                <button
+                  key={f.id}
+                  onClick={() => handleSelect(selected === f.id ? null : f.id)}
+                  style={{
+                    background: selected === f.id ? "rgba(201,168,76,0.18)" : "rgba(6,5,4,0.72)",
+                    border: `1px solid ${selected === f.id ? "#C9A84C" : "rgba(201,168,76,0.22)"}`,
+                    color: selected === f.id ? "#C9A84C" : "rgba(255,255,255,0.5)",
+                    fontSize: "0.48rem", fontWeight: 700, letterSpacing: "0.12em",
+                    textTransform: "uppercase", fontFamily: "var(--font-montserrat)",
+                    padding: "5px 10px", cursor: "pointer", whiteSpace: "nowrap",
+                    backdropFilter: "blur(8px)",
+                    transition: "all 0.2s ease",
+                    flexShrink: 0,
+                  }}
+                >
+                  {f.label}
+                </button>
+              ))}
+            </div>
 
             {/* Corner decorations */}
             {(["tl", "tr", "bl", "br"] as const).map(pos => (
@@ -876,7 +976,7 @@ export default function MallMapSection() {
               }} />
             ))}
 
-            {/* Floor label overlay — shows active floor name */}
+            {/* Floor label overlay */}
             {selected !== null && (
               <div style={{
                 position: "absolute", top: "0.8rem", left: "50%",
@@ -901,10 +1001,66 @@ export default function MallMapSection() {
                 Drag · Click a floor
               </div>
             )}
+
+            {/* ── MOBILE: bottom sheet info panel ── */}
+            <div
+              className="map-mobile-sheet"
+              style={{
+                transform: selected !== null ? "translateY(0)" : "translateY(100%)",
+                transition: "transform 0.4s cubic-bezier(0.22,1,0.36,1)",
+              }}
+            >
+              {selected !== null && (
+                <>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "0.5rem" }}>
+                    <div>
+                      <div style={{ color: "rgba(201,168,76,0.6)", fontSize: "0.42rem", letterSpacing: "0.3em", textTransform: "uppercase", fontFamily: "var(--font-montserrat)", fontWeight: 700 }}>
+                        {FLOORS[selected].label}
+                      </div>
+                      <div style={{ color: "#fff", fontSize: "0.75rem", fontWeight: 800, fontFamily: "var(--font-montserrat)", lineHeight: 1.1 }}>
+                        {FLOORS[selected].name}
+                      </div>
+                    </div>
+                    <button
+                      onClick={() => handleSelect(null)}
+                      style={{
+                        background: "transparent", border: "1px solid rgba(201,168,76,0.25)",
+                        color: "rgba(201,168,76,0.6)", width: "22px", height: "22px",
+                        fontSize: "0.7rem", cursor: "pointer", flexShrink: 0,
+                        display: "flex", alignItems: "center", justifyContent: "center",
+                      }}
+                    >✕</button>
+                  </div>
+                  <div style={{ color: "rgba(201,168,76,0.7)", fontSize: "0.5rem", fontFamily: "var(--font-montserrat)", fontWeight: 600, marginBottom: "0.4rem" }}>
+                    {FLOORS[selected].stat}
+                  </div>
+                  {/* Mini zone bars */}
+                  <div style={{ display: "flex", gap: "0.25rem", marginBottom: "0.5rem" }}>
+                    {FLOORS[selected].zones.map(z => (
+                      <div key={z.label} style={{ flex: z.pct, background: "rgba(201,168,76,0.15)", border: "1px solid rgba(201,168,76,0.2)", padding: "3px 4px", textAlign: "center" }}>
+                        <div style={{ color: "#C9A84C", fontSize: "0.5rem", fontWeight: 700, fontFamily: "var(--font-montserrat)" }}>{z.pct}%</div>
+                        <div style={{ color: "rgba(255,255,255,0.4)", fontSize: "0.38rem", letterSpacing: "0.05em", fontFamily: "var(--font-montserrat)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{z.label}</div>
+                      </div>
+                    ))}
+                  </div>
+                  {/* Tenant pills */}
+                  <div style={{ display: "flex", flexWrap: "wrap", gap: "0.2rem" }}>
+                    {FLOORS[selected].tenants.map(t => (
+                      <span key={t} style={{
+                        background: "rgba(201,168,76,0.07)", border: "1px solid rgba(201,168,76,0.18)",
+                        color: "rgba(255,255,255,0.6)", fontSize: "0.44rem",
+                        fontFamily: "var(--font-montserrat)", fontWeight: 500,
+                        letterSpacing: "0.05em", padding: "2px 6px",
+                      }}>{t}</span>
+                    ))}
+                  </div>
+                </>
+              )}
+            </div>
           </div>
 
-          {/* Right — info panel */}
-          <div style={{ borderLeft: "1px solid rgba(201,168,76,0.08)", paddingLeft: "0.75rem", minHeight: 0, overflow: "hidden" }}>
+          {/* Right — info panel (desktop only) */}
+          <div className="map-right-col" style={{ borderLeft: "1px solid rgba(201,168,76,0.08)", paddingLeft: "0.75rem", minHeight: 0, overflow: "hidden" }}>
             <SidePanel floor={selected !== null ? FLOORS[selected] : null} visible={true} />
           </div>
 
@@ -918,20 +1074,90 @@ export default function MallMapSection() {
       }} />
 
       <style>{`
+        /* ── Placeholder pulse ── */
+        @keyframes mm-pulse {
+          0%, 100% { opacity: 0.4; }
+          50%       { opacity: 0.9; }
+        }
+
+        /* ── Desktop grid: sidebar | canvas | info ── */
         .map-inner-grid {
           display: grid;
-          grid-template-columns: 1fr;
-          gap: 2rem;
-        }
-        @media (min-width: 768px) {
-          .map-inner-grid {
-            grid-template-columns: 100px 1fr clamp(160px, 18vw, 240px);
-            gap: 0;
-          }
+          grid-template-columns: 100px 1fr clamp(160px, 18vw, 240px);
+          gap: 0;
+          height: 100%;
         }
         @media (min-width: 1024px) {
           .map-inner-grid {
             grid-template-columns: 110px 1fr clamp(190px, 20vw, 280px);
+          }
+        }
+
+        /* ── Mobile overrides (≤ 767px) ── */
+        @media (max-width: 767px) {
+          /* Hide the long subtitle on mobile to reclaim vertical space */
+          .map-subtitle { display: none !important; }
+
+          /* Remove side padding so canvas fills edge-to-edge */
+          .map-canvas-wrap { padding: 0 !important; }
+
+          /* Single column — only the canvas cell spans the full area */
+          .map-inner-grid {
+            grid-template-columns: 1fr !important;
+            grid-template-rows: 1fr !important;
+            gap: 0 !important;
+          }
+
+          /* Hide the desktop left sidebar and right info column */
+          .map-left-col  { display: none !important; }
+          .map-right-col { display: none !important; }
+
+          /* Canvas div fills all remaining height */
+          .map-inner-grid > div:nth-child(2) {
+            grid-column: 1 !important;
+            grid-row: 1 !important;
+            min-height: 0 !important;
+          }
+        }
+
+        /* ── Mobile floor pill bar (overlaid at top of canvas) ── */
+        .map-mobile-floor-bar {
+          display: none;
+        }
+        @media (max-width: 767px) {
+          .map-mobile-floor-bar {
+            display: flex;
+            position: absolute;
+            top: 0.6rem;
+            left: 50%;
+            transform: translateX(-50%);
+            gap: 0.3rem;
+            z-index: 10;
+            padding: 0 0.5rem;
+            pointer-events: auto;
+            max-width: calc(100% - 1rem);
+            overflow-x: auto;
+          }
+        }
+
+        /* ── Mobile bottom-sheet info panel ── */
+        .map-mobile-sheet {
+          display: none;
+        }
+        @media (max-width: 767px) {
+          .map-mobile-sheet {
+            display: block;
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            z-index: 20;
+            background: rgba(6, 5, 4, 0.93);
+            border-top: 1px solid rgba(201,168,76,0.22);
+            backdrop-filter: blur(14px);
+            padding: 0.75rem 1rem 1rem;
+            max-height: 42%;
+            overflow-y: auto;
           }
         }
       `}</style>
