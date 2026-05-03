@@ -149,7 +149,6 @@ const NikeSneakerSlide = dynamic(() => import("@/components/Event/NikeSneakerPla
 const AdidasFanSlide = dynamic(() => import("@/components/Event/AdidasFanPlaceholder"), { ssr: false });
 const XboxGamingSlide = dynamic(() => import("@/components/Event/XboxGamingPlaceholder"), { ssr: false });
 const FootfallRevenueSlide = dynamic(() => import("@/components/FootfallRevenue/FootfallRevenueSlide"), { ssr: false });
-const TakeActionOverview = dynamic(() => import("@/components/TakeAction/TakeActionOverview"), { ssr: false });
 const PartnershipSlide = dynamic(() => import("@/components/TakeAction/PartnershipPlaceholder"), { ssr: false });
 const LeaseASpaceSlide = dynamic(() => import("@/components/TakeAction/LeaseASpacePlaceholder"), { ssr: false });
 const BecomeASponsorSlide = dynamic(() => import("@/components/TakeAction/BecomeASponsorPlaceholder"), { ssr: false });
@@ -184,8 +183,7 @@ const SLIDES = [
   { id: "events-xbox", label: "Xbox Gaming Events", chapter: "06", path: "/events/entertainmentAndGaming/xboxGamingEvents" },
   // ── Footfall → Revenue (index 23) ───────────────────────────────────────
   { id: "footfall-revenue", label: "How Footfall Turns Into Revenue", chapter: "06", path: "/footfall-revenue" },
-  // ── Take Action (index 24–29) ─────────────────────────────────────────────
-  { id: "take-action", label: "Take Action", chapter: "07", path: "/takeAction" },
+  // ── Take Action (index 24–28) ─────────────────────────────────────────────
   { id: "partnership", label: "Partnership", chapter: "07", path: "/takeAction/Partnership" },
   { id: "lease-space", label: "Lease a Space", chapter: "07", path: "/takeAction/LeaseASpace" },
   { id: "become-sponsor", label: "Become a Sponsor", chapter: "07", path: "/takeAction/BecomeASponsor" },
@@ -224,12 +222,11 @@ function renderSlide(index: number) {
     // ── Footfall → Revenue ────────────────────────────────────────────────
     case 23: return <FootfallRevenueSlide />;
     // ── Take Action ──────────────────────────────────────────────────────
-    case 24: return <TakeActionOverview />;
-    case 25: return <PartnershipSlide />;
-    case 26: return <LeaseASpaceSlide />;
-    case 27: return <BecomeASponsorSlide />;
-    case 28: return <HostAnEventSlide />;
-    case 29: return <FinalActionsSlide />;
+    case 24: return <PartnershipSlide />;
+    case 25: return <LeaseASpaceSlide />;
+    case 26: return <BecomeASponsorSlide />;
+    case 27: return <HostAnEventSlide />;
+    case 28: return <FinalActionsSlide />;
     default: return null;
   }
 }
